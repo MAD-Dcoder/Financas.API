@@ -24,8 +24,3 @@ Uma API RESTful desenvolvida em C# e .NET para o gerenciamento de finanças pess
 * [PostgreSQL](https://www.postgresql.org/download/) rodando localmente ou em servidor remoto.
 * Um editor de código como [Visual Studio](https://visualstudio.microsoft.com/) ou [VS Code](https://code.visualstudio.com/).
 
-### Configuração e Execução
-
-1. **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/seu-usuario/seu-repositorio.git](https://github.com/seu-usuario/seu-repositorio.git)
