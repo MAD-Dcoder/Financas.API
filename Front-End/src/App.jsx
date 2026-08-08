@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Offcanvas } from 'react-bootstrap';
 import './App.css';
-import { FiEye, FiEyeOff, FiHome, FiCreditCard, FiPlus, FiUser, FiSettings, FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText } from 'react-icons/fi';
+import { 
+  FiEye, FiEyeOff, FiHome, FiCreditCard, FiPlus, FiUser, FiSettings, 
+  FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText, 
+  FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, FiDollarSign, FiGift 
+} from 'react-icons/fi';
 
 function App() {
   const [showBalance, setShowBalance] = useState(true);
@@ -10,6 +14,12 @@ function App() {
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [transacaoSelecionada, setTransacaoSelecionada] = useState(null);
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
+
+  // Estado para controlar se exibe os botões de confirmação de exclusão
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+
+  // Estado para alternar entre os gráficos (0 = Categorias, 1 = Formas de Pagamento)
+  const [abaGrafico, setAbaGrafico] = useState(0);
 
   // ESTADOS DO FORMULÁRIO
   const [valorInput, setValorInput] = useState('');
@@ -31,7 +41,24 @@ function App() {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // CÁLCULO DINÂMICO PARA O GRÁFICO DE ROSCA POR CATEGORIA (Apenas Despesas)
+  // FUNÇÃO INTELIGENTE PARA RETORNAR O ÍCONE CORRESPONDENTE À CATEGORIA
+  const obterIconeCategoria = (categoria) => {
+    switch (categoria) {
+      case 'Alimentação': return <FiCoffee size={18} />;
+      case 'Moto': return <FiTool size={18} />;
+      case 'Carro Clássico':
+      case 'Carro': return <FiTruck size={18} />;
+      case 'Educação / Faculdade': return <FiBookOpen size={18} />;
+      case 'Lazer': return <FiSmile size={18} />;
+      case 'Moradia': return <FiHomeIcon size={18} />;
+      case 'Salário':
+      case 'Rendimento': return <FiDollarSign size={18} />;
+      case 'Vale (VR + VT)': return <FiGift size={18} />;
+      default: return <FiTag size={18} />;
+    }
+  };
+
+  // 1. DADOS POR CATEGORIA (Despesas)
   const despesasPorCategoria = transacoes
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
@@ -39,32 +66,53 @@ function App() {
       return acc;
     }, {});
 
-  // Cores fixas para cada categoria do seu app
   const coresCategorias = {
     'Alimentação': '#818cf8',
     'Moto': '#10b981',
     'Carro Clássico': '#f59e0b',
+    'Carro': '#f59e0b',
     'Educação / Faculdade': '#3b82f6',
     'Lazer': '#f43f5e',
     'Moradia': '#a855f7',
     'Outros': '#6b7280'
   };
 
-  // Monta o gradiente cônico dinâmico com espaçamento (gaps)
-  let acumulado = 0;
-  const gradientStops = Object.entries(despesasPorCategoria).map(([cat, valor]) => {
-    const porcentagem = (valor / totalDespesas) * 100;
-    const inicio = acumulado;
-    const fim = acumulado + porcentagem;
-    acumulado = fim;
-    const cor = coresCategorias[cat] || '#cbd5e1';
-    // Adiciona um pequeno espaçamento visual de 1.5% entre as fatias
-    return `${cor} ${inicio}% ${fim - 1.5}%, transparent ${fim - 1.5}% ${fim}%`;
-  });
+  // 2. DADOS POR FORMA DE PAGAMENTO (Despesas)
+  const despesasPorPagamento = transacoes
+    .filter(t => t.tipo === 'despesa')
+    .reduce((acc, t) => {
+      acc[t.pagamento] = (acc[t.pagamento] || 0) + t.valor;
+      return acc;
+    }, {});
 
-  const backgroundGrafico = totalDespesas > 0 
-    ? `conic-gradient(${gradientStops.join(', ')})` 
-    : '#27272a'; // Cor neutra quando zerado
+  const coresPagamento = {
+    'Pix': '#06b6d4',
+    'Crédito': '#ec4899',
+    'Débito': '#8b5cf6',
+    'Dinheiro': '#eab308'
+  };
+
+  // Função auxiliar para gerar o background do gráfico
+  const gerarBackgroundGrafico = (dados, mapaCores) => {
+    if (totalDespesas === 0) return '#27272a';
+    const chaves = Object.keys(dados);
+    if (chaves.length === 1) {
+      return mapaCores[chaves[0]] || '#10b981';
+    }
+    let acumulado = 0;
+    const gradientStops = Object.entries(dados).map(([chave, valor]) => {
+      const porcentagem = (valor / totalDespesas) * 100;
+      const inicio = acumulado;
+      const fim = acumulado + porcentagem;
+      acumulado = fim;
+      const cor = mapaCores[chave] || '#cbd5e1';
+      return `${cor} ${inicio}% ${fim}%`;
+    });
+    return `conic-gradient(${gradientStops.join(', ')})`;
+  };
+
+  const backgroundGraficoCat = gerarBackgroundGrafico(despesasPorCategoria, coresCategorias);
+  const backgroundGraficoPag = gerarBackgroundGrafico(despesasPorPagamento, coresPagamento);
 
   // MÁSCARA DE MOEDA
   const handleValorChange = (e) => {
@@ -117,6 +165,13 @@ function App() {
     setShowBottomSheet(false);
   };
 
+  // EXCLUIR DE FATO
+  const handleEfetuarExclusao = (id) => {
+    setTransacoes(transacoes.filter(t => t.id !== id));
+    setTransacaoSelecionada(null);
+    setConfirmandoExclusao(false);
+  };
+
   return (
     <div className="app-container pt-4 px-3">
       
@@ -163,58 +218,136 @@ function App() {
         </div>
       </section>
 
-      {/* SEÇÃO: DISTRIBUIÇÃO DAS DESPESAS DINÂMICA COM GAPS */}
+      {/* SEÇÃO: CARROSSEL DE GRÁFICOS */}
       <section className="card dark-card p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>
             <small className="text-light opacity-75 d-block" style={{ fontSize: '11px' }}>Este mês</small>
-            <h6 className="mb-0 fw-bold text-white">Distribuição das despesas</h6>
+            <h6 className="mb-0 fw-bold text-white">
+              {abaGrafico === 0 ? 'Distribuição por Categoria' : 'Formas de Pagamento'}
+            </h6>
           </div>
-          <span className="badge bg-secondary bg-opacity-25 text-light px-3 py-2 rounded-pill" style={{ fontSize: '12px' }}>
-            Agosto
-          </span>
+          
+          <div className="d-flex align-items-center gap-3">
+            <span className="badge bg-secondary bg-opacity-25 text-light px-3 py-2 rounded-pill text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
+              Agosto
+            </span>
+
+            <div className="d-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-1 rounded-pill">
+              <span 
+                style={{ 
+                  width: abaGrafico === 0 ? '16px' : '6px', 
+                  height: '6px', 
+                  borderRadius: '3px', 
+                  backgroundColor: abaGrafico === 0 ? '#10b981' : '#6b7280', 
+                  cursor: 'pointer',
+                  transition: '0.3s'
+                }}
+                onClick={() => setAbaGrafico(0)}
+              ></span>
+              <span 
+                style={{ 
+                  width: abaGrafico === 1 ? '16px' : '6px', 
+                  height: '6px', 
+                  borderRadius: '3px', 
+                  backgroundColor: abaGrafico === 1 ? '#10b981' : '#6b7280', 
+                  cursor: 'pointer',
+                  transition: '0.3s'
+                }}
+                onClick={() => setAbaGrafico(1)}
+              ></span>
+            </div>
+          </div>
         </div>
 
-        <div className="d-flex align-items-center justify-content-between mt-3">
-          {/* Gráfico de Rosca Dinâmico com Espaçamento */}
+        {/* ABA 0: GRÁFICO DE CATEGORIAS */}
+        {abaGrafico === 0 && (
           <div 
-            style={{ 
-              width: '110px', 
-              height: '110px', 
-              borderRadius: '50%', 
-              background: backgroundGrafico,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-            }}
+            className="d-flex align-items-center justify-content-between mt-3"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setAbaGrafico(1)}
           >
-            <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#1e1e24' }}></div>
-          </div>
+            <div 
+              style={{ 
+                width: '110px', 
+                height: '110px', 
+                borderRadius: '50%', 
+                background: backgroundGraficoCat,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+              }}
+            >
+              <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#1e1e24' }}></div>
+            </div>
 
-          {/* Legendas Dinâmicas */}
-          <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
-            {totalDespesas === 0 ? (
-              <span className="text-light opacity-50 text-center w-100">Sem despesas no mês</span>
-            ) : (
-              Object.entries(despesasPorCategoria).map(([cat, valor]) => {
-                const porcentagem = ((valor / totalDespesas) * 100).toFixed(0);
-                const corCat = coresCategorias[cat] || '#ffffff';
-                return (
-                  <div key={cat} className="d-flex align-items-center justify-content-between">
-                    <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '100px' }}>
-                      <span className="rounded-circle me-2 flex-shrink-0" style={{ width: '8px', height: '8px', backgroundColor: corCat }}></span> {cat}
-                    </span>
-                    <span className="fw-bold text-white">{porcentagem}%</span>
-                  </div>
-                );
-              })
-            )}
+            <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
+              {totalDespesas === 0 ? (
+                <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
+              ) : (
+                Object.entries(despesasPorCategoria).map(([cat, valor]) => {
+                  const porcentagem = ((valor / totalDespesas) * 100).toFixed(0);
+                  const corCat = coresCategorias[cat] || '#ffffff';
+                  return (
+                    <div key={cat} className="d-flex align-items-center justify-content-between">
+                      <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '100px' }}>
+                        <span className="rounded-circle me-2 flex-shrink-0" style={{ width: '8px', height: '8px', backgroundColor: corCat }}></span> {cat}
+                      </span>
+                      <span className="fw-bold text-white">{porcentagem}%</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ABA 1: GRÁFICO DE FORMAS DE PAGAMENTO */}
+        {abaGrafico === 1 && (
+          <div 
+            className="d-flex align-items-center justify-content-between mt-3"
+            style={{ cursor: 'pointer' }}
+            onClick={() => setAbaGrafico(0)}
+          >
+            <div 
+              style={{ 
+                width: '110px', 
+                height: '110px', 
+                borderRadius: '50%', 
+                background: backgroundGraficoPag,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+              }}
+            >
+              <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: '#1e1e24' }}></div>
+            </div>
+
+            <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
+              {totalDespesas === 0 ? (
+                <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
+              ) : (
+                Object.entries(despesasPorPagamento).map(([pag, valor]) => {
+                  const porcentagem = ((valor / totalDespesas) * 100).toFixed(0);
+                  const corPag = coresPagamento[pag] || '#ffffff';
+                  return (
+                    <div key={pag} className="d-flex align-items-center justify-content-between">
+                      <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '100px' }}>
+                        <span className="rounded-circle me-2 flex-shrink-0" style={{ width: '8px', height: '8px', backgroundColor: corPag }}></span> {pag}
+                      </span>
+                      <span className="fw-bold text-white">{porcentagem}%</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
-      {/* ÚLTIMAS TRANSAÇÕES */}
+      {/* ÚLTIMAS TRANSAÇÕES COM ÍCONES DINÂMICOS */}
       <section className="mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="text-white mb-0 fw-bold">Últimas transações</h6>
@@ -230,17 +363,18 @@ function App() {
           transacoes.map((t) => (
             <div 
               key={t.id} 
-              className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2"
-              style={{ cursor: 'pointer', transition: '0.2s' }}
-              onClick={() => setTransacaoSelecionada(t)}
+              className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-hover"
+              style={{ cursor: 'pointer' }}
+              onClick={() => { setTransacaoSelecionada(t); setConfirmandoExclusao(false); }}
             >
               <div className="d-flex align-items-center">
-                  <div className="bg-secondary bg-opacity-25 p-2 rounded me-3 text-white">
-                    <FiTag />
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                    {/* Ícone dinâmico correspondente à categoria */}
+                    {obterIconeCategoria(t.categoria)}
                   </div>
                   <div>
                     <h6 className="mb-0 text-white">{t.titulo}</h6>
-                    <small className="text-light opacity-75">{t.categoria}</small>
+                    <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
                   </div>
               </div>
               <span className={t.tipo === 'despesa' ? 'text-white fw-bold' : 'text-emerald fw-bold'}>
@@ -366,13 +500,14 @@ function App() {
                     <>
                       <option value="Alimentação">Alimentação</option>
                       <option value="Moto">Moto</option>
-                      <option value="Carro">Carro</option>
-                      <option value="Educação">Educação / Faculdade</option>
+                      <option value="Carro Clássico">Carro</option>
+                      <option value="Educação / Faculdade">Educação / Faculdade</option>
                       <option value="Lazer">Lazer</option>
+                      <option value="Fatura">Fatura Cartão</option>
                       <option value="Moradia">Moradia</option>
                       <option value="Outros">Outros</option>
                     </>
-                  )}
+                  )}  
                 </select>
               </div>
             </div>
@@ -389,6 +524,7 @@ function App() {
                   <option value="Pix">Pix</option>
                   <option value="Crédito">Cartão de Crédito</option>
                   <option value="Débito">Cartão de Débito</option>
+                  <option value="Boleto">Boleto</option>
                   <option value="Dinheiro">Dinheiro</option>
                 </select>
               </div>
@@ -442,7 +578,7 @@ function App() {
       {/* DETALHES DA TRANSAÇÃO */}
       <Offcanvas 
         show={!!transacaoSelecionada} 
-        onHide={() => setTransacaoSelecionada(null)} 
+        onHide={() => { setTransacaoSelecionada(null); setConfirmandoExclusao(false); }} 
         placement="bottom" 
         style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
       >
@@ -454,7 +590,8 @@ function App() {
           <Offcanvas.Body>
             <div className="text-center mb-4">
               <div className="bg-secondary bg-opacity-25 p-3 rounded-circle d-inline-block text-white mb-2">
-                <FiTag size={32} />
+                {/* Ícone correspondente na gaveta de detalhes */}
+                {obterIconeCategoria(transacaoSelecionada.categoria)}
               </div>
               <h4 className="fw-bold mb-1">{transacaoSelecionada.titulo}</h4>
               <h2 className={transacaoSelecionada.tipo === 'despesa' ? 'text-white' : 'text-emerald'}>
@@ -489,12 +626,35 @@ function App() {
               </div>
             )}
 
-            <button 
-              className="btn btn-outline-danger w-100 py-3 rounded-4 fw-bold shadow-sm"
-              onClick={() => alert('Em breve a API de exclusão!')}
-            >
-              Apagar Transação
-            </button>
+            {!confirmandoExclusao ? (
+              <button 
+                className="btn btn-outline-danger w-100 py-3 rounded-4 fw-bold shadow-sm"
+                onClick={() => setConfirmandoExclusao(true)}
+              >
+                Apagar Transação
+              </button>
+            ) : (
+              <div className="p-3 rounded-4 bg-dark border border-danger border-opacity-50 text-center">
+                <p className="text-light small mb-3 fw-bold d-flex align-items-center justify-content-center gap-2">
+                  Deseja realmente excluir este lançamento?
+                </p>
+                <div className="d-flex gap-2">
+                  <button 
+                    className="btn btn-secondary w-50 py-2 rounded-3 fw-bold text-white"
+                    onClick={() => setConfirmandoExclusao(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    className="btn btn-danger w-50 py-2 rounded-3 fw-bold text-white"
+                    onClick={() => handleEfetuarExclusao(transacaoSelecionada.id)}
+                  >
+                    Sim, apagar
+                  </button>
+                </div>
+              </div>
+            )}
+
           </Offcanvas.Body>
         )}
       </Offcanvas>
