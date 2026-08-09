@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Offcanvas } from 'react-bootstrap';
+import axios from 'axios';
 import './App.css';
 import { 
   FiEye, FiEyeOff, FiHome, FiCreditCard, FiPlus, FiUser, FiSettings, 
@@ -18,10 +19,7 @@ function App() {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [abaGrafico, setAbaGrafico] = useState(0);
 
-  // ESTADO DA BUSCA
   const [termoBusca, setTermoBusca] = useState('');
-
-  // ESTADO DO MÊS SELECIONADO (Filtro)
   const [mesFiltro, setMesFiltro] = useState({ nome: 'Agosto', num: '08', ano: '2026' });
 
   const listaMeses = [
@@ -32,7 +30,6 @@ function App() {
     { nome: 'Abril', num: '04', ano: '2026' }
   ];
 
-  // ESTADOS DO FORMULÁRIO
   const [valorInput, setValorInput] = useState('');
   const [tituloInput, setTituloInput] = useState('');
   const [categoriaInput, setCategoriaInput] = useState('');
@@ -43,7 +40,56 @@ function App() {
   
   const [transacoes, setTransacoes] = useState([]);
 
-  // LÓGICA DE FILTRAGEM POR MÊS E BUSCA GLOBAL
+  const API_URL = 'https://localhost:7231/api/Transacoes';
+  const USUARIO_MOCK_ID = 1;
+
+  const mapaCategoriasAPI = {
+    'Alimentação': 1, 'Moto': 2, 'Carro': 3, 'Educação / Faculdade': 4,
+    'Lazer': 5, 'Moradia': 6, 'Salário': 7, 'Vale (VR + VT)': 8,
+    'Rendimento': 9, 'Outros': 10
+  };
+
+  const mapaContasAPI = {
+    'Pix': 2, 'Crédito': 3, 'Débito': 4, 'Dinheiro': 5, 'Boleto': 6
+  };
+
+  const mapaCategoriasAPIReverse = Object.fromEntries(Object.entries(mapaCategoriasAPI).map(([key, value]) => [value, key]));
+  const mapaContasAPIReverse = Object.fromEntries(Object.entries(mapaContasAPI).map(([key, value]) => [value, key]));
+
+  useEffect(() => {
+    const buscarTransacoes = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/usuario/${USUARIO_MOCK_ID}`);
+        
+        const transacoesDoBanco = response.data.map(t => {
+          const dataQuebrada = t.dataTransacao.split('T');
+          const dataBruta = dataQuebrada[0].split('-'); 
+          const dataCerta = `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}`; 
+          const horaCerta = dataQuebrada[1].substring(0, 5); 
+          
+          return {
+            id: t.id,
+            titulo: t.descricao,
+            categoria: mapaCategoriasAPIReverse[t.categoriaId] || 'Outros',
+            pagamento: mapaContasAPIReverse[t.contaOrigemId] || mapaContasAPIReverse[t.contaDestinoId] || 'Pix',
+            observacao: t.observacao || '',
+            data: dataCerta,
+            hora: horaCerta,
+            valor: t.valor,
+            tipo: t.tipo,
+            recorrente: t.ehRecorrente
+          };
+        });
+
+        setTransacoes(transacoesDoBanco);
+      } catch (error) {
+        console.error("Erro ao buscar transações da API:", error);
+      }
+    };
+
+    buscarTransacoes();
+  }, [mapaCategoriasAPIReverse, mapaContasAPIReverse]);
+
   const transacoesDoMes = transacoes.filter(t => {
     const partes = t.data.split('/');
     if (partes.length === 3) {
@@ -67,7 +113,6 @@ function App() {
       })
     : transacoesDoMes;
 
-  // LÓGICA DE AGRUPAMENTO POR DIA 
   const agruparTransacoesPorData = (lista) => {
     const grupos = {};
     lista.forEach(t => {
@@ -136,29 +181,6 @@ function App() {
     'Débito': '#8b5cf6',
     'Dinheiro': '#eab308'
   };
-
-  // --- DICIONÁRIOS DE TRADUÇÃO (FRONT -> BACK) ---
-  const mapaCategoriasAPI = {
-    'Alimentação': 1,
-    'Moto': 2,
-    'Carro': 3,
-    'Educação / Faculdade': 4,
-    'Lazer': 5,
-    'Moradia': 6,
-    'Salário': 7,
-    'Vale (VR + VT)': 8,
-    'Rendimento': 9,
-    'Outros': 10
-  };
-
-  const mapaContasAPI = {
-    'Pix': 2,
-    'Crédito': 3,
-    'Débito': 4,
-    'Dinheiro': 5,
-    'Boleto': 6
-  };
-  // ---------------------------------------------------------
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -229,72 +251,94 @@ function App() {
     setCategoriaInput('');
   };
 
-  const handleConfirmarLancamento = () => {
+  // --- POST: SALVAR DADOS NO BANCO ---
+  const handleConfirmarLancamento = async () => {
     if (!valorInput || !tituloInput || !categoriaInput || !pagamentoInput) {
       alert("Por favor, preencha o valor, título, categoria e forma de pagamento!");
       return;
     }
 
     const valorNumerico = parseFloat(valorInput.replace(/\./g, '').replace(',', '.'));
-    const tituloFormatado = tituloInput.charAt(0).toUpperCase() + tituloInput.slice(1);
+    
+    const tituloFormatado = tituloInput
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const dataHoraLocal = `${dataInput}T${horaAtual}:00`;
 
-    // --- PACOTE DE DADOS PARA A API C# (Onde a mágica da integração começa) ---
-    // Ajuste 3: Tratando a data local (Input type="date") para o padrão ISO que o C# aceita
-    const dataHoraIso = new Date(`${dataInput}T${horaAtual}:00`).toISOString();
-
+    // CORREÇÃO: contaOrigemId deve SEMPRE ser enviada, pois no SQL ela é NOT NULL
     const payloadParaAPI = {
-      usuarioId: 1, // Ajuste 4: Mockado para o usuário provisório
-      contaOrigemId: tipoTransacao === 'despesa' ? mapaContasAPI[pagamentoInput] : null,
-      contaDestinoId: tipoTransacao === 'receita' ? mapaContasAPI[pagamentoInput] : null,
-      categoriaId: mapaCategoriasAPI[categoriaInput], // Ajuste 1: Usando dicionário
-      descricao: tituloFormatado, // Ajuste 2: Mudando de titulo para descricao
+      usuarioId: USUARIO_MOCK_ID,
+      contaOrigemId: mapaContasAPI[pagamentoInput], 
+      contaDestinoId: null, 
+      categoriaId: mapaCategoriasAPI[categoriaInput],
+      descricao: tituloFormatado,
       valor: valorNumerico,
       tipo: tipoTransacao,
-      dataTransacao: dataHoraIso, // Ajuste 3: Data convertida
-      pago: true, // Ajuste 4: Obrigatório na sua API
+      dataTransacao: dataHoraLocal,
+      pago: true,
       ehRecorrente: ehRecorrente,
       observacao: observacaoInput
     };
-    
-    // Deixei este console para você inspecionar e ver o formato perfeito saindo do React
-    console.log("Dados prontos para o POST na API:", payloadParaAPI);
-    // --------------------------------------------------------------------------
 
-    // A partir daqui mantemos o estado visual local por enquanto (será trocado pelo Axios depois)
-    const novaTransacao = {
-      id: Date.now(),
-      titulo: tituloFormatado,
-      categoria: categoriaInput,
-      pagamento: pagamentoInput,
-      observacao: observacaoInput,
-      data: dataInput.split('-').reverse().join('/'),
-      hora: horaAtual,
-      valor: valorNumerico, 
-      tipo: tipoTransacao,
-      recorrente: ehRecorrente
-    };
+    try {
+      const response = await axios.post(API_URL, payloadParaAPI);
+      
+      const dataQuebradaRetorno = response.data.dataTransacao.split('T');
+      const dataBrutaRetorno = dataQuebradaRetorno[0].split('-');
+      const dataCertaRetorno = `${dataBrutaRetorno[2]}/${dataBrutaRetorno[1]}/${dataBrutaRetorno[0]}`;
+      const horaCertaRetorno = dataQuebradaRetorno[1].substring(0, 5);
+      
+      const novaTransacao = {
+        id: response.data.id,
+        titulo: response.data.descricao,
+        categoria: categoriaInput, 
+        pagamento: pagamentoInput, 
+        observacao: response.data.observacao || '',
+        data: dataCertaRetorno,
+        hora: horaCertaRetorno,
+        valor: response.data.valor, 
+        tipo: response.data.tipo,
+        recorrente: response.data.ehRecorrente
+      };
 
-    setTransacoes([novaTransacao, ...transacoes]);
-    
-    setValorInput('');
-    setTituloInput('');
-    setCategoriaInput('');
-    setPagamentoInput('');
-    setObservacaoInput('');
-    setEhRecorrente(false);
-    setShowBottomSheet(false);
-    
-    const mesNovo = dataInput.split('-')[1];
-    const anoNovo = dataInput.split('-')[0];
-    const objMes = listaMeses.find(m => m.num === mesNovo && m.ano === anoNovo);
-    if (objMes) setMesFiltro(objMes);
+      setTransacoes([novaTransacao, ...transacoes]);
+      
+      setValorInput('');
+      setTituloInput('');
+      setCategoriaInput('');
+      setPagamentoInput('');
+      setObservacaoInput('');
+      setEhRecorrente(false);
+      setShowBottomSheet(false);
+      
+      const mesNovo = dataInput.split('-')[1];
+      const anoNovo = dataInput.split('-')[0];
+      const objMes = listaMeses.find(m => m.num === mesNovo && m.ano === anoNovo);
+      if (objMes) setMesFiltro(objMes);
+
+    } catch (error) {
+      console.error("Erro ao salvar transação:", error);
+      alert("Houve um erro ao tentar salvar o lançamento. Verifique se a API está rodando.");
+    }
   };
 
-  const handleEfetuarExclusao = (id) => {
-    setTransacoes(transacoes.filter(t => t.id !== id));
-    setTransacaoSelecionada(null);
-    setConfirmandoExclusao(false);
+  // --- DELETE: APAGAR DADO NO BANCO ---
+  const handleEfetuarExclusao = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      
+      setTransacoes(transacoes.filter(t => t.id !== id));
+      setTransacaoSelecionada(null);
+      setConfirmandoExclusao(false);
+    } catch (error) {
+      console.error("Erro ao excluir transação:", error);
+      alert("Houve um erro ao tentar excluir. Tente novamente.");
+    }
   };
 
   return (
@@ -526,7 +570,7 @@ function App() {
                         <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
                       </div>
                   </div>
-                  {/* LIMPEZA NO VALOR: Removida a data para evitar poluição */}
+                  {/* APENAS O VALOR (SEM DATA REDUNDANTE) */}
                   <div className="text-end">
                     <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
                       {showBalance 
