@@ -5,21 +5,32 @@ import './App.css';
 import { 
   FiEye, FiEyeOff, FiHome, FiCreditCard, FiPlus, FiUser, FiSettings, 
   FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText, 
-  FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, FiDollarSign, FiGift 
+  FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, FiDollarSign, FiGift, FiChevronDown, FiSearch, FiClock 
 } from 'react-icons/fi';
 
 function App() {
   const [showBalance, setShowBalance] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [transacaoSelecionada, setTransacaoSelecionada] = useState(null);
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
-
-  // Estado para controlar se exibe os botões de confirmação de exclusão
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
-
-  // Estado para alternar entre os gráficos (0 = Categorias, 1 = Formas de Pagamento)
   const [abaGrafico, setAbaGrafico] = useState(0);
+
+  // ESTADO DA BUSCA
+  const [termoBusca, setTermoBusca] = useState('');
+
+  // ESTADO DO MÊS SELECIONADO (Filtro)
+  const [mesFiltro, setMesFiltro] = useState({ nome: 'Agosto', num: '08', ano: '2026' });
+
+  const listaMeses = [
+    { nome: 'Agosto', num: '08', ano: '2026' },
+    { nome: 'Julho', num: '07', ano: '2026' },
+    { nome: 'Junho', num: '06', ano: '2026' },
+    { nome: 'Maio', num: '05', ano: '2026' },
+    { nome: 'Abril', num: '04', ano: '2026' }
+  ];
 
   // ESTADOS DO FORMULÁRIO
   const [valorInput, setValorInput] = useState('');
@@ -32,16 +43,123 @@ function App() {
   
   const [transacoes, setTransacoes] = useState([]);
 
-  // CÁLCULOS DINÂMICOS DE SALDO
-  const totalReceitas = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
-  const totalDespesas = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
-  const saldoAtual = totalReceitas - totalDespesas;
+  // LÓGICA DE FILTRAGEM POR MÊS E BUSCA GLOBAL
+  const transacoesDoMes = transacoes.filter(t => {
+    const partes = t.data.split('/');
+    if (partes.length === 3) {
+      return partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano;
+    }
+    return true;
+  });
+
+  const transacoesParaExibir = termoBusca 
+    ? transacoes.filter(t => {
+        const termo = termoBusca.toLowerCase();
+        return (
+          t.titulo.toLowerCase().includes(termo) ||
+          t.categoria.toLowerCase().includes(termo) ||
+          t.pagamento.toLowerCase().includes(termo) ||
+          t.data.includes(termo) ||
+          (t.hora && t.hora.includes(termo)) ||
+          (t.observacao && t.observacao.toLowerCase().includes(termo)) ||
+          t.valor.toString().includes(termo)
+        );
+      })
+    : transacoesDoMes;
+
+  // LÓGICA DE AGRUPAMENTO POR DIA 
+  const agruparTransacoesPorData = (lista) => {
+    const grupos = {};
+    lista.forEach(t => {
+      if (!grupos[t.data]) {
+        grupos[t.data] = [];
+      }
+      grupos[t.data].push(t);
+    });
+
+    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+      const [diaA, mesA, anoA] = a.split('/');
+      const [diaB, mesB, anoB] = b.split('/');
+      const dataA = new Date(anoA, mesA - 1, diaA);
+      const dataB = new Date(anoB, mesB - 1, diaB);
+      return dataB - dataA;
+    });
+
+    return chavesOrdenadas.map(chave => ({
+      dataString: chave,
+      transacoes: grupos[chave].sort((a, b) => b.id - a.id) 
+    }));
+  };
+
+  const transacoesAgrupadas = agruparTransacoesPorData(transacoesParaExibir);
+
+  const formatarCabecalhoData = (dataStr) => {
+    const hojeObj = new Date();
+    const hoje = hojeObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    
+    const ontemObj = new Date(hojeObj);
+    ontemObj.setDate(ontemObj.getDate() - 1);
+    const ontem = ontemObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    if (dataStr === hoje) return 'Hoje';
+    if (dataStr === ontem) return 'Ontem';
+    
+    const [dia, mes] = dataStr.split('/');
+    return `${dia}/${mes}`;
+  };
+
+  const totalReceitasGeral = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const totalDespesasGeral = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
+  const saldoAtual = totalReceitasGeral - totalDespesasGeral;
+
+  const receitasDoMes = transacoesDoMes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const despesasDoMes = transacoesDoMes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
 
   const formatarMoeda = (valor) => {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // FUNÇÃO INTELIGENTE PARA RETORNAR O ÍCONE CORRESPONDENTE À CATEGORIA
+  const coresCategorias = {
+    'Alimentação': '#818cf8',
+    'Moto': '#10b981',
+    'Carro Clássico': '#f59e0b',
+    'Carro': '#f59e0b',
+    'Educação / Faculdade': '#3b82f6',
+    'Lazer': '#f43f5e',
+    'Moradia': '#a855f7',
+    'Outros': '#6b7280'
+  };
+
+  const coresPagamento = {
+    'Pix': '#06b6d4',
+    'Crédito': '#ec4899',
+    'Débito': '#8b5cf6',
+    'Dinheiro': '#eab308'
+  };
+
+  // --- DICIONÁRIOS DE TRADUÇÃO (FRONT -> BACK) ---
+  const mapaCategoriasAPI = {
+    'Alimentação': 1,
+    'Moto': 2,
+    'Carro': 3,
+    'Educação / Faculdade': 4,
+    'Lazer': 5,
+    'Moradia': 6,
+    'Salário': 7,
+    'Vale (VR + VT)': 8,
+    'Rendimento': 9,
+    'Outros': 10
+  };
+
+  const mapaContasAPI = {
+    'Pix': 2,
+    'Crédito': 3,
+    'Débito': 4,
+    'Dinheiro': 5,
+    'Boleto': 6
+  };
+  // ---------------------------------------------------------
+
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
       case 'Alimentação': return <FiCoffee size={18} />;
@@ -58,63 +176,41 @@ function App() {
     }
   };
 
-  // 1. DADOS POR CATEGORIA (Despesas)
-  const despesasPorCategoria = transacoes
+  const despesasPorCategoria = transacoesDoMes
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.categoria] = (acc[t.categoria] || 0) + t.valor;
       return acc;
     }, {});
 
-  const coresCategorias = {
-    'Alimentação': '#818cf8',
-    'Moto': '#10b981',
-    'Carro Clássico': '#f59e0b',
-    'Carro': '#f59e0b',
-    'Educação / Faculdade': '#3b82f6',
-    'Lazer': '#f43f5e',
-    'Moradia': '#a855f7',
-    'Outros': '#6b7280'
-  };
-
-  // 2. DADOS POR FORMA DE PAGAMENTO (Despesas)
-  const despesasPorPagamento = transacoes
+  const despesasPorPagamento = transacoesDoMes
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.pagamento] = (acc[t.pagamento] || 0) + t.valor;
       return acc;
     }, {});
 
-  const coresPagamento = {
-    'Pix': '#06b6d4',
-    'Crédito': '#ec4899',
-    'Débito': '#8b5cf6',
-    'Dinheiro': '#eab308'
-  };
-
-  // Função auxiliar para gerar o background do gráfico
-  const gerarBackgroundGrafico = (dados, mapaCores) => {
-    if (totalDespesas === 0) return '#27272a';
+  const gerarBackgroundGrafico = (dados, mapaCores, total) => {
+    if (total === 0) return '#27272a';
     const chaves = Object.keys(dados);
     if (chaves.length === 1) {
       return mapaCores[chaves[0]] || '#10b981';
     }
     let acumulado = 0;
     const gradientStops = Object.entries(dados).map(([chave, valor]) => {
-      const porcentagem = (valor / totalDespesas) * 100;
+      const porcentagem = (valor / total) * 100;
       const inicio = acumulado;
       const fim = acumulado + porcentagem;
       acumulado = fim;
-      const cor = mapaCores[chave] || '#cbd5e1';
+      const cor = mapaCores[chave] || '#6b7280';
       return `${cor} ${inicio}% ${fim}%`;
     });
     return `conic-gradient(${gradientStops.join(', ')})`;
   };
 
-  const backgroundGraficoCat = gerarBackgroundGrafico(despesasPorCategoria, coresCategorias);
-  const backgroundGraficoPag = gerarBackgroundGrafico(despesasPorPagamento, coresPagamento);
+  const backgroundGraficoCat = gerarBackgroundGrafico(despesasPorCategoria, coresCategorias, despesasDoMes);
+  const backgroundGraficoPag = gerarBackgroundGrafico(despesasPorPagamento, coresPagamento, despesasDoMes);
 
-  // MÁSCARA DE MOEDA
   const handleValorChange = (e) => {
     const apenasNumeros = e.target.value.replace(/\D/g, ''); 
     if (!apenasNumeros) {
@@ -133,7 +229,6 @@ function App() {
     setCategoriaInput('');
   };
 
-  // SALVAR NOVO GASTO
   const handleConfirmarLancamento = () => {
     if (!valorInput || !tituloInput || !categoriaInput || !pagamentoInput) {
       alert("Por favor, preencha o valor, título, categoria e forma de pagamento!");
@@ -141,14 +236,40 @@ function App() {
     }
 
     const valorNumerico = parseFloat(valorInput.replace(/\./g, '').replace(',', '.'));
+    const tituloFormatado = tituloInput.charAt(0).toUpperCase() + tituloInput.slice(1);
+    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+    // --- PACOTE DE DADOS PARA A API C# (Onde a mágica da integração começa) ---
+    // Ajuste 3: Tratando a data local (Input type="date") para o padrão ISO que o C# aceita
+    const dataHoraIso = new Date(`${dataInput}T${horaAtual}:00`).toISOString();
+
+    const payloadParaAPI = {
+      usuarioId: 1, // Ajuste 4: Mockado para o usuário provisório
+      contaOrigemId: tipoTransacao === 'despesa' ? mapaContasAPI[pagamentoInput] : null,
+      contaDestinoId: tipoTransacao === 'receita' ? mapaContasAPI[pagamentoInput] : null,
+      categoriaId: mapaCategoriasAPI[categoriaInput], // Ajuste 1: Usando dicionário
+      descricao: tituloFormatado, // Ajuste 2: Mudando de titulo para descricao
+      valor: valorNumerico,
+      tipo: tipoTransacao,
+      dataTransacao: dataHoraIso, // Ajuste 3: Data convertida
+      pago: true, // Ajuste 4: Obrigatório na sua API
+      ehRecorrente: ehRecorrente,
+      observacao: observacaoInput
+    };
+    
+    // Deixei este console para você inspecionar e ver o formato perfeito saindo do React
+    console.log("Dados prontos para o POST na API:", payloadParaAPI);
+    // --------------------------------------------------------------------------
+
+    // A partir daqui mantemos o estado visual local por enquanto (será trocado pelo Axios depois)
     const novaTransacao = {
       id: Date.now(),
-      titulo: tituloInput,
+      titulo: tituloFormatado,
       categoria: categoriaInput,
       pagamento: pagamentoInput,
       observacao: observacaoInput,
       data: dataInput.split('-').reverse().join('/'),
+      hora: horaAtual,
       valor: valorNumerico, 
       tipo: tipoTransacao,
       recorrente: ehRecorrente
@@ -163,9 +284,13 @@ function App() {
     setObservacaoInput('');
     setEhRecorrente(false);
     setShowBottomSheet(false);
+    
+    const mesNovo = dataInput.split('-')[1];
+    const anoNovo = dataInput.split('-')[0];
+    const objMes = listaMeses.find(m => m.num === mesNovo && m.ano === anoNovo);
+    if (objMes) setMesFiltro(objMes);
   };
 
-  // EXCLUIR DE FATO
   const handleEfetuarExclusao = (id) => {
     setTransacoes(transacoes.filter(t => t.id !== id));
     setTransacaoSelecionada(null);
@@ -204,21 +329,21 @@ function App() {
         
         <div className="d-flex justify-content-between">
           <div>
-             <small className="text-light opacity-75 d-block mb-1">Receitas ↙</small>
+             <small className="text-light opacity-75 d-block mb-1">Receitas ({mesFiltro.nome}) ↙</small>
              <span className="text-emerald fw-bold">
-               {showBalance ? formatarMoeda(totalReceitas) : 'R$ •••••'}
+               {showBalance ? formatarMoeda(receitasDoMes) : 'R$ •••••'}
              </span>
           </div>
           <div className="text-end">
-             <small className="text-light opacity-75 d-block mb-1">Despesas ↗</small>
+             <small className="text-light opacity-75 d-block mb-1">Despesas ({mesFiltro.nome}) ↗</small>
              <span className="text-white fw-bold">
-               {showBalance ? formatarMoeda(totalDespesas) : 'R$ •••••'}
+               {showBalance ? formatarMoeda(despesasDoMes) : 'R$ •••••'}
              </span>
           </div>
         </div>
       </section>
 
-      {/* SEÇÃO: CARROSSEL DE GRÁFICOS */}
+      {/* CARROSSEL DE GRÁFICOS */}
       <section className="card dark-card p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>
@@ -229,8 +354,12 @@ function App() {
           </div>
           
           <div className="d-flex align-items-center gap-3">
-            <span className="badge bg-secondary bg-opacity-25 text-light px-3 py-2 rounded-pill text-uppercase" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
-              Agosto
+            <span 
+              className="badge bg-secondary bg-opacity-25 text-light px-3 py-2 rounded-pill text-uppercase d-flex align-items-center gap-1" 
+              style={{ fontSize: '11px', letterSpacing: '0.5px', cursor: 'pointer' }}
+              onClick={() => setShowMonthSelector(true)}
+            >
+              {mesFiltro.nome} <FiChevronDown size={14} className="ms-1" />
             </span>
 
             <div className="d-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-1 rounded-pill">
@@ -260,7 +389,6 @@ function App() {
           </div>
         </div>
 
-        {/* ABA 0: GRÁFICO DE CATEGORIAS */}
         {abaGrafico === 0 && (
           <div 
             className="d-flex align-items-center justify-content-between mt-3"
@@ -283,12 +411,12 @@ function App() {
             </div>
 
             <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
-              {totalDespesas === 0 ? (
+              {despesasDoMes === 0 ? (
                 <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
               ) : (
                 Object.entries(despesasPorCategoria).map(([cat, valor]) => {
-                  const porcentagem = ((valor / totalDespesas) * 100).toFixed(0);
-                  const corCat = coresCategorias[cat] || '#ffffff';
+                  const porcentagem = ((valor / despesasDoMes) * 100).toFixed(0);
+                  const corCat = coresCategorias[cat] || '#6b7280';
                   return (
                     <div key={cat} className="d-flex align-items-center justify-content-between">
                       <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '100px' }}>
@@ -303,7 +431,6 @@ function App() {
           </div>
         )}
 
-        {/* ABA 1: GRÁFICO DE FORMAS DE PAGAMENTO */}
         {abaGrafico === 1 && (
           <div 
             className="d-flex align-items-center justify-content-between mt-3"
@@ -326,12 +453,12 @@ function App() {
             </div>
 
             <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
-              {totalDespesas === 0 ? (
+              {despesasDoMes === 0 ? (
                 <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
               ) : (
                 Object.entries(despesasPorPagamento).map(([pag, valor]) => {
-                  const porcentagem = ((valor / totalDespesas) * 100).toFixed(0);
-                  const corPag = coresPagamento[pag] || '#ffffff';
+                  const porcentagem = ((valor / despesasDoMes) * 100).toFixed(0);
+                  const corPag = coresPagamento[pag] || '#6b7280';
                   return (
                     <div key={pag} className="d-flex align-items-center justify-content-between">
                       <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '100px' }}>
@@ -347,42 +474,69 @@ function App() {
         )}
       </section>
 
-      {/* ÚLTIMAS TRANSAÇÕES COM ÍCONES DINÂMICOS */}
+      {/* BARRA DE PESQUISA GERAL */}
+      <div className="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill px-3 py-2 mb-4 border border-secondary border-opacity-25 shadow-sm">
+        <FiSearch className="text-light opacity-50 me-2" size={18} />
+        <input 
+          type="text" 
+          className="form-control bg-transparent border-0 text-white shadow-none p-0 input-busca" 
+          placeholder="Pesquisar" 
+          value={termoBusca}
+          onChange={(e) => setTermoBusca(e.target.value)}
+          style={{ fontSize: '14px' }}
+        />
+      </div>
+
+      {/* LISTA DE TRANSAÇÕES AGRUPADAS POR DATA */}
       <section className="mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="text-white mb-0 fw-bold">Últimas transações</h6>
-          <span className="text-light opacity-75" style={{ fontSize: '13px', cursor: 'pointer' }}>Mais recentes</span>
+          <h6 className="text-white mb-0 fw-bold">
+            {termoBusca ? 'Resultados da busca' : `Transações de ${mesFiltro.nome}`}
+          </h6>
         </div>
         
-        {transacoes.length === 0 ? (
+        {transacoesAgrupadas.length === 0 ? (
           <div className="card dark-card text-center p-4">
-            <p className="text-light opacity-50 mb-0">Nenhuma transação ainda.</p>
-            <small className="text-light opacity-50">Comece adicionando no botão + abaixo!</small>
+            <p className="text-light opacity-50 mb-0">Nenhuma transação encontrada.</p>
+            {!termoBusca && <small className="text-light opacity-50">Que tal adicionar alguma?</small>}
           </div>
         ) : (
-          transacoes.map((t) => (
-            <div 
-              key={t.id} 
-              className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-hover"
-              style={{ cursor: 'pointer' }}
-              onClick={() => { setTransacaoSelecionada(t); setConfirmandoExclusao(false); }}
-            >
-              <div className="d-flex align-items-center">
-                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
-                    {/* Ícone dinâmico correspondente à categoria */}
-                    {obterIconeCategoria(t.categoria)}
+          transacoesAgrupadas.map(grupo => (
+            <div key={grupo.dataString} className="mb-4">
+              
+              {/* CABEÇALHO DA DATA DO GRUPO */}
+              <small className="text-light opacity-50 fw-bold d-block mb-2 ms-2">
+                {formatarCabecalhoData(grupo.dataString)}
+              </small>
+
+              {/* TRANSAÇÕES DESTE DIA */}
+              {grupo.transacoes.map((t) => (
+                <div 
+                  key={t.id} 
+                  className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-hover border-0 shadow-sm"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => { setTransacaoSelecionada(t); setConfirmandoExclusao(false); }}
+                >
+                  <div className="d-flex align-items-center">
+                      <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                        {obterIconeCategoria(t.categoria)}
+                      </div>
+                      <div>
+                        <h6 className="mb-0 text-white" style={{ fontSize: '15px' }}>{t.titulo}</h6>
+                        <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
+                      </div>
                   </div>
-                  <div>
-                    <h6 className="mb-0 text-white">{t.titulo}</h6>
-                    <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
+                  {/* LIMPEZA NO VALOR: Removida a data para evitar poluição */}
+                  <div className="text-end">
+                    <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
+                      {showBalance 
+                        ? <>{t.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(t.valor)}</>
+                        : '••••••••'
+                      }
+                    </span>
                   </div>
-              </div>
-              <span className={t.tipo === 'despesa' ? 'text-white fw-bold' : 'text-emerald fw-bold'}>
-                {showBalance 
-                  ? <>{t.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(t.valor)}</>
-                  : '••••••••'
-                }
-              </span>
+                </div>
+              ))}
             </div>
           ))
         )}
@@ -399,7 +553,7 @@ function App() {
         <div className="nav-icon"><FiCreditCard size={28} /></div>
       </nav>
 
-      {/* GAVETA LATERAL DE PERFIL */}
+      {/* MENU PERFIL */}
       <Offcanvas show={showProfile} onHide={() => setShowProfile(false)} placement="start" style={{ backgroundColor: '#1e1e24', color: '#fff', maxWidth: '300px' }}>
         <Offcanvas.Header closeButton closeVariant="white" className="border-bottom border-secondary border-opacity-25">
           <Offcanvas.Title className="fw-bold">Menu</Offcanvas.Title>
@@ -426,7 +580,37 @@ function App() {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* BOTTOM SHEET: NOVA TRANSAÇÃO */}
+      {/* GAVETA DE MÊS */}
+      <Offcanvas 
+        show={showMonthSelector} 
+        onHide={() => setShowMonthSelector(false)} 
+        placement="bottom" 
+        style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
+      >
+        <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
+          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Selecione o Mês</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <div className="d-flex flex-column gap-2 mt-2">
+            {listaMeses.map((mes) => (
+              <button 
+                key={mes.num}
+                className={`btn w-100 py-3 rounded-4 fw-bold shadow-sm ${mesFiltro.num === mes.num ? 'text-white' : 'btn-dark text-light'}`}
+                style={mesFiltro.num === mes.num ? { backgroundColor: '#10b981', borderColor: '#10b981' } : {}}
+                onClick={() => {
+                  setMesFiltro(mes);
+                  setShowMonthSelector(false);
+                  setTermoBusca(''); 
+                }}
+              >
+                {mes.nome} {mes.ano}
+              </button>
+            ))}
+          </div>
+        </Offcanvas.Body>
+      </Offcanvas>
+
+      {/* GAVETA NOVO LANÇAMENTO */}
       <Offcanvas 
         show={showBottomSheet} 
         onHide={() => setShowBottomSheet(false)} 
@@ -437,7 +621,6 @@ function App() {
           <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Novo Lançamento</Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body>
-          
           <div className="d-flex justify-content-center mb-4 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '250px' }}>
             <button 
               className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'despesa' ? 'text-white' : 'text-light opacity-50'}`} 
@@ -469,7 +652,6 @@ function App() {
           </div>
 
           <div className="d-flex flex-column gap-3 mb-4">
-            
             <div className="row g-2">
               <div className="col-6">
                 <label className="form-label text-light opacity-75 small mb-1">Título</label>
@@ -500,14 +682,13 @@ function App() {
                     <>
                       <option value="Alimentação">Alimentação</option>
                       <option value="Moto">Moto</option>
-                      <option value="Carro Clássico">Carro</option>
+                      <option value="Carro">Carro</option>
                       <option value="Educação / Faculdade">Educação / Faculdade</option>
                       <option value="Lazer">Lazer</option>
-                      <option value="Fatura">Fatura Cartão</option>
                       <option value="Moradia">Moradia</option>
                       <option value="Outros">Outros</option>
                     </>
-                  )}  
+                  )}
                 </select>
               </div>
             </div>
@@ -524,8 +705,8 @@ function App() {
                   <option value="Pix">Pix</option>
                   <option value="Crédito">Cartão de Crédito</option>
                   <option value="Débito">Cartão de Débito</option>
-                  <option value="Boleto">Boleto</option>
                   <option value="Dinheiro">Dinheiro</option>
+                  <option value="Boleto">Boleto</option>
                 </select>
               </div>
               <div className="col-6">
@@ -571,11 +752,10 @@ function App() {
           >
             Confirmar Lançamento
           </button>
-
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* DETALHES DA TRANSAÇÃO */}
+      {/* GAVETA DETALHES TRANSAÇÃO */}
       <Offcanvas 
         show={!!transacaoSelecionada} 
         onHide={() => { setTransacaoSelecionada(null); setConfirmandoExclusao(false); }} 
@@ -590,7 +770,6 @@ function App() {
           <Offcanvas.Body>
             <div className="text-center mb-4">
               <div className="bg-secondary bg-opacity-25 p-3 rounded-circle d-inline-block text-white mb-2">
-                {/* Ícone correspondente na gaveta de detalhes */}
                 {obterIconeCategoria(transacaoSelecionada.categoria)}
               </div>
               <h4 className="fw-bold mb-1">{transacaoSelecionada.titulo}</h4>
@@ -611,6 +790,13 @@ function App() {
                 <span className="text-light opacity-75"><FiCalendar className="me-2"/> Data</span>
                 <span className="fw-bold text-white">{transacaoSelecionada.data}</span>
               </div>
+              {/* HORÁRIO CONTINUA AQUI NOS DETALHES */}
+              {transacaoSelecionada.hora && (
+                <div className="d-flex justify-content-between mb-2">
+                  <span className="text-light opacity-75"><FiClock className="me-2"/> Horário do Registro</span>
+                  <span className="fw-bold text-white">{transacaoSelecionada.hora}</span>
+                </div>
+              )}
               <div className="d-flex justify-content-between">
                 <span className="text-light opacity-75"><FiCreditCard className="me-2"/> Forma de Pagamento</span>
                 <span className="fw-bold text-white">{transacaoSelecionada.pagamento}</span>
@@ -654,7 +840,6 @@ function App() {
                 </div>
               </div>
             )}
-
           </Offcanvas.Body>
         )}
       </Offcanvas>
