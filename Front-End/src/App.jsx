@@ -6,7 +6,9 @@ import './App.css';
 import { 
   FiEye, FiEyeOff, FiHome, FiCreditCard, FiPlus, FiUser, FiSettings, 
   FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText, 
-  FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, FiDollarSign, FiGift, FiChevronDown, FiSearch, FiClock 
+  FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, 
+  FiDollarSign, FiGift, FiChevronDown, FiSearch, FiClock, FiMoreVertical,
+  FiEdit2, FiTrash2
 } from 'react-icons/fi';
 
 function App() {
@@ -18,17 +20,69 @@ function App() {
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [abaGrafico, setAbaGrafico] = useState(0);
+  
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [showCardSettings, setShowCardSettings] = useState(false);
+  const [diaVencimento, setDiaVencimento] = useState('09'); 
+  const [corCartao, setCorCartao] = useState('linear-gradient(135deg, #b45309 0%, #d97706 100%)'); 
+  const [apelidoCartao, setApelidoCartao] = useState('magazineluiza');
+  const [finalCartao, setFinalCartao] = useState('3911');
+  const [nomeCartao, setNomeCartao] = useState('MATHEUS A DUARTE');
+  const [bandeiraCartao, setBandeiraCartao] = useState('Mastercard'); 
+
+  const [tempDiaVencimento, setTempDiaVencimento] = useState(diaVencimento);
+  const [tempCor, setTempCor] = useState(corCartao);
+  const [tempApelido, setTempApelido] = useState(apelidoCartao);
+  const [tempFinal, setTempFinal] = useState(finalCartao);
+  const [tempNome, setTempNome] = useState(nomeCartao);
+  const [tempBandeira, setTempBandeira] = useState(bandeiraCartao);
 
   const [termoBusca, setTermoBusca] = useState('');
-  const [mesFiltro, setMesFiltro] = useState({ nome: 'Agosto', num: '08', ano: '2026' });
 
-  const listaMeses = [
-    { nome: 'Agosto', num: '08', ano: '2026' },
-    { nome: 'Julho', num: '07', ano: '2026' },
-    { nome: 'Junho', num: '06', ano: '2026' },
-    { nome: 'Maio', num: '05', ano: '2026' },
-    { nome: 'Abril', num: '04', ano: '2026' }
-  ];
+  const gerarListaMeses = () => {
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const lista = [];
+    const dataAtual = new Date();
+    
+    dataAtual.setMonth(dataAtual.getMonth() + 6);
+    let mes = dataAtual.getMonth();
+    let ano = dataAtual.getFullYear();
+
+    for (let i = 0; i < 18; i++) {
+      lista.push({
+        nome: nomesMeses[mes],
+        num: String(mes + 1).padStart(2, '0'),
+        ano: String(ano)
+      });
+      
+      mes--;
+      if (mes < 0) {
+        mes = 11;
+        ano--;
+      }
+    }
+    return lista;
+  };
+
+  const listaMeses = gerarListaMeses();
+
+  const [mesFiltro, setMesFiltro] = useState(() => {
+    const mesAtual = String(new Date().getMonth() + 1).padStart(2, '0');
+    const anoAtual = String(new Date().getFullYear());
+    return listaMeses.find(m => m.num === mesAtual && m.ano === anoAtual) || listaMeses[0];
+  });
+
+  // EFEITO PARA FOCAR NO MÊS ATUAL AO ABRIR A GAVETA DE MESES
+  useEffect(() => {
+    if (showMonthSelector) {
+      setTimeout(() => {
+        const el = document.getElementById('btn-mes-ativo');
+        if (el) {
+          el.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }
+      }, 50);
+    }
+  }, [showMonthSelector]);
 
   const [valorInput, setValorInput] = useState('');
   const [tituloInput, setTituloInput] = useState('');
@@ -37,6 +91,7 @@ function App() {
   const [dataInput, setDataInput] = useState(new Date().toISOString().substring(0,10));
   const [observacaoInput, setObservacaoInput] = useState('');
   const [ehRecorrente, setEhRecorrente] = useState(false);
+  const [editandoId, setEditandoId] = useState(null); 
   
   const [transacoes, setTransacoes] = useState([]);
 
@@ -98,8 +153,13 @@ function App() {
     return true;
   });
 
+  const transacoesDaAbaAtiva = transacoesDoMes.filter(t => {
+    if (isCardFlipped) return t.pagamento === 'Crédito';
+    return true; 
+  });
+
   const transacoesParaExibir = termoBusca 
-    ? transacoes.filter(t => {
+    ? transacoesDaAbaAtiva.filter(t => {
         const termo = termoBusca.toLowerCase();
         return (
           t.titulo.toLowerCase().includes(termo) ||
@@ -111,7 +171,7 @@ function App() {
           t.valor.toString().includes(termo)
         );
       })
-    : transacoesDoMes;
+    : transacoesDaAbaAtiva;
 
   const agruparTransacoesPorData = (lista) => {
     const grupos = {};
@@ -160,6 +220,38 @@ function App() {
   const receitasDoMes = transacoesDoMes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
   const despesasDoMes = transacoesDoMes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
 
+  const totalFaturaMes = transacoesDoMes.filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
+  const mesVencimentoFatura = String((Number(mesFiltro.num) % 12) + 1).padStart(2, '0');
+
+  const calcularStatusFatura = () => {
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+    const anoAtual = hoje.getFullYear();
+    const diaAtual = hoje.getDate();
+
+    const fMes = Number(mesFiltro.num);
+    const fAno = Number(mesFiltro.ano);
+
+    let mesVenc = fMes + 1;
+    let anoVenc = fAno;
+    if (mesVenc > 12) {
+      mesVenc = 1;
+      anoVenc++;
+    }
+
+    if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual > Number(diaVencimento))) {
+      return { texto: 'Paga', cor: 'text-emerald' };
+    } 
+    else if (anoAtual > fAno || (anoAtual === fAno && mesAtual > fMes)) {
+      return { texto: 'Fechada', cor: 'text-danger' };
+    } 
+    else {
+      return { texto: 'Aberta', cor: 'text-warning' }; 
+    }
+  };
+
+  const statusFatura = calcularStatusFatura();
+
   const formatarMoeda = (valor) => {
     return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -198,19 +290,42 @@ function App() {
     }
   };
 
-  const despesasPorCategoria = transacoesDoMes
+  const gerarHistoricoFaturas = () => {
+    const idx = listaMeses.findIndex(m => m.num === mesFiltro.num && m.ano === mesFiltro.ano);
+    if(idx === -1) return [];
+    
+    const mesesHistorico = listaMeses.slice(idx, idx + 5).reverse(); 
+
+    return mesesHistorico.map(mes => {
+      const total = transacoes
+        .filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa')
+        .filter(t => {
+           const partes = t.data.split('/');
+           return partes[1] === mes.num && partes[2] === mes.ano;
+        })
+        .reduce((acc, t) => acc + t.valor, 0);
+      return { nome: mes.nome.substring(0, 3).toUpperCase(), total, num: mes.num, ano: mes.ano };
+    });
+  };
+
+  const historicoData = isCardFlipped && abaGrafico === 1 ? gerarHistoricoFaturas() : [];
+  const maxFaturaHist = historicoData.length > 0 ? Math.max(...historicoData.map(h => h.total), 1) : 1;
+
+  const despesasGrafico = transacoesDaAbaAtiva
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.categoria] = (acc[t.categoria] || 0) + t.valor;
       return acc;
     }, {});
 
-  const despesasPorPagamento = transacoesDoMes
+  const pagamentosGrafico = transacoesDaAbaAtiva
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.pagamento] = (acc[t.pagamento] || 0) + t.valor;
       return acc;
     }, {});
+    
+  const totalDespesasAtivas = transacoesDaAbaAtiva.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
 
   const gerarBackgroundGrafico = (dados, mapaCores, total) => {
     if (total === 0) return '#27272a';
@@ -230,8 +345,8 @@ function App() {
     return `conic-gradient(${gradientStops.join(', ')})`;
   };
 
-  const backgroundGraficoCat = gerarBackgroundGrafico(despesasPorCategoria, coresCategorias, despesasDoMes);
-  const backgroundGraficoPag = gerarBackgroundGrafico(despesasPorPagamento, coresPagamento, despesasDoMes);
+  const backgroundGraficoCat = gerarBackgroundGrafico(despesasGrafico, coresCategorias, totalDespesasAtivas);
+  const backgroundGraficoPag = gerarBackgroundGrafico(pagamentosGrafico, coresPagamento, totalDespesasAtivas);
 
   const handleValorChange = (e) => {
     const apenasNumeros = e.target.value.replace(/\D/g, ''); 
@@ -251,7 +366,53 @@ function App() {
     setCategoriaInput('');
   };
 
-  // --- POST: SALVAR DADOS NO BANCO ---
+  const handleSalvarConfigCartao = () => {
+    setDiaVencimento(String(tempDiaVencimento).padStart(2, '0'));
+    setCorCartao(tempCor);
+    setApelidoCartao(tempApelido);
+    setFinalCartao(tempFinal || '0000');
+    setNomeCartao(tempNome.toUpperCase());
+    setBandeiraCartao(tempBandeira);
+    setShowCardSettings(false);
+  };
+
+  const renderLogoBandeira = () => {
+    if (bandeiraCartao === 'Visa') {
+      return <div className="text-white fw-bold fst-italic" style={{ fontSize: '24px', letterSpacing: '-1px', textShadow: '1px 1px 2px rgba(0,0,0,0.5)', marginRight: '5px' }}>VISA</div>;
+    }
+    if (bandeiraCartao === 'Elo') {
+      return (
+        <div className="d-flex align-items-center justify-content-center" style={{ width: '42px', height: '26px', backgroundColor: '#000', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.2)', marginRight: '5px' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #00a4e0', marginLeft: '4px' }}></div>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #ffb71b', marginLeft: '-6px', zIndex: 1 }}></div>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #ef3340', marginLeft: '-6px', zIndex: 2 }}></div>
+        </div>
+      );
+    }
+    return (
+      <div className="d-flex" style={{ marginRight: '5px' }}>
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#eb001b', opacity: 0.8, marginRight: '-10px', zIndex: 1 }}></div>
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#f79e1b', opacity: 0.8 }}></div>
+      </div>
+    );
+  };
+
+  const handleAbrirEdicao = () => {
+    setValorInput((transacaoSelecionada.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setTituloInput(transacaoSelecionada.titulo);
+    setCategoriaInput(transacaoSelecionada.categoria);
+    setPagamentoInput(transacaoSelecionada.pagamento);
+    const [dia, mes, ano] = transacaoSelecionada.data.split('/');
+    setDataInput(`${ano}-${mes}-${dia}`);
+    setObservacaoInput(transacaoSelecionada.observacao || '');
+    setTipoTransacao(transacaoSelecionada.tipo);
+    setEhRecorrente(transacaoSelecionada.recorrente);
+    setEditandoId(transacaoSelecionada.id);
+
+    setTransacaoSelecionada(null); 
+    setShowBottomSheet(true);      
+  };
+
   const handleConfirmarLancamento = async () => {
     if (!valorInput || !tituloInput || !categoriaInput || !pagamentoInput) {
       alert("Por favor, preencha o valor, título, categoria e forma de pagamento!");
@@ -259,19 +420,12 @@ function App() {
     }
 
     const valorNumerico = parseFloat(valorInput.replace(/\./g, '').replace(',', '.'));
-    
-    const tituloFormatado = tituloInput
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    
+    const tituloFormatado = tituloInput.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     const dataHoraLocal = `${dataInput}T${horaAtual}:00`;
 
-    // CORREÇÃO: contaOrigemId deve SEMPRE ser enviada, pois no SQL ela é NOT NULL
     const payloadParaAPI = {
+      id: editandoId || 0,
       usuarioId: USUARIO_MOCK_ID,
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
@@ -286,27 +440,57 @@ function App() {
     };
 
     try {
-      const response = await axios.post(API_URL, payloadParaAPI);
-      
-      const dataQuebradaRetorno = response.data.dataTransacao.split('T');
-      const dataBrutaRetorno = dataQuebradaRetorno[0].split('-');
-      const dataCertaRetorno = `${dataBrutaRetorno[2]}/${dataBrutaRetorno[1]}/${dataBrutaRetorno[0]}`;
-      const horaCertaRetorno = dataQuebradaRetorno[1].substring(0, 5);
-      
-      const novaTransacao = {
-        id: response.data.id,
-        titulo: response.data.descricao,
-        categoria: categoriaInput, 
-        pagamento: pagamentoInput, 
-        observacao: response.data.observacao || '',
-        data: dataCertaRetorno,
-        hora: horaCertaRetorno,
-        valor: response.data.valor, 
-        tipo: response.data.tipo,
-        recorrente: response.data.ehRecorrente
-      };
+      if (editandoId) {
+        await axios.put(`${API_URL}/${editandoId}`, payloadParaAPI);
+        
+        const dataCertaRetorno = `${dataInput.split('-')[2]}/${dataInput.split('-')[1]}/${dataInput.split('-')[0]}`;
+        const transacaoAtualizada = {
+          id: editandoId,
+          titulo: tituloFormatado,
+          categoria: categoriaInput, 
+          pagamento: pagamentoInput, 
+          observacao: observacaoInput,
+          data: dataCertaRetorno,
+          hora: horaAtual,
+          valor: valorNumerico, 
+          tipo: tipoTransacao,
+          recorrente: ehRecorrente
+        };
 
-      setTransacoes([novaTransacao, ...transacoes]);
+        setTransacoes(transacoes.map(t => t.id === editandoId ? transacaoAtualizada : t));
+      } else {
+        const parcelas = ehRecorrente ? 12 : 1;
+        let primeiraTransacaoSalva = null;
+
+        for (let i = 0; i < parcelas; i++) {
+          const dataParcela = new Date(`${dataInput}T12:00:00`);
+          dataParcela.setMonth(dataParcela.getMonth() + i);
+          const dataFormatada = dataParcela.toISOString().substring(0, 10);
+          
+          const payloadCriacao = { ...payloadParaAPI, dataTransacao: `${dataFormatada}T${horaAtual}:00` };
+          const response = await axios.post(API_URL, payloadCriacao);
+          
+          if (i === 0) primeiraTransacaoSalva = response.data;
+        }
+        
+        if (primeiraTransacaoSalva) {
+          const dataQuebradaRetorno = primeiraTransacaoSalva.dataTransacao.split('T');
+          const dataBrutaRetorno = dataQuebradaRetorno[0].split('-');
+          const novaTransacao = {
+            id: primeiraTransacaoSalva.id,
+            titulo: primeiraTransacaoSalva.descricao,
+            categoria: categoriaInput, 
+            pagamento: pagamentoInput, 
+            observacao: primeiraTransacaoSalva.observacao || '',
+            data: `${dataBrutaRetorno[2]}/${dataBrutaRetorno[1]}/${dataBrutaRetorno[0]}`,
+            hora: dataQuebradaRetorno[1].substring(0, 5),
+            valor: primeiraTransacaoSalva.valor, 
+            tipo: primeiraTransacaoSalva.tipo,
+            recorrente: primeiraTransacaoSalva.ehRecorrente
+          };
+          setTransacoes(transacoesAntigas => [novaTransacao, ...transacoesAntigas]);
+        }
+      }
       
       setValorInput('');
       setTituloInput('');
@@ -314,6 +498,7 @@ function App() {
       setPagamentoInput('');
       setObservacaoInput('');
       setEhRecorrente(false);
+      setEditandoId(null);
       setShowBottomSheet(false);
       
       const mesNovo = dataInput.split('-')[1];
@@ -323,11 +508,10 @@ function App() {
 
     } catch (error) {
       console.error("Erro ao salvar transação:", error);
-      alert("Houve um erro ao tentar salvar o lançamento. Verifique se a API está rodando.");
+      alert("Houve um erro ao salvar. Verifique se a API está rodando.");
     }
   };
 
-  // --- DELETE: APAGAR DADO NO BANCO ---
   const handleEfetuarExclusao = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
@@ -344,6 +528,36 @@ function App() {
   return (
     <div className="app-container pt-4 px-3">
       
+      <style>{`
+        .flip-container {
+          perspective: 1000px;
+          margin-bottom: 1.5rem;
+          cursor: pointer;
+        }
+        .flip-card-inner {
+          position: relative;
+          width: 100%;
+          min-height: 210px;
+          transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+          transform-style: preserve-3d;
+        }
+        .flip-card-front, .flip-card-back {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          backface-visibility: hidden;
+          border-radius: 1rem;
+        }
+        .flip-card-front {
+          transform: rotateY(0deg);
+        }
+        .flip-card-back {
+          transform: rotateY(180deg);
+        }
+      `}</style>
+
       {/* HEADER */}
       <header className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center">
@@ -364,26 +578,83 @@ function App() {
         </button>
       </header>
 
-      {/* CARD PRINCIPAL */}
-      <section className="card dark-card p-4 mb-4">
-        <p className="text-light opacity-75 mb-1">Saldo atual</p>
-        <h1 className="mb-4 fw-bold text-white">
-          {showBalance ? formatarMoeda(saldoAtual) : 'R$ •••••••'}
-        </h1>
-        
-        <div className="d-flex justify-content-between">
-          <div>
-             <small className="text-light opacity-75 d-block mb-1">Receitas ({mesFiltro.nome}) ↙</small>
-             <span className="text-emerald fw-bold">
-               {showBalance ? formatarMoeda(receitasDoMes) : 'R$ •••••'}
-             </span>
+      {/* CARD PRINCIPAL COM FLIP */}
+      <section className="flip-container" onClick={() => setIsCardFlipped(!isCardFlipped)}>
+        <div className="flip-card-inner" style={{ transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+          
+          <div className="flip-card-front card dark-card p-4">
+            <p className="text-light opacity-75 mb-1">Saldo atual livre</p>
+            <h1 className="mb-4 fw-bold text-white">
+              {showBalance ? formatarMoeda(saldoAtual) : 'R$ •••••••'}
+            </h1>
+            
+            <div className="d-flex justify-content-between">
+              <div>
+                 <small className="text-light opacity-75 d-block mb-1">Receitas ({mesFiltro.nome}) ↙</small>
+                 <span className="text-emerald fw-bold">
+                   {showBalance ? formatarMoeda(receitasDoMes) : 'R$ •••••'}
+                 </span>
+              </div>
+              <div className="text-end">
+                 <small className="text-light opacity-75 d-block mb-1">Despesas ({mesFiltro.nome}) ↗</small>
+                 <span className="text-white fw-bold">
+                   {showBalance ? formatarMoeda(despesasDoMes) : 'R$ •••••'}
+                 </span>
+              </div>
+            </div>
           </div>
-          <div className="text-end">
-             <small className="text-light opacity-75 d-block mb-1">Despesas ({mesFiltro.nome}) ↗</small>
-             <span className="text-white fw-bold">
-               {showBalance ? formatarMoeda(despesasDoMes) : 'R$ •••••'}
-             </span>
+
+          <div 
+            className="flip-card-back shadow-lg" 
+            style={{ 
+              background: corCartao, 
+              padding: '1.25rem', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'space-between', 
+              borderRadius: '1rem',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-start">
+              <span className="text-white fw-bold opacity-75" style={{ fontSize: '1rem' }}>{apelidoCartao}</span>
+              <button 
+                className="btn btn-link p-0 text-white shadow-none" 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setShowCardSettings(true); 
+                }}
+              >
+                <FiMoreVertical size={22} />
+              </button>
+            </div>
+
+            <div className="text-center my-2">
+              <small className="text-light opacity-75 d-block mb-1" style={{ fontSize: '0.8rem' }}>Fatura de {mesFiltro.nome}</small>
+              <h2 className="mb-1 fw-bold text-white" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.4)' }}>
+                {showBalance ? formatarMoeda(totalFaturaMes) : 'R$ •••••••'}
+              </h2>
+              <div className="d-flex justify-content-center align-items-center gap-2 mt-1" style={{ fontSize: '0.75rem' }}>
+                <span className="text-light opacity-75">Vence: {diaVencimento}/{mesVencimentoFatura}</span>
+                <span className={`badge bg-dark bg-opacity-25 border border-light border-opacity-25 ${statusFatura.cor}`}>
+                  {statusFatura.texto}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-auto">
+              <h5 className="text-white mb-2 fw-bold opacity-75" style={{ letterSpacing: '2px', fontSize: '1.1rem' }}>
+                **** **** **** {finalCartao}
+              </h5>
+              <div className="d-flex justify-content-between align-items-end">
+                <small className="text-light opacity-75 text-uppercase fw-bold m-0 p-0" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
+                  {nomeCartao}
+                </small>
+                {renderLogoBandeira()}
+              </div>
+            </div>
           </div>
+
         </div>
       </section>
 
@@ -391,9 +662,14 @@ function App() {
       <section className="card dark-card p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div>
-            <small className="text-light opacity-75 d-block" style={{ fontSize: '11px' }}>Este mês</small>
+            <small className="text-light opacity-75 d-block" style={{ fontSize: '11px' }}>
+              {isCardFlipped ? 'Este mês (Cartão)' : 'Este mês (Geral)'}
+            </small>
             <h6 className="mb-0 fw-bold text-white">
-              {abaGrafico === 0 ? 'Distribuição por Categoria' : 'Formas de Pagamento'}
+              {isCardFlipped 
+                ? (abaGrafico === 0 ? 'Distribuição por Categoria' : 'Histórico de Faturas') 
+                : (abaGrafico === 0 ? 'Distribuição por Categoria' : 'Formas de Pagamento')
+              }
             </h6>
           </div>
           
@@ -433,6 +709,7 @@ function App() {
           </div>
         </div>
 
+        {/* ABA 0: SEMPRE CATEGORIAS (Cartão ou Geral) */}
         {abaGrafico === 0 && (
           <div 
             className="d-flex align-items-center justify-content-between mt-3"
@@ -455,11 +732,11 @@ function App() {
             </div>
 
             <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
-              {despesasDoMes === 0 ? (
+              {totalDespesasAtivas === 0 ? (
                 <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
               ) : (
-                Object.entries(despesasPorCategoria).map(([cat, valor]) => {
-                  const porcentagem = ((valor / despesasDoMes) * 100).toFixed(0);
+                Object.entries(despesasGrafico).map(([cat, valor]) => {
+                  const porcentagem = ((valor / totalDespesasAtivas) * 100).toFixed(0);
                   const corCat = coresCategorias[cat] || '#6b7280';
                   return (
                     <div key={cat} className="d-flex align-items-center justify-content-between">
@@ -475,7 +752,41 @@ function App() {
           </div>
         )}
 
-        {abaGrafico === 1 && (
+        {/* ABA 1 + CARTÃO: HISTÓRICO DE FATURAS SEM BARRAS CLICÁVEIS */}
+        {abaGrafico === 1 && isCardFlipped && (
+          <div 
+            className="d-flex justify-content-between align-items-end mt-3 pb-1"
+            style={{ height: '110px', padding: '0 10px' }}
+          >
+            {historicoData.map((hist, i) => {
+              const heightPct = Math.max((hist.total / maxFaturaHist) * 100, 5);
+              return (
+                <div 
+                  key={i} 
+                  className="d-flex flex-column align-items-center justify-content-end" 
+                  style={{ height: '100%' }}
+                >
+                  <span className="text-light opacity-75 mb-2" style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
+                    {hist.total > 0 ? `R$ ${Math.round(hist.total)}` : '-'}
+                  </span>
+                  <div 
+                    style={{ 
+                      width: '14px', 
+                      height: `${heightPct}%`, 
+                      backgroundColor: i === 4 ? '#4f46e5' : '#3f3f46', 
+                      borderRadius: '4px 4px 0 0',
+                      transition: 'height 0.5s ease-in-out'
+                    }}
+                  ></div>
+                  <span className="text-white mt-2 fw-bold opacity-75" style={{ fontSize: '10px' }}>{hist.nome}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ABA 1 + GERAL: FORMAS DE PAGAMENTO */}
+        {abaGrafico === 1 && !isCardFlipped && (
           <div 
             className="d-flex align-items-center justify-content-between mt-3"
             style={{ cursor: 'pointer' }}
@@ -497,11 +808,11 @@ function App() {
             </div>
 
             <div className="d-flex flex-column gap-2" style={{ fontSize: '13px', width: '160px' }}>
-              {despesasDoMes === 0 ? (
+              {totalDespesasAtivas === 0 ? (
                 <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
               ) : (
-                Object.entries(despesasPorPagamento).map(([pag, valor]) => {
-                  const porcentagem = ((valor / despesasDoMes) * 100).toFixed(0);
+                Object.entries(pagamentosGrafico).map(([pag, valor]) => {
+                  const porcentagem = ((valor / totalDespesasAtivas) * 100).toFixed(0);
                   const corPag = coresPagamento[pag] || '#6b7280';
                   return (
                     <div key={pag} className="d-flex align-items-center justify-content-between">
@@ -535,7 +846,10 @@ function App() {
       <section className="mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className="text-white mb-0 fw-bold">
-            {termoBusca ? 'Resultados da busca' : `Transações de ${mesFiltro.nome}`}
+            {termoBusca 
+              ? 'Resultados da busca' 
+              : (isCardFlipped ? `Gastos no Cartão - ${mesFiltro.nome}` : `Transações Gerais - ${mesFiltro.nome}`)
+            }
           </h6>
         </div>
         
@@ -548,12 +862,10 @@ function App() {
           transacoesAgrupadas.map(grupo => (
             <div key={grupo.dataString} className="mb-4">
               
-              {/* CABEÇALHO DA DATA DO GRUPO */}
               <small className="text-light opacity-50 fw-bold d-block mb-2 ms-2">
                 {formatarCabecalhoData(grupo.dataString)}
               </small>
 
-              {/* TRANSAÇÕES DESTE DIA */}
               {grupo.transacoes.map((t) => (
                 <div 
                   key={t.id} 
@@ -570,7 +882,6 @@ function App() {
                         <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
                       </div>
                   </div>
-                  {/* APENAS O VALOR (SEM DATA REDUNDANTE) */}
                   <div className="text-end">
                     <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
                       {showBalance 
@@ -614,7 +925,7 @@ function App() {
               <FiChevronRight className="text-light opacity-75" />
             </div>
             <div className="d-flex align-items-center justify-content-between p-3 dark-card" style={{ cursor: 'pointer' }}>
-              <div className="d-flex align-items-center gap-3"><FiSettings className="text-emerald" size={20} /><span className="text-white">Configurações</span></div>
+              <div className="d-flex align-items-center gap-3"><FiSettings className="text-emerald" size={20} /><span className="text-white">Configurações globais</span></div>
               <FiChevronRight className="text-light opacity-75" />
             </div>
           </div>
@@ -624,23 +935,138 @@ function App() {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* GAVETA DE MÊS */}
+      {/* GAVETA: CONFIGURAÇÕES DO CARTÃO DE CRÉDITO */}
       <Offcanvas 
-        show={showMonthSelector} 
-        onHide={() => setShowMonthSelector(false)} 
+        show={showCardSettings} 
+        onHide={() => { 
+          setShowCardSettings(false); 
+          setTempDiaVencimento(diaVencimento); 
+          setTempCor(corCartao);
+          setTempApelido(apelidoCartao);
+          setTempFinal(finalCartao);
+          setTempNome(nomeCartao);
+          setTempBandeira(bandeiraCartao);
+        }} 
         placement="bottom" 
         style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
       >
         <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
-          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Selecione o Mês</Offcanvas.Title>
+          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white d-flex align-items-center justify-content-center gap-2">
+            <FiSettings /> Configurar Cartão
+          </Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body>
+          <div className="d-flex flex-column gap-3 mb-4 mt-2">
+            
+            <div className="row g-2">
+              <div className="col-8">
+                <label className="form-label text-light opacity-75 small mb-1">Apelido do Cartão</label>
+                <input 
+                  type="text" 
+                  className="form-control bg-dark border-secondary text-white shadow-none" 
+                  value={tempApelido}
+                  onChange={(e) => setTempApelido(e.target.value)}
+                />
+              </div>
+              <div className="col-4">
+                <label className="form-label text-light opacity-75 small mb-1">Finais (4 dig)</label>
+                <input 
+                  type="text" 
+                  maxLength="4"
+                  className="form-control bg-dark border-secondary text-white shadow-none text-center fw-bold text-info" 
+                  value={tempFinal}
+                  onChange={(e) => setTempFinal(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+            </div>
+
+            <div className="row g-2">
+              <div className="col-7">
+                <label className="form-label text-light opacity-75 small mb-1">Nome impresso</label>
+                <input 
+                  type="text" 
+                  className="form-control bg-dark border-secondary text-white shadow-none text-uppercase" 
+                  value={tempNome}
+                  onChange={(e) => setTempNome(e.target.value)}
+                />
+              </div>
+              <div className="col-5">
+                <label className="form-label text-light opacity-75 small mb-1">Bandeira</label>
+                <select 
+                  className="form-select bg-dark border-secondary text-white shadow-none"
+                  value={tempBandeira}
+                  onChange={(e) => setTempBandeira(e.target.value)}
+                >
+                  <option value="Mastercard">Mastercard</option>
+                  <option value="Visa">Visa</option>
+                  <option value="Elo">Elo</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="row g-2">
+              <div className="col-5">
+                <label className="form-label text-light opacity-75 small mb-1">Vencimento</label>
+                <input 
+                  type="number"
+                  min="1"
+                  max="31"
+                  className="form-control bg-dark border-secondary text-white shadow-none"
+                  value={tempDiaVencimento}
+                  onChange={(e) => {
+                    let val = e.target.value.replace(/\D/g, '');
+                    if (val !== '' && parseInt(val, 10) > 31) val = '31';
+                    setTempDiaVencimento(val);
+                  }}
+                />
+              </div>
+              
+              <div className="col-7">
+                <label className="form-label text-light opacity-75 small mb-1">Cor do Cartão</label>
+                <select 
+                  className="form-select bg-dark border-secondary text-white shadow-none"
+                  value={tempCor}
+                  onChange={(e) => setTempCor(e.target.value)}
+                >
+                  <option value="linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)">Roxo (Padrão)</option>
+                  <option value="linear-gradient(135deg, #b45309 0%, #d97706 100%)">Ouro / Gold</option>
+                  <option value="linear-gradient(135deg, #064e3b 0%, #047857 100%)">Esmeralda</option>
+                  <option value="linear-gradient(135deg, #171717 0%, #3f3f46 100%)">Black</option>
+                  <option value="linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)">Vermelho</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          <button 
+            className="btn w-100 py-3 rounded-4 fw-bold shadow text-white"
+            style={{ backgroundColor: '#10b981' }}
+            onClick={handleSalvarConfigCartao}
+          >
+            Salvar Alterações
+          </button>
+        </Offcanvas.Body>
+      </Offcanvas>
+
+      {/* GAVETA DE MÊS COM SCROLL PARA NÃO CORTAR MESES ANTIGOS */}
+      <Offcanvas 
+        show={showMonthSelector} 
+        onHide={() => setShowMonthSelector(false)} 
+        placement="bottom" 
+        style={{ maxHeight: '75vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
+      >
+        <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
+          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Selecione o Mês</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body style={{ overflowY: 'auto' }}>
           <div className="d-flex flex-column gap-2 mt-2">
             {listaMeses.map((mes) => (
               <button 
-                key={mes.num}
-                className={`btn w-100 py-3 rounded-4 fw-bold shadow-sm ${mesFiltro.num === mes.num ? 'text-white' : 'btn-dark text-light'}`}
-                style={mesFiltro.num === mes.num ? { backgroundColor: '#10b981', borderColor: '#10b981' } : {}}
+                id={mesFiltro.num === mes.num && mesFiltro.ano === mes.ano ? 'btn-mes-ativo' : ''}
+                key={`${mes.num}-${mes.ano}`}
+                className={`btn w-100 py-3 rounded-4 fw-bold shadow-sm ${mesFiltro.num === mes.num && mesFiltro.ano === mes.ano ? 'text-white' : 'btn-dark text-light'}`}
+                style={mesFiltro.num === mes.num && mesFiltro.ano === mes.ano ? { backgroundColor: '#10b981', borderColor: '#10b981' } : {}}
                 onClick={() => {
                   setMesFiltro(mes);
                   setShowMonthSelector(false);
@@ -654,17 +1080,22 @@ function App() {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* GAVETA NOVO LANÇAMENTO */}
+      {/* GAVETA: NOVO / EDITAR LANÇAMENTO */}
       <Offcanvas 
         show={showBottomSheet} 
-        onHide={() => setShowBottomSheet(false)} 
+        onHide={() => {
+          setShowBottomSheet(false);
+          setEditandoId(null);
+        }} 
         placement="bottom" 
-        style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
+        style={{ maxHeight: '85vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
       >
         <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
-          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Novo Lançamento</Offcanvas.Title>
+          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">
+            {editandoId ? 'Editar Lançamento' : 'Novo Lançamento'}
+          </Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body>
+        <Offcanvas.Body style={{ overflowY: 'auto', paddingBottom: '20px' }}>
           <div className="d-flex justify-content-center mb-4 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '250px' }}>
             <button 
               className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'despesa' ? 'text-white' : 'text-light opacity-50'}`} 
@@ -776,30 +1207,32 @@ function App() {
             </div>
           </div>
 
-          <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-4">
-            <label className="form-check-label text-light opacity-75 ms-0" htmlFor="recorrente">É uma transação fixa/recorrente?</label>
-            <input 
-              className="form-check-input ms-3 shadow-none mt-0" 
-              type="checkbox" 
-              role="switch" 
-              id="recorrente" 
-              style={{ width: '45px', height: '24px', cursor: 'pointer' }}
-              checked={ehRecorrente}
-              onChange={(e) => setEhRecorrente(e.target.checked)}
-            />
-          </div>
+          {!editandoId && (
+            <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-4">
+              <label className="form-check-label text-light opacity-75 ms-0" htmlFor="recorrente">É uma transação fixa/recorrente?</label>
+              <input 
+                className="form-check-input ms-3 shadow-none mt-0" 
+                type="checkbox" 
+                role="switch" 
+                id="recorrente" 
+                style={{ width: '45px', height: '24px', cursor: 'pointer' }}
+                checked={ehRecorrente}
+                onChange={(e) => setEhRecorrente(e.target.checked)}
+              />
+            </div>
+          )}
 
           <button 
             className="btn w-100 py-3 rounded-4 fw-bold shadow text-dark"
             style={{ backgroundColor: '#10b981' }}
             onClick={handleConfirmarLancamento}
           >
-            Confirmar Lançamento
+            {editandoId ? 'Salvar Alterações' : 'Confirmar Lançamento'}
           </button>
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* GAVETA DETALHES TRANSAÇÃO */}
+      {/* GAVETA DETALHES TRANSAÇÃO (COM MENU SUPERIOR) */}
       <Offcanvas 
         show={!!transacaoSelecionada} 
         onHide={() => { setTransacaoSelecionada(null); setConfirmandoExclusao(false); }} 
@@ -807,7 +1240,22 @@ function App() {
         style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
       >
         <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
-          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">Detalhes do Lançamento</Offcanvas.Title>
+          {/* BOTÃO DE OPÇÕES (TRES PONTINHOS) */}
+          <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white position-relative">
+            Detalhes do Lançamento
+            {!confirmandoExclusao && (
+              <button 
+                className="btn btn-link p-0 position-absolute end-0 top-0 text-white shadow-none opacity-75"
+                style={{ marginRight: '35px' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmandoExclusao(true); // Exibe opções
+                }}
+              >
+                <FiMoreVertical size={20} />
+              </button>
+            )}
+          </Offcanvas.Title>
         </Offcanvas.Header>
         
         {transacaoSelecionada && (
@@ -834,7 +1282,6 @@ function App() {
                 <span className="text-light opacity-75"><FiCalendar className="me-2"/> Data</span>
                 <span className="fw-bold text-white">{transacaoSelecionada.data}</span>
               </div>
-              {/* HORÁRIO CONTINUA AQUI NOS DETALHES */}
               {transacaoSelecionada.hora && (
                 <div className="d-flex justify-content-between mb-2">
                   <span className="text-light opacity-75"><FiClock className="me-2"/> Horário do Registro</span>
@@ -856,30 +1303,29 @@ function App() {
               </div>
             )}
 
-            {!confirmandoExclusao ? (
-              <button 
-                className="btn btn-outline-danger w-100 py-3 rounded-4 fw-bold shadow-sm"
-                onClick={() => setConfirmandoExclusao(true)}
-              >
-                Apagar Transação
-              </button>
-            ) : (
-              <div className="p-3 rounded-4 bg-dark border border-danger border-opacity-50 text-center">
-                <p className="text-light small mb-3 fw-bold d-flex align-items-center justify-content-center gap-2">
-                  Deseja realmente excluir este lançamento?
-                </p>
-                <div className="d-flex gap-2">
+            {/* OPÇÕES SECUNDÁRIAS OCULTAS ATRÁS DO CLIQUE */}
+            {confirmandoExclusao && (
+              <div className="p-3 rounded-4 bg-dark border border-secondary border-opacity-25 text-center">
+                <p className="text-light small mb-3 fw-bold">O que deseja fazer com este lançamento?</p>
+                <div className="d-flex flex-column gap-2">
                   <button 
-                    className="btn btn-secondary w-50 py-2 rounded-3 fw-bold text-white"
-                    onClick={() => setConfirmandoExclusao(false)}
+                    className="btn btn-secondary w-100 py-3 rounded-3 fw-bold text-white d-flex align-items-center justify-content-center gap-2"
+                    onClick={handleAbrirEdicao}
                   >
-                    Cancelar
+                    <FiEdit2 size={18} /> Editar dados
                   </button>
                   <button 
-                    className="btn btn-danger w-50 py-2 rounded-3 fw-bold text-white"
-                    onClick={() => handleEfetuarExclusao(transacaoSelecionada.id)}
+                    className="btn btn-outline-danger w-100 py-3 rounded-3 fw-bold text-danger d-flex align-items-center justify-content-center gap-2"
+                    onClick={() => {
+                      if(window.confirm('Tem certeza que deseja apagar? Essa ação não pode ser desfeita.')) {
+                        handleEfetuarExclusao(transacaoSelecionada.id);
+                      }
+                    }}
                   >
-                    Sim, apagar
+                    <FiTrash2 size={18} /> Excluir permanentemente
+                  </button>
+                  <button className="btn btn-link text-light opacity-75 mt-2" onClick={() => setConfirmandoExclusao(false)}>
+                    Cancelar
                   </button>
                 </div>
               </div>
