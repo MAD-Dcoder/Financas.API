@@ -8,10 +8,103 @@ import {
   FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText, 
   FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, 
   FiDollarSign, FiGift, FiChevronDown, FiSearch, FiClock, FiMoreVertical,
-  FiEdit2, FiTrash2
+  FiEdit2, FiTrash2, FiLock, FiMail, FiShield, FiBell, FiHelpCircle
 } from 'react-icons/fi';
 
 function App() {
+  // ==========================================
+  // CONSTANTES DA API
+  // ==========================================
+  const TRANSACOES_API_URL = 'https://localhost:7231/api/Transacoes';
+  const USUARIOS_API_URL = 'https://localhost:7231/api/Usuarios';
+
+  // ==========================================
+  // ESTADOS DE AUTENTICAÇÃO E LOGIN (FIRMO)
+  // ==========================================
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
+  
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  const [emailLogin, setEmailLogin] = useState('');
+  const [senhaLogin, setSenhaLogin] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const [nomeCadastro, setNomeCadastro] = useState('');
+  const [emailCadastro, setEmailCadastro] = useState('');
+  const [senhaCadastro, setSenhaCadastro] = useState('');
+  const [confirmaSenhaCadastro, setConfirmaSenhaCadastro] = useState('');
+  const [registerError, setRegisterError] = useState('');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+
+    if (!emailLogin || !senhaLogin) {
+      setLoginError('Preencha e-mail e senha para entrar!');
+      return;
+    }
+
+    try {
+      // Requisita o endpoint de login com senhaHash
+      const response = await axios.post(`${USUARIOS_API_URL}/login`, {
+        email: emailLogin,
+        senhaHash: senhaLogin // <- Mudança aqui
+      });
+      
+      setUsuarioLogado(response.data);
+      setIsLoggedIn(true);
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        setLoginError('E-mail ou senha inválidos. Tente novamente.');
+      } else {
+        setLoginError('Erro de conexão com o servidor.');
+      }
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setRegisterError('');
+
+    if (!nomeCadastro || !emailCadastro || !senhaCadastro || !confirmaSenhaCadastro) {
+      setRegisterError('Por favor, preencha todos os campos.');
+      return;
+    }
+
+    if (senhaCadastro !== confirmaSenhaCadastro) {
+      setRegisterError('As senhas não coincidem.');
+      return;
+    }
+
+    try {
+      // Envia os dados para o C# com senhaHash
+      const response = await axios.post(USUARIOS_API_URL, {
+        nome: nomeCadastro,
+        email: emailCadastro,
+        senhaHash: senhaCadastro // <- Mudança aqui
+      });
+
+      setUsuarioLogado(response.data);
+      setIsLoggedIn(true);
+    } catch (error) {
+      setRegisterError('Erro ao criar conta. Verifique os dados ou o servidor.');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUsuarioLogado(null);
+    setShowProfile(false); 
+    setLoginError('');
+    setRegisterError('');
+    setEmailLogin('');
+    setSenhaLogin('');
+  };
+
+  // ==========================================
+  // ESTADOS GERAIS DO APP FIRMO
+  // ==========================================
   const [showBalance, setShowBalance] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -25,9 +118,9 @@ function App() {
   const [showCardSettings, setShowCardSettings] = useState(false);
   const [diaVencimento, setDiaVencimento] = useState('09'); 
   const [corCartao, setCorCartao] = useState('linear-gradient(135deg, #b45309 0%, #d97706 100%)'); 
-  const [apelidoCartao, setApelidoCartao] = useState('magazineluiza');
+  const [apelidoCartao, setApelidoCartao] = useState('Cartão Principal');
   const [finalCartao, setFinalCartao] = useState('3911');
-  const [nomeCartao, setNomeCartao] = useState('MATHEUS A DUARTE');
+  const [nomeCartao, setNomeCartao] = useState('');
   const [bandeiraCartao, setBandeiraCartao] = useState('Mastercard'); 
 
   const [tempDiaVencimento, setTempDiaVencimento] = useState(diaVencimento);
@@ -72,7 +165,6 @@ function App() {
     return listaMeses.find(m => m.num === mesAtual && m.ano === anoAtual) || listaMeses[0];
   });
 
-  // EFEITO PARA FOCAR NO MÊS ATUAL AO ABRIR A GAVETA DE MESES
   useEffect(() => {
     if (showMonthSelector) {
       setTimeout(() => {
@@ -95,9 +187,6 @@ function App() {
   
   const [transacoes, setTransacoes] = useState([]);
 
-  const API_URL = 'https://localhost:7231/api/Transacoes';
-  const USUARIO_MOCK_ID = 1;
-
   const mapaCategoriasAPI = {
     'Alimentação': 1, 'Moto': 2, 'Carro': 3, 'Educação / Faculdade': 4,
     'Lazer': 5, 'Moradia': 6, 'Salário': 7, 'Vale (VR + VT)': 8,
@@ -113,8 +202,10 @@ function App() {
 
   useEffect(() => {
     const buscarTransacoes = async () => {
+      if (!isLoggedIn || !usuarioLogado) return;
+
       try {
-        const response = await axios.get(`${API_URL}/usuario/${USUARIO_MOCK_ID}`);
+        const response = await axios.get(`${TRANSACOES_API_URL}/usuario/${usuarioLogado.id}`);
         
         const transacoesDoBanco = response.data.map(t => {
           const dataQuebrada = t.dataTransacao.split('T');
@@ -143,7 +234,7 @@ function App() {
     };
 
     buscarTransacoes();
-  }, [mapaCategoriasAPIReverse, mapaContasAPIReverse]);
+  }, [isLoggedIn, usuarioLogado, mapaCategoriasAPIReverse, mapaContasAPIReverse]);
 
   const transacoesDoMes = transacoes.filter(t => {
     const partes = t.data.split('/');
@@ -426,7 +517,7 @@ function App() {
 
     const payloadParaAPI = {
       id: editandoId || 0,
-      usuarioId: USUARIO_MOCK_ID,
+      usuarioId: usuarioLogado.id, 
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
       categoriaId: mapaCategoriasAPI[categoriaInput],
@@ -441,7 +532,7 @@ function App() {
 
     try {
       if (editandoId) {
-        await axios.put(`${API_URL}/${editandoId}`, payloadParaAPI);
+        await axios.put(`${TRANSACOES_API_URL}/${editandoId}`, payloadParaAPI);
         
         const dataCertaRetorno = `${dataInput.split('-')[2]}/${dataInput.split('-')[1]}/${dataInput.split('-')[0]}`;
         const transacaoAtualizada = {
@@ -468,7 +559,7 @@ function App() {
           const dataFormatada = dataParcela.toISOString().substring(0, 10);
           
           const payloadCriacao = { ...payloadParaAPI, dataTransacao: `${dataFormatada}T${horaAtual}:00` };
-          const response = await axios.post(API_URL, payloadCriacao);
+          const response = await axios.post(TRANSACOES_API_URL, payloadCriacao);
           
           if (i === 0) primeiraTransacaoSalva = response.data;
         }
@@ -514,7 +605,7 @@ function App() {
 
   const handleEfetuarExclusao = async (id) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${TRANSACOES_API_URL}/${id}`);
       
       setTransacoes(transacoes.filter(t => t.id !== id));
       setTransacaoSelecionada(null);
@@ -525,6 +616,171 @@ function App() {
     }
   };
 
+  // ==========================================
+  // RENDERIZAÇÃO CONDICIONAL: TELA DE LOGIN / CADASTRO
+  // ==========================================
+  if (!isLoggedIn) {
+    if (isRegistering) {
+      return (
+        <div className="app-container d-flex flex-column align-items-center justify-content-center px-4" 
+             style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, #064e3b 0%, #121214 40%)' }}>
+          <div className="w-100" style={{ maxWidth: '400px', zIndex: 1 }}>
+            
+            <div className="text-center mb-4">
+              <h2 className="fw-bold text-white mb-1" style={{ letterSpacing: '1px' }}>Criar Conta</h2>
+              <p className="text-light opacity-50">Junte-se ao FIRMO</p>
+            </div>
+
+            <form onSubmit={handleRegister} className="card dark-card p-4 shadow-lg border border-secondary border-opacity-25" style={{ background: 'rgba(30, 30, 36, 0.7)', backdropFilter: 'blur(10px)' }}>
+              
+              {registerError && (
+                <div className="alert alert-danger py-2 small text-center border-0" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }} role="alert">
+                  {registerError}
+                </div>
+              )}
+
+              <div className="mb-3">
+                <label className="form-label text-light opacity-75 small mb-1">Nome Completo</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiUser /></span>
+                  <input 
+                    type="text" 
+                    className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                    placeholder="Seu nome"
+                    value={nomeCadastro}
+                    onChange={(e) => setNomeCadastro(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label text-light opacity-75 small mb-1">E-mail</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiMail /></span>
+                  <input 
+                    type="email" 
+                    className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                    placeholder="Seu e-mail"
+                    value={emailCadastro}
+                    onChange={(e) => setEmailCadastro(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label text-light opacity-75 small mb-1">Senha</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiLock /></span>
+                  <input 
+                    type="password" 
+                    className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                    placeholder="Crie uma senha"
+                    value={senhaCadastro}
+                    onChange={(e) => setSenhaCadastro(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="form-label text-light opacity-75 small mb-1">Confirmar Senha</label>
+                <div className="input-group">
+                  <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiLock /></span>
+                  <input 
+                    type="password" 
+                    className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                    placeholder="Repita a senha"
+                    value={confirmaSenhaCadastro}
+                    onChange={(e) => setConfirmaSenhaCadastro(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="btn w-100 py-3 rounded-4 fw-bold shadow text-white border-0" style={{ background: 'linear-gradient(to right, #10b981, #059669)' }}>
+                Criar Conta
+              </button>
+            </form>
+
+            <div className="text-center mt-4">
+              <p className="text-light opacity-50 small">
+                Já tem uma conta? <span onClick={() => setIsRegistering(false)} className="text-emerald fw-bold" style={{ cursor: 'pointer' }}>Entrar</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="app-container d-flex flex-column align-items-center justify-content-center px-4" 
+           style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, #064e3b 0%, #121214 40%)' }}>
+        <div className="w-100" style={{ maxWidth: '400px', zIndex: 1 }}>
+          
+          <div className="text-center mb-5">
+            <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-lg" 
+                 style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '36px' }}>
+              F
+            </div>
+            <h1 className="fw-bold text-white mb-1" style={{ letterSpacing: '3px' }}>FIRMO</h1>
+            <p className="text-light opacity-50" style={{ fontSize: '14px' }}>Controle financeiro pessoal</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="card dark-card p-4 shadow-lg border border-secondary border-opacity-25" style={{ background: 'rgba(30, 30, 36, 0.7)', backdropFilter: 'blur(10px)' }}>
+            
+            {loginError && (
+              <div className="alert alert-danger py-2 small text-center border-0" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }} role="alert">
+                {loginError}
+              </div>
+            )}
+
+            <div className="mb-3">
+              <label className="form-label text-light opacity-75 small mb-1">E-mail</label>
+              <div className="input-group">
+                <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiMail /></span>
+                <input 
+                  type="email" 
+                  className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                  placeholder="Seu e-mail"
+                  value={emailLogin}
+                  onChange={(e) => setEmailLogin(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="form-label text-light opacity-75 small mb-1">Senha</label>
+              <div className="input-group">
+                <span className="input-group-text bg-dark border-secondary border-opacity-25 text-light opacity-50"><FiLock /></span>
+                <input 
+                  type="password" 
+                  className="form-control bg-dark border-secondary border-opacity-25 text-white shadow-none" 
+                  placeholder="Sua senha"
+                  value={senhaLogin}
+                  onChange={(e) => setSenhaLogin(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn w-100 py-3 rounded-4 fw-bold shadow text-white border-0" style={{ background: 'linear-gradient(to right, #10b981, #059669)' }}>
+              Entrar
+            </button>
+          </form>
+
+          <div className="text-center mt-4">
+            <p className="text-light opacity-50 small">
+              Ainda não tem conta? <span onClick={() => setIsRegistering(true)} className="text-emerald fw-bold" style={{ cursor: 'pointer' }}>Criar conta</span>
+            </p>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // RENDERIZAÇÃO: TELA PRINCIPAL (APP FIRMO)
+  // ==========================================
   return (
     <div className="app-container pt-4 px-3">
       
@@ -558,7 +814,7 @@ function App() {
         }
       `}</style>
 
-      {/* HEADER */}
+      {/* HEADER (COM NOME FIRMO APP E NOME DO USUÁRIO LOGADO) */}
       <header className="d-flex justify-content-between align-items-center mb-4">
         <div className="d-flex align-items-center">
           <div 
@@ -566,11 +822,11 @@ function App() {
             style={{ width: '48px', height: '48px', backgroundColor: '#10b981', color: '#121214', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer' }}
             onClick={() => setShowProfile(true)}
           >
-            M
+            {usuarioLogado.nome.charAt(0).toUpperCase()}
           </div>
           <div>
-            <span className="text-light opacity-75 small d-block" style={{ fontSize: '12px', letterSpacing: '1px' }}>BEM-VINDO</span>
-            <h5 className="mb-0 fw-bold text-white">Olá, Matheus</h5>
+            <span className="text-emerald small d-block fw-bold" style={{ fontSize: '11px', letterSpacing: '1px' }}>FIRMO APP</span>
+            <h5 className="mb-0 fw-bold text-white">Olá, {usuarioLogado.nome.split(' ')[0]}</h5>
           </div>
         </div>
         <button className="btn btn-link text-light opacity-75 p-0" onClick={() => setShowBalance(!showBalance)}>
@@ -582,6 +838,7 @@ function App() {
       <section className="flip-container" onClick={() => setIsCardFlipped(!isCardFlipped)}>
         <div className="flip-card-inner" style={{ transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
           
+          {/* FRENTE: SALDO GERAL */}
           <div className="flip-card-front card dark-card p-4">
             <p className="text-light opacity-75 mb-1">Saldo atual livre</p>
             <h1 className="mb-4 fw-bold text-white">
@@ -604,6 +861,7 @@ function App() {
             </div>
           </div>
 
+          {/* COSTAS: CARTÃO DE CRÉDITO REALISTA */}
           <div 
             className="flip-card-back shadow-lg" 
             style={{ 
@@ -648,7 +906,7 @@ function App() {
               </h5>
               <div className="d-flex justify-content-between align-items-end">
                 <small className="text-light opacity-75 text-uppercase fw-bold m-0 p-0" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
-                  {nomeCartao}
+                  {nomeCartao || (usuarioLogado ? usuarioLogado.nome : '')}
                 </small>
                 {renderLogoBandeira()}
               </div>
@@ -908,29 +1166,87 @@ function App() {
         <div className="nav-icon"><FiCreditCard size={28} /></div>
       </nav>
 
-      {/* MENU PERFIL */}
-      <Offcanvas show={showProfile} onHide={() => setShowProfile(false)} placement="start" style={{ backgroundColor: '#1e1e24', color: '#fff', maxWidth: '300px' }}>
-        <Offcanvas.Header closeButton closeVariant="white" className="border-bottom border-secondary border-opacity-25">
-          <Offcanvas.Title className="fw-bold">Menu</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="position-relative">
-          <div className="text-center mb-5 mt-3">
-            <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow" style={{ width: '80px', height: '80px', backgroundColor: '#10b981', color: '#121214', fontWeight: 'bold', fontSize: '32px' }}>M</div>
-            <h5 className="fw-bold mb-1 text-white">Matheus Aurélio Duarte</h5>
-            <small className="text-light opacity-75">matheus@teste.com</small>
-          </div>
-          <div className="d-flex flex-column gap-3">
-            <div className="d-flex align-items-center justify-content-between p-3 dark-card" style={{ cursor: 'pointer' }}>
-              <div className="d-flex align-items-center gap-3"><FiUser className="text-emerald" size={20} /><span className="text-white">Meus Dados</span></div>
-              <FiChevronRight className="text-light opacity-75" />
+      {/* MENU PERFIL (DESIGN PREMIUM BANCOS) */}
+      <Offcanvas 
+        show={showProfile} 
+        onHide={() => setShowProfile(false)} 
+        placement="start" 
+        style={{ backgroundColor: '#1e1e24', color: '#fff', maxWidth: '300px', borderRight: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <Offcanvas.Body className="p-0 d-flex flex-column">
+          
+          {/* CABEÇALHO DO PERFIL COM GLOW */}
+          <div className="p-4 text-center position-relative" style={{ background: 'linear-gradient(to bottom, rgba(16, 185, 129, 0.15), transparent)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <button 
+              className="btn btn-link position-absolute top-0 end-0 mt-3 me-2 text-white opacity-50 shadow-none"
+              onClick={() => setShowProfile(false)}
+            >
+              X
+            </button>
+            <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 mt-3 shadow-lg" 
+                 style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '32px' }}>
+              {usuarioLogado.nome.charAt(0).toUpperCase()}
             </div>
-            <div className="d-flex align-items-center justify-content-between p-3 dark-card" style={{ cursor: 'pointer' }}>
-              <div className="d-flex align-items-center gap-3"><FiSettings className="text-emerald" size={20} /><span className="text-white">Configurações globais</span></div>
-              <FiChevronRight className="text-light opacity-75" />
-            </div>
+            <h5 className="fw-bold mb-1 text-white">{usuarioLogado.nome}</h5>
+            <small className="text-light opacity-75">{usuarioLogado.email}</small>
           </div>
-          <div className="position-absolute bottom-0 start-0 w-100 p-4">
-            <button className="btn btn-outline-danger w-100 d-flex justify-content-center align-items-center gap-2 py-2"><FiLogOut /> Sair do App</button>
+
+          {/* LISTA DE OPÇÕES AGRUPADAS */}
+          <div className="px-3 pt-4 flex-grow-1 overflow-auto">
+            
+            <small className="text-light opacity-50 fw-bold ms-2 mb-2 d-block" style={{ fontSize: '11px', letterSpacing: '1px' }}>MINHA CONTA</small>
+            <div className="card dark-card bg-dark border-0 mb-4 shadow-sm" style={{ borderRadius: '1rem' }}>
+              <div className="d-flex align-items-center justify-content-between p-3 border-bottom border-secondary border-opacity-25" style={{ cursor: 'pointer' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle text-white d-flex align-items-center justify-content-center"><FiUser size={18} /></div>
+                  <span className="text-white" style={{ fontSize: '14px' }}>Meus Dados</span>
+                </div>
+                <FiChevronRight className="text-light opacity-50" />
+              </div>
+              <div className="d-flex align-items-center justify-content-between p-3 border-bottom border-secondary border-opacity-25" style={{ cursor: 'pointer' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle text-white d-flex align-items-center justify-content-center"><FiSettings size={18} /></div>
+                  <span className="text-white" style={{ fontSize: '14px' }}>Configurações Globais</span>
+                </div>
+                <FiChevronRight className="text-light opacity-50" />
+              </div>
+              <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle text-white d-flex align-items-center justify-content-center"><FiShield size={18} /></div>
+                  <span className="text-white" style={{ fontSize: '14px' }}>Segurança</span>
+                </div>
+                <FiChevronRight className="text-light opacity-50" />
+              </div>
+            </div>
+
+            <small className="text-light opacity-50 fw-bold ms-2 mb-2 d-block" style={{ fontSize: '11px', letterSpacing: '1px' }}>MAIS OPÇÕES</small>
+            <div className="card dark-card bg-dark border-0 mb-4 shadow-sm" style={{ borderRadius: '1rem' }}>
+              <div className="d-flex align-items-center justify-content-between p-3 border-bottom border-secondary border-opacity-25" style={{ cursor: 'pointer' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle text-white d-flex align-items-center justify-content-center"><FiBell size={18} /></div>
+                  <span className="text-white" style={{ fontSize: '14px' }}>Notificações</span>
+                </div>
+                <FiChevronRight className="text-light opacity-50" />
+              </div>
+              <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div className="bg-secondary bg-opacity-25 p-2 rounded-circle text-white d-flex align-items-center justify-content-center"><FiHelpCircle size={18} /></div>
+                  <span className="text-white" style={{ fontSize: '14px' }}>Central de Ajuda</span>
+                </div>
+                <FiChevronRight className="text-light opacity-50" />
+              </div>
+            </div>
+
+          </div>
+
+          <div className="p-4 mt-auto">
+            <button 
+              className="btn btn-outline-danger w-100 py-3 rounded-4 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 border border-danger text-danger"
+              style={{ background: 'transparent' }}
+              onClick={handleLogout}
+            >
+              <FiLogOut size={18} /> Sair do App
+            </button>
           </div>
         </Offcanvas.Body>
       </Offcanvas>
@@ -1088,14 +1404,14 @@ function App() {
           setEditandoId(null);
         }} 
         placement="bottom" 
-        style={{ maxHeight: '85vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
+        style={{ height: 'auto', maxHeight: '90vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
       >
         <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
           <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">
             {editandoId ? 'Editar Lançamento' : 'Novo Lançamento'}
           </Offcanvas.Title>
         </Offcanvas.Header>
-        <Offcanvas.Body style={{ overflowY: 'auto', paddingBottom: '20px' }}>
+        <Offcanvas.Body style={{ overflowY: 'auto', paddingBottom: '80px' }}>
           <div className="d-flex justify-content-center mb-4 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '250px' }}>
             <button 
               className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'despesa' ? 'text-white' : 'text-light opacity-50'}`} 
@@ -1249,7 +1565,7 @@ function App() {
                 style={{ marginRight: '35px' }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setConfirmandoExclusao(true); // Exibe opções
+                  setConfirmandoExclusao(true); 
                 }}
               >
                 <FiMoreVertical size={20} />

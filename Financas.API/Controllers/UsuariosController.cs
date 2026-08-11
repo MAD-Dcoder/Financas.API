@@ -33,4 +33,19 @@ public class UsuariosController : ControllerBase
 
         return CreatedAtAction(nameof(GetUsuarios), new { id = usuario.Id }, usuario);
     }
+    // POST: api/Usuarios/login
+    [HttpPost("login")]
+    public async Task<ActionResult<Usuario>> Login([FromBody] Usuario loginInfo)
+    {
+        // Agora ele busca usando SenhaHash
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Email == loginInfo.Email && u.SenhaHash == loginInfo.SenhaHash);
+
+        if (usuario == null)
+        {
+            return Unauthorized(new { message = "E-mail ou senha inválidos." });
+        }
+
+        return Ok(usuario);
+    }
 }
