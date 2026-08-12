@@ -24,8 +24,14 @@ function App() {
   
   // INICIALIZAÇÃO INTELIGENTE: Olha o LocalStorage antes de decidir a tela
   const [usuarioLogado, setUsuarioLogado] = useState(() => {
-    const savedUser = localStorage.getItem('firmo_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    const savedData = localStorage.getItem('firmo_user');
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      // Já gruda o token no Axios assim que abre o app!
+      axios.defaults.headers.common['Authorization'] = `Bearer ${parsedData.token}`;
+      return parsedData.usuario;
+    }
+    return null;
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -59,9 +65,16 @@ function App() {
         senhaHash: senhaLogin 
       });
       
+      // O C# agora vai devolver { token: "...", usuario: {...} }
+      const { token, usuario } = response.data;
+
       // SALVA NO BOLSO (LocalStorage) E NO ESTADO
-      localStorage.setItem('firmo_user', JSON.stringify(response.data));
-      setUsuarioLogado(response.data);
+      localStorage.setItem('firmo_user', JSON.stringify({ token, usuario }));
+      
+      // Gruda o token no Axios para as próximas requisições
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      setUsuarioLogado(usuario);
       setIsLoggedIn(true);
     } catch (error) {
       if (error.response && error.response.status === 401) {
@@ -93,9 +106,16 @@ function App() {
         senhaHash: senhaCadastro 
       });
 
+      // O C# agora vai devolver { token: "...", usuario: {...} }
+      const { token, usuario } = response.data;
+
       // SALVA NO BOLSO (LocalStorage) E NO ESTADO
-      localStorage.setItem('firmo_user', JSON.stringify(response.data));
-      setUsuarioLogado(response.data);
+      localStorage.setItem('firmo_user', JSON.stringify({ token, usuario }));
+      
+      // Gruda o token no Axios para as próximas requisições
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      setUsuarioLogado(usuario);
       setIsLoggedIn(true);
     } catch (error) {
       setRegisterError('Erro ao criar conta. Verifique os dados ou o servidor.');
@@ -103,8 +123,9 @@ function App() {
   };
 
   const handleLogout = () => {
-    // APAGA DO BOLSO (LocalStorage)
+    // APAGA DO BOLSO E TIRA O TOKEN DO AXIOS
     localStorage.removeItem('firmo_user');
+    delete axios.defaults.headers.common['Authorization'];
     
     setIsLoggedIn(false);
     setUsuarioLogado(null);
@@ -242,6 +263,10 @@ function App() {
 
         setTransacoes(transacoesDoBanco);
       } catch (error) {
+        if(error.response && error.response.status === 401) {
+           handleLogout(); // Se o token estiver expirado ou inválido, desloga por segurança
+           alert("Sua sessão expirou, faça login novamente.");
+        }
         console.error("Erro ao buscar transações da API:", error);
       }
     };
@@ -1035,7 +1060,14 @@ function App() {
                 <div 
                   key={i} 
                   className="d-flex flex-column align-items-center justify-content-end" 
-                  style={{ height: '100%' }}
+                  style={{ height: '100%', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const objMes = listaMeses.find(m => m.num === hist.num && m.ano === hist.ano);
+                    if (objMes) {
+                      setMesFiltro(objMes);
+                    }
+                  }}
                 >
                   <span className="text-light opacity-75 mb-2" style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
                     {hist.total > 0 ? `R$ ${Math.round(hist.total)}` : '-'}
