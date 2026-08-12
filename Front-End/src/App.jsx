@@ -21,8 +21,16 @@ function App() {
   // ==========================================
   // ESTADOS DE AUTENTICAÇÃO E LOGIN (FIRMO)
   // ==========================================
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [usuarioLogado, setUsuarioLogado] = useState(null);
+  
+  // INICIALIZAÇÃO INTELIGENTE: Olha o LocalStorage antes de decidir a tela
+  const [usuarioLogado, setUsuarioLogado] = useState(() => {
+    const savedUser = localStorage.getItem('firmo_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('firmo_user');
+  });
   
   const [isRegistering, setIsRegistering] = useState(false);
   
@@ -46,12 +54,13 @@ function App() {
     }
 
     try {
-      // Requisita o endpoint de login com senhaHash
       const response = await axios.post(`${USUARIOS_API_URL}/login`, {
         email: emailLogin,
-        senhaHash: senhaLogin // <- Mudança aqui
+        senhaHash: senhaLogin 
       });
       
+      // SALVA NO BOLSO (LocalStorage) E NO ESTADO
+      localStorage.setItem('firmo_user', JSON.stringify(response.data));
       setUsuarioLogado(response.data);
       setIsLoggedIn(true);
     } catch (error) {
@@ -78,13 +87,14 @@ function App() {
     }
 
     try {
-      // Envia os dados para o C# com senhaHash
       const response = await axios.post(USUARIOS_API_URL, {
         nome: nomeCadastro,
         email: emailCadastro,
-        senhaHash: senhaCadastro // <- Mudança aqui
+        senhaHash: senhaCadastro 
       });
 
+      // SALVA NO BOLSO (LocalStorage) E NO ESTADO
+      localStorage.setItem('firmo_user', JSON.stringify(response.data));
       setUsuarioLogado(response.data);
       setIsLoggedIn(true);
     } catch (error) {
@@ -93,6 +103,9 @@ function App() {
   };
 
   const handleLogout = () => {
+    // APAGA DO BOLSO (LocalStorage)
+    localStorage.removeItem('firmo_user');
+    
     setIsLoggedIn(false);
     setUsuarioLogado(null);
     setShowProfile(false); 
@@ -822,11 +835,11 @@ function App() {
             style={{ width: '48px', height: '48px', backgroundColor: '#10b981', color: '#121214', fontWeight: 'bold', fontSize: '20px', cursor: 'pointer' }}
             onClick={() => setShowProfile(true)}
           >
-            {usuarioLogado.nome.charAt(0).toUpperCase()}
+            {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0).toUpperCase() : 'U'}
           </div>
           <div>
             <span className="text-emerald small d-block fw-bold" style={{ fontSize: '11px', letterSpacing: '1px' }}>FIRMO APP</span>
-            <h5 className="mb-0 fw-bold text-white">Olá, {usuarioLogado.nome.split(' ')[0]}</h5>
+            <h5 className="mb-0 fw-bold text-white">Olá, {usuarioLogado?.nome ? usuarioLogado.nome.split(' ')[0] : ''}</h5>
           </div>
         </div>
         <button className="btn btn-link text-light opacity-75 p-0" onClick={() => setShowBalance(!showBalance)}>
@@ -1185,10 +1198,10 @@ function App() {
             </button>
             <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 mt-3 shadow-lg" 
                  style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '32px' }}>
-              {usuarioLogado.nome.charAt(0).toUpperCase()}
+              {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0).toUpperCase() : 'U'}
             </div>
-            <h5 className="fw-bold mb-1 text-white">{usuarioLogado.nome}</h5>
-            <small className="text-light opacity-75">{usuarioLogado.email}</small>
+            <h5 className="fw-bold mb-1 text-white">{usuarioLogado?.nome}</h5>
+            <small className="text-light opacity-75">{usuarioLogado?.email}</small>
           </div>
 
           {/* LISTA DE OPÇÕES AGRUPADAS */}
