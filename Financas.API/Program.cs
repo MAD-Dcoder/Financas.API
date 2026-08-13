@@ -8,10 +8,22 @@ using System.Text;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-var builder = WebApplication.CreateBuilder(args);
+// --- CORREÇÃO PARA O RENDER ---
+var options = new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = "wwwroot"
+};
 
-// Adicione esta linha exata para o Render mandar o tráfego para a porta correta:
+var builder = WebApplication.CreateBuilder(options);
+
+// Desativa o recarregamento automático para evitar erro de limite de inotify no Linux do Render
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
+
+// Porta dinâmica para o Render
 builder.WebHost.UseUrls("http://0.0.0.0:" + (Environment.GetEnvironmentVariable("PORT") ?? "8080"));
+// ------------------------------
 
 // Permite aceitar os enums como texto no Swagger/JSON
 builder.Services.AddControllers()
@@ -34,12 +46,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configuração do CORS para permitir que o Front-end acesse a API
+// Configuração do CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontEnd", policy =>
     {
-        // Libera acesso apenas para o seu ambiente local e para a nuvem
         policy.WithOrigins("http://localhost:5173", "https://firmo-app.vercel.app")
               .AllowAnyMethod()
               .AllowAnyHeader();
@@ -49,9 +60,8 @@ builder.Services.AddCors(options =>
 // ==========================================
 // INÍCIO DA CONFIGURAÇÃO JWT
 // ==========================================
-var jwtKey = builder.Configuration["Jwt:Key"]; // <-- LENDO DO COFRE (appsettings.Development.json)
+var jwtKey = builder.Configuration["Jwt:Key"];
 var key = Encoding.ASCII.GetBytes(jwtKey);
-
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -81,14 +91,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Aplica a política de CORS criada lá em cima
 app.UseCors("PermitirFrontEnd");
-
-// IMPORTANTE: Authentication vem antes de Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
