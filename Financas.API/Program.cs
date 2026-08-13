@@ -51,7 +51,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontEnd", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://firmo-app.vercel.app")
+        policy.WithOrigins("http://localhost:5173", "financas-api-three.vercel.app")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
