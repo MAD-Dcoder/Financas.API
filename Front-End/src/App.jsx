@@ -15,8 +15,8 @@ function App() {
   // ==========================================
   // CONSTANTES DA API
   // ==========================================
-  const TRANSACOES_API_URL = 'https://localhost:7231/api/Transacoes';
-  const USUARIOS_API_URL = 'https://localhost:7231/api/Usuarios';
+const TRANSACOES_API_URL = 'https://financas-api-v5lj.onrender.com/api/Transacoes';
+const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
 
   // ==========================================
   // ESTADOS DE AUTENTICAÇÃO E LOGIN (FIRMO)
