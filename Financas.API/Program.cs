@@ -10,6 +10,9 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Adicione esta linha exata para o Render mandar o tráfego para a porta correta:
+builder.WebHost.UseUrls("http://0.0.0.0:" + (Environment.GetEnvironmentVariable("PORT") ?? "8080"));
+
 // Permite aceitar os enums como texto no Swagger/JSON
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
