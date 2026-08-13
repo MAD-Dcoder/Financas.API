@@ -14,7 +14,6 @@ var options = new WebApplicationOptions
     Args = args,
     WebRootPath = "wwwroot"
 };
-
 var builder = WebApplication.CreateBuilder(options);
 
 // Desativa o recarregamento automático para evitar erro de limite de inotify no Linux do Render
@@ -27,14 +26,14 @@ builder.WebHost.UseUrls("http://0.0.0.0:" + (Environment.GetEnvironmentVariable(
 
 // Permite aceitar os enums como texto no Swagger/JSON
 builder.Services.AddControllers()
-    .AddJsonOptions(options =>
+    .AddJsonOptions(jsonOptions =>
     {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        jsonOptions.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 // Configura a conexão e o mapeamento dos Enums com o Postgres
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(
+builder.Services.AddDbContext<AppDbContext>(dbOptions =>
+    dbOptions.UseNpgsql(
         builder.Configuration.GetConnectionString("PostgresConnection"),
         o =>
         {
@@ -46,12 +45,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configuração do CORS
-builder.Services.AddCors(options =>
+// ==========================================
+// CONFIGURAÇÃO DO CORS (ATUALIZADA)
+// ==========================================
+builder.Services.AddCors(corsOptions =>
 {
-    options.AddPolicy("PermitirFrontEnd", policy =>
+    corsOptions.AddPolicy("PermitirFrontEnd", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://financas-api-three.vercel.app")
+        // AllowAnyOrigin resolve definitivamente o bloqueio da Vercel
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -62,6 +64,7 @@ builder.Services.AddCors(options =>
 // ==========================================
 var jwtKey = builder.Configuration["Jwt:Key"];
 var key = Encoding.ASCII.GetBytes(jwtKey);
+
 builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -91,9 +94,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Aplica o CORS (Deve vir antes do UseAuthentication)
 app.UseCors("PermitirFrontEnd");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
