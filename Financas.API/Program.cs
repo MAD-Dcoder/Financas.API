@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Permite aceitar os enums como texto no Swagger/JSON
@@ -35,7 +36,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirFrontEnd", policy =>
     {
-        policy.AllowAnyOrigin()
+        // Libera acesso apenas para o seu ambiente local e para a nuvem
+        policy.WithOrigins("http://localhost:5173", "https://firmo-app.vercel.app")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -44,7 +46,7 @@ builder.Services.AddCors(options =>
 // ==========================================
 // INÍCIO DA CONFIGURAÇÃO JWT
 // ==========================================
-var jwtKey = builder.Configuration["Jwt:Key"]; // <-- LENDO DO COFRE (appsettings.json)
+var jwtKey = builder.Configuration["Jwt:Key"]; // <-- LENDO DO COFRE (appsettings.Development.json)
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(x =>
@@ -76,6 +78,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Aplica a política de CORS criada lá em cima
 app.UseCors("PermitirFrontEnd");
 
 // IMPORTANTE: Authentication vem antes de Authorization
@@ -83,4 +87,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 app.Run();
