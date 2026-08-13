@@ -10,7 +10,11 @@ public class AppDbContext : DbContext
 
     public DbSet<Transacao> Transacoes => Set<Transacao>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
-    public DbSet<Conta> Contas => Set<Conta>(); // <- Nova tabela
+    public DbSet<Conta> Contas => Set<Conta>();
+
+    // Adicionados para incluir as tabelas faltantes no banco e nas migrations
+    public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Planejamento> Planejamentos => Set<Planejamento>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,7 +24,7 @@ public class AppDbContext : DbContext
             .Property(t => t.Tipo)
             .HasColumnType("tipo_transacao");
 
-        // Enums de Conta (Novo)
+        // Enums de Conta
         modelBuilder.HasPostgresEnum<TipoConta>("tipo_conta");
         modelBuilder.Entity<Conta>()
             .Property(c => c.Tipo)

@@ -4,6 +4,7 @@ using Financas.API.Data;
 using Financas.API.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Financas.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813150522_AdicionarTabelasFaltantes")]
+    partial class AdicionarTabelasFaltantes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,26 +29,6 @@ namespace Financas.API.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "tipo_transacao", new[] { "despesa", "receita" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "tipo_transacao", "tipo_transacao", new[] { "despesa", "receita" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Financas.API.Models.Categoria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Categorias");
-                });
 
             modelBuilder.Entity("Financas.API.Models.Conta", b =>
                 {
@@ -72,31 +55,6 @@ namespace Financas.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("contas");
-                });
-
-            modelBuilder.Entity("Financas.API.Models.Planejamento", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoriaId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("MesAno")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("UsuarioId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("ValorLimite")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Planejamentos");
                 });
 
             modelBuilder.Entity("Financas.API.Models.Transacao", b =>
