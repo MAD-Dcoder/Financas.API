@@ -1,75 +1,43 @@
-💰 Financas.API & App
-Sistema completo de gestão financeira pessoal composto por uma API RESTful em C# (.NET) e uma interface web/mobile-first reativa em React, integrando banco de dados relacional e infraestrutura na nuvem.
+# 💰 Financas.API & App
 
-🛠️ Tecnologias & Arquitetura
-Back-end (API)
-C# / .NET 8 — Plataforma principal da API.
+> Sistema completo de gestão financeira pessoal composto por uma API RESTful em C# (.NET) e uma interface web/mobile-first reativa em React, integrando banco de dados relacional e infraestrutura na nuvem.
 
-Entity Framework Core & Npgsql — ORM e driver PostgreSQL com suporte nativo a tipos Enum.
+---
 
-JWT (JSON Web Token) — Autenticação estateless para proteção de rotas.
+## 🛠️ Tecnologias & Arquitetura
 
-Swagger / OpenAPI — Documentação e testes de endpoints em desenvolvimento.
+### ⚙️ Back-end (API)
+* **C# / .NET 8** — Plataforma principal da API.
+* **Entity Framework Core & Npgsql** — ORM e driver PostgreSQL com suporte nativo a tipos `Enum`.
+* **JWT (JSON Web Token)** — Autenticação stateless para proteção de rotas.
+* **Swagger / OpenAPI** — Documentação e testes de endpoints em desenvolvimento.
+* **Render** — Hospedagem automatizada em container Linux.
 
-Render — Hospedagem automatizada em container Linux.
+### 🎨 Front-end (Interface)
+* **React.js (Vite)** — Interface reativa e performática.
+* **Bootstrap 5 & React Icons** — Design responsivo no estilo *Dark Mode Tech*.
+* **Axios** — Consumo assíncrono da API com envio dinâmico de cabeçalhos de autenticação.
+* **Vercel** — Deploy contínuo e distribuição global do front-end.
 
-Front-end (Interface)
-React.js (Vite) — Interface reativa e performática.
+### ☁️ Banco de Dados & Nuvem
+* **PostgreSQL (Supabase)** — Banco relacional hospedado em nuvem com gerenciamento via DBeaver.
 
-Bootstrap 5 & React Icons — Design responsivo no estilo Dark Mode Tech.
+---
 
-Axios — Consumo assíncrono da API com envio dinâmico de cabeçalhos de autenticação.
+## 🔐 Segurança & Boas Práticas
 
-Vercel — Deploy contínuo e distribuição global do front-end.
+* **Autenticação JWT:** Acesso restrito a rotas protegidas exigindo token Bearer válido por sessão.
+* **Variáveis de Ambiente (`Environment Variables`):** Isolamento total de credenciais sensíveis (chaves JWT e *Connection Strings*) fora do código-fonte e do histórico do Git.
+* **Política de CORS Configurada:** Permissões de acesso controladas entre a API no Render e o Front-end na Vercel.
+* **Proteção contra SQL Injection:** Consultas parametrizadas via Entity Framework Core.
 
-Banco de Dados & Nuvem
-PostgreSQL (Supabase) — Banco relacional hospedado em nuvem com gerenciamento via DBeaver.
+---
 
-🔐 Segurança & Boas Práticas
-Autenticação JWT: Acesso restrito a rotas protegidas exigindo token Bearer válido por sessão.
+## ⚙️ Funcionalidades Principais
 
-Variáveis de Ambiente (Environment Variables): Isolamento total de credenciais sensíveis (chaves JWT e Connection Strings) fora do código-fonte e do histórico do Git.
+* **Gestão de Transações:** Lançamento de receitas e despesas com valor, data, forma de pagamento, observações e categorização.
+* **Dashboard Financeiro:** Cálculo em tempo real do saldo livre, total de receitas, despesas do mês e gráfico dinâmico por categoria.
+* **Privacidade Visual:** Alternância rápida com um clique para mascarar valores sensíveis na tela.
+* **Filtros e Histórico:** Listagem cronológica de transações com suporte a parcelamentos/recorrências.
 
-Política de CORS Configurada: Permissões de acesso controladas entre a API no Render e o Front-end na Vercel.
-
-Proteção contra SQL Injection: Consultas parametrizadas via Entity Framework Core.
-
-⚙️ Funcionalidades Principais
-Gestão de Transações: Lançamento de receitas e despesas com valor, data, forma de pagamento, observações e categorização.
-
-Dashboard Financeiro: Cálculo em tempo real do saldo livre, total de receitas, despesas do mês e gráfico dinâmico por categoria.
-
-Privacidade Visual: Alternância rápida com um clique para mascarar valores sensíveis na tela.
-
-Filtros e Histórico: Listagem cronológica de transações com suporte a parcelamentos/recorrências.
-
-🚀 Como Executar Localmente
-Pré-requisitos
-.NET 8.0 SDK
-
-Node.js (v18+)
-
-Instância do PostgreSQL
-
-1. Back-end (API)
-
-# Clone o repositório
-git clone https://github.com/MAD-Dcoder/Financas.API.git
-
-# Acesse a pasta do projeto
-cd Financas.API
-
-# Configure a ConnectionString no appsettings.Development.json
-# Execute a aplicação
-dotnet run
-
-2. Front-end
-
-# Acesse a pasta do front-end
-cd front-end
-
-# Instale as dependências
-npm install
-
-# Inicie o servidor de desenvolvimento
-npm run dev
+---
