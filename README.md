@@ -16,53 +16,76 @@
 graph TD
     A[Front-end React / Vercel] -->|Requisições HTTP / JWT| B[API .NET / Render]
     B -->|Entity Framework Core| C[(PostgreSQL / Supabase)]
+```
 
-    🛠️ Tecnologias & Arquitetura
-⚙️ Back-end (API)
-C# / .NET 8 — Plataforma principal da API.
+---
 
-Entity Framework Core & Npgsql — ORM e driver PostgreSQL com suporte nativo a tipos Enum.
+## 🛠️ Tecnologias & Arquitetura
 
-JWT (JSON Web Token) — Autenticação stateless para proteção de rotas.
+### ⚙️ Back-end (API)
+* **C# / .NET 8** — Plataforma principal da API.
+* **Entity Framework Core & Npgsql** — ORM e driver PostgreSQL com suporte nativo a tipos `Enum`.
+* **JWT (JSON Web Token)** — Autenticação stateless para proteção de rotas.
+* **Swagger / OpenAPI** — Documentação e testes de endpoints em desenvolvimento.
+* **Render** — Hospedagem automatizada em container Linux.
 
-Swagger / OpenAPI — Documentação e testes de endpoints em desenvolvimento.
+### 🎨 Front-end (Interface)
+* **React.js (Vite)** — Interface reativa e performática.
+* **Bootstrap 5 & React Icons** — Design responsivo no estilo *Dark Mode Tech*.
+* **Axios** — Consumo assíncrono da API com envio dinâmico de cabeçalhos de autenticação.
+* **Vercel** — Deploy contínuo e distribuição global do front-end.
 
-Render — Hospedagem automatizada em container Linux.
+### ☁️ Banco de Dados & Nuvem
+* **PostgreSQL (Supabase)** — Banco relacional hospedado em nuvem com gerenciamento via DBeaver.
 
-🎨 Front-end (Interface)
-React.js (Vite) — Interface reativa e performática.
+---
 
-Bootstrap 5 & React Icons — Design responsivo no estilo Dark Mode Tech.
+## 🔐 Segurança & Boas Práticas
 
-Axios — Consumo assíncrono da API com envio dinâmico de cabeçalhos de autenticação.
+* **Autenticação JWT:** Acesso restrito a rotas protegidas exigindo token Bearer válido por sessão.
+* **Variáveis de Ambiente (`Environment Variables`):** Isolamento total de credenciais sensíveis (chaves JWT e *Connection Strings*) fora do código-fonte e do histórico do Git.
+* **Política de CORS Configurada:** Permissões de acesso controladas entre a API no Render e o Front-end na Vercel.
+* **Proteção contra SQL Injection:** Consultas parametrizadas via Entity Framework Core.
 
-Vercel — Deploy contínuo e distribuição global do front-end.
+---
 
-☁️ Banco de Dados & Nuvem
-PostgreSQL (Supabase) — Banco relacional hospedado em nuvem com gerenciamento via DBeaver.
+## ⚙️ Funcionalidades Principais
 
-🔐 Segurança & Boas Práticas
-Autenticação JWT: Acesso restrito a rotas protegidas exigindo token Bearer válido por sessão.
+* **Gestão de Transações:** Lançamento de receitas e despesas com valor, data, forma de pagamento, observações e categorização.
+* **Dashboard Financeiro:** Cálculo em tempo real do saldo livre, total de receitas, despesas do mês e gráfico dinâmico por categoria.
+* **Privacidade Visual:** Alternância rápida com um clique para mascarar valores sensíveis na tela.
+* **Filtros e Histórico:** Listagem cronológica de transações com suporte a parcelamentos/recorrências.
 
-Variáveis de Ambiente (Environment Variables): Isolamento total de credenciais sensíveis (chaves JWT e Connection Strings) fora do código-fonte e do histórico do Git.
+---
 
-Política de CORS Configurada: Permissões de acesso controladas entre a API no Render e o Front-end na Vercel.
+## 🚀 Como Executar Localmente
 
-Proteção contra SQL Injection: Consultas parametrizadas via Entity Framework Core.
+### Pré-requisitos
+* [.NET 8.0 SDK](https://dotnet.microsoft.com/)
+* [Node.js](https://nodejs.org/) (v18+)
+* Instância do [PostgreSQL](https://www.postgresql.org/)
 
-⚙️ Funcionalidades Principais
-Gestão de Transações: Lançamento de receitas e despesas com valor, data, forma de pagamento, observações e categorização.
+### 1. Back-end (API)
+```bash
+# Clone o repositório
+git clone https://github.com/MAD-Dcoder/Financas.API.git
 
-Dashboard Financeiro: Cálculo em tempo real do saldo livre, total de receitas, despesas do mês e gráfico dinâmico por categoria.
+# Acesse a pasta do projeto
+cd Financas.API
 
-Privacidade Visual: Alternância rápida com um clique para mascarar valores sensíveis na tela.
+# Configure a ConnectionString no appsettings.Development.json
+# Execute a aplicação
+dotnet run
+```
 
-Filtros e Histórico: Listagem cronológica de transações com suporte a parcelamentos/recorrências.
+### 2. Front-end
+```bash
+# Acesse a pasta do front-end
+cd front-end
 
-🚀 Como Executar Localmente
-Pré-requisitos
-.NET 8.0 SDK
+# Instale as dependências
+npm install
 
-Node.js (v18+)
-
-Instância do PostgreSQL
+# Inicie o servidor de desenvolvimento
+npm run dev
+```
