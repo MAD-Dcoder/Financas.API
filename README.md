@@ -1,45 +1,91 @@
 # 💰 Financas.API & App
 
-> Um ecossistema completo de gerenciamento de finanças pessoais desenvolvido com arquitetura moderna, unindo uma API robusta em C#/.NET a uma interface mobile-first de alta performance construída em React.
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+
+> Sistema completo de gestão financeira pessoal composto por uma API RESTful em C# (.NET) e uma interface web/mobile-first reativa em React, integrando banco de dados relacional e infraestrutura na nuvem.
 
 ---
 
-## 🚀 Sobre o Projeto
+## 📐 Arquitetura da Solução
 
-O **Financas.API** nasceu para resolver o controle financeiro do dia a dia com foco total em experiência do usuário (UX/UI) e performance. O sistema conta com um painel dinâmico em estilo *Dark Mode Tech*, suporte a gráficos de distribuição de despesas em tempo real, cálculos automáticos de saldo, mascaramento inteligente de moeda e gavetas interativas (*Bottom Sheets*) para lançamentos rápidos.
+```mermaid
+graph TD
+    A[Front-end React / Vercel] -->|Requisições HTTP / JWT| B[API .NET / Render]
+    B -->|Entity Framework Core| C[(PostgreSQL / Supabase)]
+```
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Tecnologias & Arquitetura
 
-### **Back-end (API)**
-* **C# / .NET** — Linguagem e plataforma principal.
-* **Entity Framework Core** — ORM para mapeamento e persistência de dados.
-* **PostgreSQL** — Banco de dados relacional robusto.
-* **Npgsql** — Driver oficial com suporte nativo a tipos `Enum` mapeados (`tipo_transacao`).
-* **Swagger / OpenAPI** — Documentação e testes interativos dos endpoints.
+### ⚙️ Back-end (API)
+* **C# / .NET 8** — Plataforma principal da API.
+* **Entity Framework Core & Npgsql** — ORM e driver PostgreSQL com suporte nativo a tipos `Enum`.
+* **JWT (JSON Web Token)** — Autenticação stateless para proteção de rotas.
+* **Swagger / OpenAPI** — Documentação e testes de endpoints em desenvolvimento.
+* **Render** — Hospedagem automatizada em container Linux.
 
-### **Front-end (Interface)**
-* **React.js (com Vite)** — Biblioteca reativa de alta performance.
-* **Bootstrap & React Bootstrap** — Framework CSS para estruturação responsiva.
-* **React Icons** — Iconografia minimalista e moderna.
-* **Axios** — Cliente HTTP para comunicação assíncrona com a API.
+### 🎨 Front-end (Interface)
+* **React.js (Vite)** — Interface reativa e performática.
+* **Bootstrap 5 & React Icons** — Design responsivo no estilo *Dark Mode Tech*.
+* **Axios** — Consumo assíncrono da API com envio dinâmico de cabeçalhos de autenticação.
+* **Vercel** — Deploy contínuo e distribuição global do front-end.
+
+### ☁️ Banco de Dados & Nuvem
+* **PostgreSQL (Supabase)** — Banco relacional hospedado em nuvem com gerenciamento via DBeaver.
+
+---
+
+## 🔐 Segurança & Boas Práticas
+
+* **Autenticação JWT:** Acesso restrito a rotas protegidas exigindo token Bearer válido por sessão.
+* **Variáveis de Ambiente (`Environment Variables`):** Isolamento total de credenciais sensíveis (chaves JWT e *Connection Strings*) fora do código-fonte e do histórico do Git.
+* **Política de CORS Configurada:** Permissões de acesso controladas entre a API no Render e o Front-end na Vercel.
+* **Proteção contra SQL Injection:** Consultas parametrizadas via Entity Framework Core.
 
 ---
 
 ## ⚙️ Funcionalidades Principais
 
-* **Gestão Dinâmica de Transações:** Cadastro ágil de receitas e despesas com categorização inteligente (*Moto, Alimentação, Salário, Vale, etc.*), formas de pagamento (*Pix, Crédito, Débito, Dinheiro*) e campos dedicados a observações.
-* **Dashboard em Tempo Real:** Cálculo automático de saldo atual, receitas e despesas com base nos lançamentos, incluindo um gráfico de rosca dinâmico para distribuição de gastos.
-* **Modo de Privacidade (Blackout):** Alternância rápida para ocultar valores sensíveis em público com um único toque no ícone de visualização.
-* **Mapeamento Avançado de Dados:** Integração transparente entre enums do PostgreSQL e tipagem forte do C#.
+* **Gestão de Transações:** Lançamento de receitas e despesas com valor, data, forma de pagamento, observações e categorização.
+* **Dashboard Financeiro:** Cálculo em tempo real do saldo livre, total de receitas, despesas do mês e gráfico dinâmico por categoria.
+* **Privacidade Visual:** Alternância rápida com um clique para mascarar valores sensíveis na tela.
+* **Filtros e Histórico:** Listagem cronológica de transações com suporte a parcelamentos/recorrências.
 
 ---
 
-## 📦 Como Executar o Projeto
+## 🚀 Como Executar Localmente
 
 ### Pré-requisitos
-Certifique-se de ter instalado em sua máquina:
-* [.NET SDK](https://dotnet.microsoft.com/) (Versão 8.0 ou superior)
-* [Node.js](https://nodejs.org/) (Para rodar o ambiente front-end)
-* [PostgreSQL](https://www.postgresql.org/) (Rodando localmente ou em servidor remoto)
+* [.NET 8.0 SDK](https://dotnet.microsoft.com/)
+* [Node.js](https://nodejs.org/) (v18+)
+* Instância do [PostgreSQL](https://www.postgresql.org/)
+
+### 1. Back-end (API)
+```bash
+# Clone o repositório
+git clone https://github.com/MAD-Dcoder/Financas.API.git
+
+# Acesse a pasta do projeto
+cd Financas.API
+
+# Configure a ConnectionString no appsettings.Development.json
+# Execute a aplicação
+dotnet run
+```
+
+### 2. Front-end
+```bash
+# Acesse a pasta do front-end
+cd front-end
+
+# Instale as dependências
+npm install
+
+# Inicie o servidor de desenvolvimento
+npm run dev
+```
