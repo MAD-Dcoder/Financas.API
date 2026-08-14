@@ -1491,13 +1491,30 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             <div className="row g-2">
               <div className="col-6">
                 <label className="form-label text-light opacity-75 small mb-1">Título</label>
-                <input 
-                  type="text" 
-                  className="form-control bg-dark border-secondary text-white shadow-none" 
-                  placeholder="Ex: Troca de óleo" 
-                  value={tituloInput}
-                  onChange={(e) => setTituloInput(e.target.value)}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type="text" 
+                    className="form-control bg-dark border-secondary text-white shadow-none" 
+                    placeholder="Ex: Troca de óleo" 
+                    value={tituloInput}
+                    onChange={(e) => setTituloInput(e.target.value)}
+                    maxLength={30}
+                    style={{ paddingRight: '40px' }} 
+                  />
+                  <span 
+                    style={{ 
+                      position: 'absolute', 
+                      right: '10px', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)', 
+                      fontSize: '10px', 
+                      color: '#6c757d',
+                      pointerEvents: 'none' 
+                    }}
+                  >
+                    {tituloInput.length}/30
+                  </span>
+                </div>
               </div>
               <div className="col-6">
                 <label className="form-label text-light opacity-75 small mb-1">Categoria</label>
@@ -1558,13 +1575,29 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
 
             <div>
               <label className="form-label text-light opacity-75 small mb-1">Observação</label>
-              <textarea 
-                className="form-control bg-dark border-secondary text-white shadow-none" 
-                rows="2"
-                placeholder="Detalhes adicionais (Opcional)" 
-                value={observacaoInput}
-                onChange={(e) => setObservacaoInput(e.target.value)}
-              />
+              <div style={{ position: 'relative' }}>
+                <textarea 
+                  className="form-control bg-dark border-secondary text-white shadow-none" 
+                  rows="2"
+                  placeholder="Detalhes adicionais (Opcional)" 
+                  value={observacaoInput}
+                  onChange={(e) => setObservacaoInput(e.target.value)}
+                  maxLength={255}
+                  style={{ paddingBottom: '20px' }} 
+                />
+                <span 
+                  style={{ 
+                    position: 'absolute', 
+                    right: '10px', 
+                    bottom: '8px', 
+                    fontSize: '10px', 
+                    color: '#6c757d',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  {observacaoInput.length}/255
+                </span>
+              </div>
             </div>
           </div>
 
