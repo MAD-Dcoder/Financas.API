@@ -8,7 +8,8 @@ import {
   FiLogOut, FiChevronRight, FiTag, FiCalendar, FiFileText, 
   FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, 
   FiDollarSign, FiGift, FiChevronDown, FiSearch, FiClock, FiMoreVertical,
-  FiEdit2, FiTrash2, FiLock, FiMail, FiShield, FiBell, FiHelpCircle
+  FiEdit2, FiTrash2, FiLock, FiMail, FiShield, FiBell, FiHelpCircle,
+  FiRefreshCw, FiAlertCircle, FiCheckCircle
 } from 'react-icons/fi';
 
 function App() {
@@ -22,12 +23,10 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
   // ESTADOS DE AUTENTICAÇÃO E LOGIN (FIRMO)
   // ==========================================
   
-  // INICIALIZAÇÃO INTELIGENTE: Olha o LocalStorage antes de decidir a tela
   const [usuarioLogado, setUsuarioLogado] = useState(() => {
     const savedData = localStorage.getItem('firmo_user');
     if (savedData) {
       const parsedData = JSON.parse(savedData);
-      // Já gruda o token no Axios assim que abre o app!
       axios.defaults.headers.common['Authorization'] = `Bearer ${parsedData.token}`;
       return parsedData.usuario;
     }
@@ -65,13 +64,9 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         senhaHash: senhaLogin 
       });
       
-      // O C# agora vai devolver { token: "...", usuario: {...} }
       const { token, usuario } = response.data;
 
-      // SALVA NO BOLSO (LocalStorage) E NO ESTADO
       localStorage.setItem('firmo_user', JSON.stringify({ token, usuario }));
-      
-      // Gruda o token no Axios para as próximas requisições
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       setUsuarioLogado(usuario);
@@ -106,13 +101,9 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         senhaHash: senhaCadastro 
       });
 
-      // O C# agora vai devolver { token: "...", usuario: {...} }
       const { token, usuario } = response.data;
 
-      // SALVA NO BOLSO (LocalStorage) E NO ESTADO
       localStorage.setItem('firmo_user', JSON.stringify({ token, usuario }));
-      
-      // Gruda o token no Axios para as próximas requisições
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       setUsuarioLogado(usuario);
@@ -123,7 +114,6 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
   };
 
   const handleLogout = () => {
-    // APAGA DO BOLSO E TIRA O TOKEN DO AXIOS
     localStorage.removeItem('firmo_user');
     delete axios.defaults.headers.common['Authorization'];
     
@@ -147,6 +137,12 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [abaGrafico, setAbaGrafico] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // ESTADOS PARA RECORRÊNCIA E STATUS DE PAGAMENTO
+  const [tipoRecorrencia, setTipoRecorrencia] = useState('fixo'); 
+  const [qtdParcelas, setQtdParcelas] = useState(2);
+  const [pagoInput, setPagoInput] = useState(true);
   
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [showCardSettings, setShowCardSettings] = useState(false);
@@ -219,6 +215,40 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
   const [ehRecorrente, setEhRecorrente] = useState(false);
   const [editandoId, setEditandoId] = useState(null); 
   
+  // ==========================================
+  // FUNÇÕES DE INTELIGÊNCIA DE DATA
+  // ==========================================
+  
+  // 1. Verifica se a data (dd/mm/yyyy) já passou ou é hoje
+  const isPastOrToday = (dataStr) => {
+    if (!dataStr) return true;
+    const partes = dataStr.split('/');
+    if (partes.length !== 3) return true;
+    const [dia, mes, ano] = partes;
+    const dateObj = new Date(ano, mes - 1, dia);
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+    return dateObj <= hoje;
+  };
+
+  // 2. Verifica se a data do Input (yyyy-mm-dd) é no futuro
+  const isDataInputFuture = (dateString) => {
+    if(!dateString) return false;
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const hojeStr = `${ano}-${mes}-${dia}`;
+    return dateString > hojeStr;
+  }
+
+  // Alterna o Switch de pendente/pago sozinho baseado na data selecionada
+  useEffect(() => {
+    if (!editandoId && dataInput) {
+      setPagoInput(!isDataInputFuture(dataInput));
+    }
+  }, [dataInput, editandoId]);
+
   const [transacoes, setTransacoes] = useState([]);
 
   const mapaCategoriasAPI = {
@@ -257,14 +287,15 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             hora: horaCerta,
             valor: t.valor,
             tipo: t.tipo,
-            recorrente: t.ehRecorrente
+            recorrente: t.ehRecorrente,
+            pago: t.pago !== undefined ? t.pago : true // Puxa do banco
           };
         });
 
         setTransacoes(transacoesDoBanco);
       } catch (error) {
         if(error.response && error.response.status === 401) {
-           handleLogout(); // Se o token estiver expirado ou inválido, desloga por segurança
+           handleLogout();
            alert("Sua sessão expirou, faça login novamente.");
         }
         console.error("Erro ao buscar transações da API:", error);
@@ -342,10 +373,13 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
     return `${dia}/${mes}`;
   };
 
-  const totalReceitasGeral = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
-  const totalDespesasGeral = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
+  // SALDO GERAL (Considera como pago as do passado e as que estão t.pago === true)
+  const transacoesParaSaldo = transacoes.filter(t => isPastOrToday(t.data) || t.pago === true);
+  const totalReceitasGeral = transacoesParaSaldo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const totalDespesasGeral = transacoesParaSaldo.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
   const saldoAtual = totalReceitasGeral - totalDespesasGeral;
 
+  // VISÃO DO MÊS (Mostra a previsão total da fatura/mes)
   const receitasDoMes = transacoesDoMes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
   const despesasDoMes = transacoesDoMes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
 
@@ -536,22 +570,62 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
     setObservacaoInput(transacaoSelecionada.observacao || '');
     setTipoTransacao(transacaoSelecionada.tipo);
     setEhRecorrente(transacaoSelecionada.recorrente);
+    setPagoInput(transacaoSelecionada.pago !== false);
     setEditandoId(transacaoSelecionada.id);
 
     setTransacaoSelecionada(null); 
     setShowBottomSheet(true);      
   };
 
+  const handleToggleStatusPagamento = async () => {
+    const novoStatus = !transacaoSelecionada.pago;
+    const [dia, mes, ano] = transacaoSelecionada.data.split('/');
+    const horaAtual = transacaoSelecionada.hora || '12:00';
+    
+    const payload = {
+      id: transacaoSelecionada.id,
+      usuarioId: usuarioLogado.id,
+      contaOrigemId: mapaContasAPI[transacaoSelecionada.pagamento],
+      contaDestinoId: null,
+      categoriaId: mapaCategoriasAPI[transacaoSelecionada.categoria],
+      descricao: transacaoSelecionada.titulo,
+      valor: transacaoSelecionada.valor,
+      tipo: transacaoSelecionada.tipo,
+      dataTransacao: `${ano}-${mes}-${dia}T${horaAtual}:00`,
+      pago: novoStatus,
+      ehRecorrente: transacaoSelecionada.recorrente,
+      observacao: transacaoSelecionada.observacao
+    };
+
+    try {
+      await axios.put(`${TRANSACOES_API_URL}/${transacaoSelecionada.id}`, payload);
+      setTransacoes(transacoes.map(t => t.id === transacaoSelecionada.id ? { ...t, pago: novoStatus } : t));
+      setTransacaoSelecionada({ ...transacaoSelecionada, pago: novoStatus });
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      alert("Erro de conexão ao tentar mudar o status de pagamento.");
+    }
+  };
+
   const handleConfirmarLancamento = async () => {
+    if (isSubmitting) return;
+
     if (!valorInput || !tituloInput || !categoriaInput || !pagamentoInput) {
       alert("Por favor, preencha o valor, título, categoria e forma de pagamento!");
       return;
     }
 
+    setIsSubmitting(true);
+
     const valorNumerico = parseFloat(valorInput.replace(/\./g, '').replace(',', '.'));
     const tituloFormatado = tituloInput.trim().toLowerCase().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const dataHoraLocal = `${dataInput}T${horaAtual}:00`;
+
+    const isParcelado = ehRecorrente && tipoRecorrencia === 'parcelado';
+    const isFixo = ehRecorrente && tipoRecorrencia === 'fixo';
+    
+    const parcelas = isParcelado ? qtdParcelas : (isFixo ? 12 : 1);
+    const valorFinalTransacao = isParcelado ? (valorNumerico / qtdParcelas) : valorNumerico;
 
     const payloadParaAPI = {
       id: editandoId || 0,
@@ -559,18 +633,21 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
       categoriaId: mapaCategoriasAPI[categoriaInput],
-      descricao: tituloFormatado,
-      valor: valorNumerico,
+      valor: valorFinalTransacao,
       tipo: tipoTransacao,
-      dataTransacao: dataHoraLocal,
-      pago: true,
+      pago: pagoInput,
       ehRecorrente: ehRecorrente,
       observacao: observacaoInput
     };
 
     try {
       if (editandoId) {
-        await axios.put(`${TRANSACOES_API_URL}/${editandoId}`, payloadParaAPI);
+        const dataHoraLocal = `${dataInput}T${horaAtual}:00`;
+        await axios.put(`${TRANSACOES_API_URL}/${editandoId}`, {
+          ...payloadParaAPI, 
+          descricao: tituloFormatado, 
+          dataTransacao: dataHoraLocal 
+        });
         
         const dataCertaRetorno = `${dataInput.split('-')[2]}/${dataInput.split('-')[1]}/${dataInput.split('-')[0]}`;
         const transacaoAtualizada = {
@@ -581,14 +658,15 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
           observacao: observacaoInput,
           data: dataCertaRetorno,
           hora: horaAtual,
-          valor: valorNumerico, 
+          valor: valorFinalTransacao, 
           tipo: tipoTransacao,
-          recorrente: ehRecorrente
+          recorrente: ehRecorrente,
+          pago: pagoInput
         };
 
         setTransacoes(transacoes.map(t => t.id === editandoId ? transacaoAtualizada : t));
       } else {
-        const parcelas = ehRecorrente ? 12 : 1;
+        
         let primeiraTransacaoSalva = null;
 
         for (let i = 0; i < parcelas; i++) {
@@ -596,7 +674,20 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
           dataParcela.setMonth(dataParcela.getMonth() + i);
           const dataFormatada = dataParcela.toISOString().substring(0, 10);
           
-          const payloadCriacao = { ...payloadParaAPI, dataTransacao: `${dataFormatada}T${horaAtual}:00` };
+          let tituloFinal = tituloFormatado;
+          if (isParcelado) {
+            tituloFinal = `${tituloFormatado} (${i + 1}/${parcelas})`;
+          }
+
+          const statusPagoParcela = i === 0 ? pagoInput : false;
+
+          const payloadCriacao = { 
+            ...payloadParaAPI, 
+            descricao: tituloFinal,
+            dataTransacao: `${dataFormatada}T${horaAtual}:00`,
+            pago: statusPagoParcela
+          };
+          
           const response = await axios.post(TRANSACOES_API_URL, payloadCriacao);
           
           if (i === 0) primeiraTransacaoSalva = response.data;
@@ -605,6 +696,7 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         if (primeiraTransacaoSalva) {
           const dataQuebradaRetorno = primeiraTransacaoSalva.dataTransacao.split('T');
           const dataBrutaRetorno = dataQuebradaRetorno[0].split('-');
+          
           const novaTransacao = {
             id: primeiraTransacaoSalva.id,
             titulo: primeiraTransacaoSalva.descricao,
@@ -615,7 +707,8 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             hora: dataQuebradaRetorno[1].substring(0, 5),
             valor: primeiraTransacaoSalva.valor, 
             tipo: primeiraTransacaoSalva.tipo,
-            recorrente: primeiraTransacaoSalva.ehRecorrente
+            recorrente: primeiraTransacaoSalva.ehRecorrente,
+            pago: primeiraTransacaoSalva.pago
           };
           setTransacoes(transacoesAntigas => [novaTransacao, ...transacoesAntigas]);
         }
@@ -627,6 +720,9 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
       setPagamentoInput('');
       setObservacaoInput('');
       setEhRecorrente(false);
+      setTipoRecorrencia('fixo');
+      setQtdParcelas(2);
+      setPagoInput(true);
       setEditandoId(null);
       setShowBottomSheet(false);
       
@@ -638,6 +734,8 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
     } catch (error) {
       console.error("Erro ao salvar transação:", error);
       alert("Houve um erro ao salvar. Verifique se a API está rodando.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -850,6 +948,9 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         .flip-card-back {
           transform: rotateY(180deg);
         }
+        .custom-range::-webkit-slider-thumb {
+          background: #8b5cf6;
+        }
       `}</style>
 
       {/* HEADER (COM NOME FIRMO APP E NOME DO USUÁRIO LOGADO) */}
@@ -1048,7 +1149,7 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
           </div>
         )}
 
-        {/* ABA 1 + CARTÃO: HISTÓRICO DE FATURAS SEM BARRAS CLICÁVEIS */}
+        {/* ABA 1 + CARTÃO: HISTÓRICO DE FATURAS */}
         {abaGrafico === 1 && isCardFlipped && (
           <div 
             className="d-flex justify-content-between align-items-end mt-3 pb-1"
@@ -1169,32 +1270,42 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
                 {formatarCabecalhoData(grupo.dataString)}
               </small>
 
-              {grupo.transacoes.map((t) => (
-                <div 
-                  key={t.id} 
-                  className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-hover border-0 shadow-sm"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => { setTransacaoSelecionada(t); setConfirmandoExclusao(false); }}
-                >
-                  <div className="d-flex align-items-center">
-                      <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
-                        {obterIconeCategoria(t.categoria)}
-                      </div>
-                      <div>
-                        <h6 className="mb-0 text-white" style={{ fontSize: '15px' }}>{t.titulo}</h6>
-                        <small className="text-light opacity-75">{t.categoria} • {t.pagamento}</small>
-                      </div>
+              {grupo.transacoes.map((t) => {
+                const isPast = isPastOrToday(t.data);
+                return (
+                  <div 
+                    key={t.id} 
+                    className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-hover border-0 shadow-sm"
+                    style={{ cursor: 'pointer', opacity: (isPast || t.pago) ? 1 : 0.6 }} 
+                    onClick={() => { setTransacaoSelecionada(t); setConfirmandoExclusao(false); }}
+                  >
+                    <div className="d-flex align-items-center">
+                        <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                          {obterIconeCategoria(t.categoria)}
+                        </div>
+                        <div>
+                          <h6 className="mb-0 text-white" style={{ fontSize: '15px' }}>{t.titulo}</h6>
+                          <small className="text-light opacity-75 d-flex align-items-center mt-1" style={{ fontSize: '11px' }}>
+                            {!isPast && (
+                              t.pago 
+                                ? <FiCheckCircle className="text-emerald me-1" size={10} /> 
+                                : <FiClock className="text-warning me-1" size={10} />
+                            )}
+                            {t.categoria} • {t.pagamento}
+                          </small>
+                        </div>
+                    </div>
+                    <div className="text-end">
+                      <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
+                        {showBalance 
+                          ? <>{t.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(t.valor)}</>
+                          : '••••••••'
+                        }
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-end">
-                    <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
-                      {showBalance 
-                        ? <>{t.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(t.valor)}</>
-                        : '••••••••'
-                      }
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))
         )}
@@ -1211,7 +1322,7 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         <div className="nav-icon"><FiCreditCard size={28} /></div>
       </nav>
 
-      {/* MENU PERFIL (DESIGN PREMIUM BANCOS) */}
+      {/* MENU PERFIL */}
       <Offcanvas 
         show={showProfile} 
         onHide={() => setShowProfile(false)} 
@@ -1220,7 +1331,6 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
       >
         <Offcanvas.Body className="p-0 d-flex flex-column">
           
-          {/* CABEÇALHO DO PERFIL COM GLOW */}
           <div className="p-4 text-center position-relative" style={{ background: 'linear-gradient(to bottom, rgba(16, 185, 129, 0.15), transparent)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <button 
               className="btn btn-link position-absolute top-0 end-0 mt-3 me-2 text-white opacity-50 shadow-none"
@@ -1236,7 +1346,6 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             <small className="text-light opacity-75">{usuarioLogado?.email}</small>
           </div>
 
-          {/* LISTA DE OPÇÕES AGRUPADAS */}
           <div className="px-3 pt-4 flex-grow-1 overflow-auto">
             
             <small className="text-light opacity-50 fw-bold ms-2 mb-2 d-block" style={{ fontSize: '11px', letterSpacing: '1px' }}>MINHA CONTA</small>
@@ -1410,7 +1519,7 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* GAVETA DE MÊS COM SCROLL PARA NÃO CORTAR MESES ANTIGOS */}
+      {/* GAVETA DE MÊS */}
       <Offcanvas 
         show={showMonthSelector} 
         onHide={() => setShowMonthSelector(false)} 
@@ -1447,6 +1556,9 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         onHide={() => {
           setShowBottomSheet(false);
           setEditandoId(null);
+          setTipoRecorrencia('fixo');
+          setQtdParcelas(2);
+          setPagoInput(true);
         }} 
         placement="bottom" 
         style={{ height: 'auto', maxHeight: '90vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
@@ -1601,32 +1713,106 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             </div>
           </div>
 
-          {!editandoId && (
-            <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-4">
-              <label className="form-check-label text-light opacity-75 ms-0" htmlFor="recorrente">É uma transação fixa/recorrente?</label>
+          {isDataInputFuture(dataInput) && (
+            <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
+              <label className="form-check-label text-light opacity-75 ms-0" htmlFor="statusPago">Lançamento já foi pago/recebido?</label>
               <input 
                 className="form-check-input ms-3 shadow-none mt-0" 
                 type="checkbox" 
                 role="switch" 
-                id="recorrente" 
+                id="statusPago" 
                 style={{ width: '45px', height: '24px', cursor: 'pointer' }}
-                checked={ehRecorrente}
-                onChange={(e) => setEhRecorrente(e.target.checked)}
+                checked={pagoInput}
+                onChange={(e) => setPagoInput(e.target.checked)}
               />
             </div>
           )}
 
+          <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
+            <label className="form-check-label text-light opacity-75 ms-0" htmlFor="recorrente">É uma transação fixa/recorrente?</label>
+            <input 
+              className="form-check-input ms-3 shadow-none mt-0" 
+              type="checkbox" 
+              role="switch" 
+              id="recorrente" 
+              style={{ width: '45px', height: '24px', cursor: editandoId ? 'not-allowed' : 'pointer' }}
+              checked={ehRecorrente}
+              onChange={(e) => setEhRecorrente(e.target.checked)}
+              disabled={!!editandoId} 
+            />
+          </div>
+          
+          {ehRecorrente && (
+            <div className="card bg-dark border-secondary border-opacity-25 p-3 mb-4 rounded-4 shadow-sm">
+              {editandoId ? (
+                <small className="text-warning text-center d-block opacity-75">
+                  <FiAlertCircle className="me-1 mb-1" /> Você está editando apenas esta parcela individual. Para mudar a regra geral de recorrência, exclua e crie um novo lançamento.
+                </small>
+              ) : (
+                <>
+                  <div className="d-flex gap-2 mb-3">
+                    <button
+                      className={`btn flex-fill rounded-pill py-2 small fw-bold border-0 ${tipoRecorrencia === 'fixo' ? 'text-white' : 'text-light opacity-50'}`}
+                      style={{ backgroundColor: tipoRecorrencia === 'fixo' ? '#3b82f6' : '#27272a' }}
+                      onClick={() => setTipoRecorrencia('fixo')}
+                    >
+                      Conta Fixa (Mensal)
+                    </button>
+                    <button
+                      className={`btn flex-fill rounded-pill py-2 small fw-bold border-0 ${tipoRecorrencia === 'parcelado' ? 'text-white' : 'text-light opacity-50'}`}
+                      style={{ backgroundColor: tipoRecorrencia === 'parcelado' ? '#8b5cf6' : '#27272a' }}
+                      onClick={() => setTipoRecorrencia('parcelado')}
+                    >
+                      Compra Parcelada
+                    </button>
+                  </div>
+
+                  {tipoRecorrencia === 'parcelado' && (
+                    <div>
+                      <label className="form-label text-light opacity-75 small mb-1">Quantidade de Parcelas</label>
+                      <div className="d-flex align-items-center gap-3">
+                        <input
+                          type="range"
+                          className="form-range flex-grow-1 custom-range"
+                          min="2"
+                          max="24"
+                          value={qtdParcelas}
+                          onChange={(e) => setQtdParcelas(parseInt(e.target.value))}
+                        />
+                        <span className="fw-bold text-white fs-5">{qtdParcelas}x</span>
+                      </div>
+                      <small className="text-light opacity-50 d-block mt-2">
+                        O valor total de R$ {valorInput || '0,00'} será dividido em {qtdParcelas} vezes de R$ {valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) / qtdParcelas) : '0,00'}.
+                      </small>
+                    </div>
+                  )}
+                  {tipoRecorrencia === 'fixo' && (
+                    <small className="text-light opacity-50 d-block text-center mt-1">
+                      O valor de R$ {valorInput || '0,00'} será replicado para os próximos meses integralmente.
+                    </small>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           <button 
-            className="btn w-100 py-3 rounded-4 fw-bold shadow text-dark"
-            style={{ backgroundColor: '#10b981' }}
+            className={`btn w-100 py-3 rounded-4 fw-bold shadow ${isSubmitting ? 'text-white' : 'text-dark'}`}
+            style={{ 
+              backgroundColor: isSubmitting ? '#6b7280' : '#10b981',
+              transition: '0.3s'
+            }}
             onClick={handleConfirmarLancamento}
+            disabled={isSubmitting} 
           >
-            {editandoId ? 'Salvar Alterações' : 'Confirmar Lançamento'}
+            {isSubmitting 
+              ? 'Salvando...' 
+              : (editandoId ? 'Salvar Alterações' : 'Confirmar Lançamento')}
           </button>
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* GAVETA DETALHES TRANSAÇÃO (COM MENU SUPERIOR) */}
+      {/* GAVETA DETALHES TRANSAÇÃO */}
       <Offcanvas 
         show={!!transacaoSelecionada} 
         onHide={() => { setTransacaoSelecionada(null); setConfirmandoExclusao(false); }} 
@@ -1634,7 +1820,6 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
         style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
       >
         <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
-          {/* BOTÃO DE OPÇÕES (TRES PONTINHOS) */}
           <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white position-relative">
             Detalhes do Lançamento
             {!confirmandoExclusao && (
@@ -1668,7 +1853,31 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
             </div>
 
             <div className="card dark-card p-3 mb-4 bg-dark border-0">
-              <div className="d-flex justify-content-between mb-2">
+              
+              {transacaoSelecionada.recorrente && (
+                <div className="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                  <span className="text-light opacity-75"><FiRefreshCw className="me-2"/> Tipo de Lançamento</span>
+                  <span className="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 d-flex align-items-center">
+                    Fixo / Parcelado
+                  </span>
+                </div>
+              )}
+
+              {/* BOTÃO RÁPIDO DE STATUS - SÓ APARECE SE FOR NO FUTURO */}
+              {!isPastOrToday(transacaoSelecionada.data) && (
+                <div className="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-25 mt-1">
+                  <span className="text-light opacity-75 d-flex align-items-center"><FiClock className="me-2"/> Status</span>
+                  <button 
+                      className={`btn btn-sm rounded-pill fw-bold ${transacaoSelecionada.pago ? 'text-emerald border-emerald' : 'text-warning border-warning'}`}
+                      style={{ fontSize: '11px', borderWidth: '1px', borderStyle: 'solid', backgroundColor: 'transparent', borderColor: transacaoSelecionada.pago ? '#10b981' : '#f59e0b' }}
+                      onClick={handleToggleStatusPagamento}
+                  >
+                      {transacaoSelecionada.pago ? <><FiCheckCircle className="me-1 mb-1" /> PAGO</> : <><FiClock className="me-1 mb-1" /> PENDENTE</>}
+                  </button>
+                </div>
+              )}
+
+              <div className="d-flex justify-content-between mb-2 mt-2">
                 <span className="text-light opacity-75"><FiTag className="me-2"/> Categoria</span>
                 <span className="fw-bold text-white">{transacaoSelecionada.categoria}</span>
               </div>
@@ -1697,7 +1906,6 @@ const USUARIOS_API_URL = 'https://financas-api-v5lj.onrender.com/api/Usuarios';
               </div>
             )}
 
-            {/* OPÇÕES SECUNDÁRIAS OCULTAS ATRÁS DO CLIQUE */}
             {confirmandoExclusao && (
               <div className="p-3 rounded-4 bg-dark border border-secondary border-opacity-25 text-center">
                 <p className="text-light small mb-3 fw-bold">O que deseja fazer com este lançamento?</p>
