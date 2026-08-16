@@ -141,6 +141,7 @@ function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [tipoRecorrencia, setTipoRecorrencia] = useState('fixo'); 
+  const [tipoValorParcela, setTipoValorParcela] = useState('total'); 
   const [qtdParcelas, setQtdParcelas] = useState(2);
   const [pagoInput, setPagoInput] = useState(true);
   
@@ -170,8 +171,10 @@ function App() {
         setCorCartao(parsedSettings.corCartao || 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
         setApelidoCartao(parsedSettings.apelidoCartao || 'Cartão Principal');
         setFinalCartao(parsedSettings.finalCartao || '0000');
-        setNomeCartao(parsedSettings.nomeCartao || 'SEU NOME');
+        setNomeCartao(parsedSettings.nomeCartao || (usuarioLogado?.nome || 'SEU NOME').toUpperCase());
         setBandeiraCartao(parsedSettings.bandeiraCartao || 'Mastercard');
+      } else {
+        setNomeCartao((usuarioLogado?.nome || 'SEU NOME').toUpperCase());
       }
     }
   }, [usuarioLogado]);
@@ -297,7 +300,6 @@ function App() {
     };
   });
 
-  // FUNÇÃO RESET: Volta tudo ao normal ao clicar na Casinha
   const handleGoHome = () => {
     setTermoBusca('');
     setSelectedCategory(null);
@@ -309,7 +311,6 @@ function App() {
     setTransacaoSelecionada(null);
     setMenuAcaoDetalhes(0);
     
-    // Reseta pro mês atual
     const hoje = new Date();
     const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     setMesFiltro({
@@ -433,21 +434,21 @@ function App() {
     carregarTransacoes();
   }, [isLoggedIn, usuarioLogado]);
 
-  const transacoesDoMes = transacoes.filter(t => {
-    if (t.pagamento === 'Crédito') {
-      const fatura = getMesFatura(t.data);
-      return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
+  // Lógica de Separação (Contábil) - Extrato X Fatura X Gráficos
+  const transacoesDaAbaAtiva = transacoes.filter(t => {
+    if (isCardFlipped) {
+      if (t.pagamento === 'Crédito') {
+        const fatura = getMesFatura(t.data);
+        return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
+      }
+      return false;
+    } else {
+      const partes = (t.data || '').split('/');
+      if (partes.length === 3) {
+        return partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano;
+      }
+      return true;
     }
-    const partes = (t.data || '').split('/');
-    if (partes.length === 3) {
-      return partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano;
-    }
-    return true;
-  });
-
-  const transacoesDaAbaAtiva = transacoesDoMes.filter(t => {
-    if (isCardFlipped) return t.pagamento === 'Crédito';
-    return true; 
   });
 
   const transacoesParaExibir = transacoesDaAbaAtiva.filter(t => {
@@ -511,15 +512,30 @@ function App() {
     return partes.length === 3 ? `${partes[0]}/${partes[1]}` : dataStr;
   };
 
+  // Cálculos Financeiros Isolando o Cartão de Crédito do Fluxo de Caixa Diário
   const transacoesParaSaldo = transacoes.filter(t => isPastOrToday(t.data) || t.pago === true);
   const totalReceitasGeral = transacoesParaSaldo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
-  const totalDespesasGeral = transacoesParaSaldo.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+  const totalDespesasGeral = transacoesParaSaldo.filter(t => t.tipo === 'despesa' && t.pagamento !== 'Crédito').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
   const saldoAtual = totalReceitasGeral - totalDespesasGeral;
 
-  const receitasDoMes = transacoesDoMes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
-  const despesasDoMes = transacoesDoMes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+  const receitasDoMes = transacoes.filter(t => {
+    const partes = (t.data || '').split('/');
+    return partes.length === 3 && partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano && t.tipo === 'receita';
+  }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
-  const totalFaturaMes = transacoesDoMes.filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+  const despesasDoMes = transacoes.filter(t => {
+    const partes = (t.data || '').split('/');
+    return partes.length === 3 && partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano && t.tipo === 'despesa' && t.pagamento !== 'Crédito';
+  }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+
+  const totalFaturaMes = transacoes.filter(t => {
+    if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
+      const fatura = getMesFatura(t.data);
+      return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
+    }
+    return false;
+  }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+
   const mesVencimentoFatura = String((Number(mesFiltro.num) % 12) + 1).padStart(2, '0');
 
   const calcularStatusFatura = () => {
@@ -616,21 +632,27 @@ function App() {
   const historicoData = isCardFlipped && abaGrafico === 1 ? gerarHistoricoFaturas() : [];
   const maxFaturaHist = historicoData.length > 0 ? Math.max(...historicoData.map(h => h.total), 1) : 1;
 
-  const despesasGrafico = transacoesDaAbaAtiva
+  // Filtra dados do gráfico isolando o Crédito caso seja a aba Geral
+  const transacoesParaGrafico = transacoesDaAbaAtiva.filter(t => {
+    if (!isCardFlipped && t.pagamento === 'Crédito') return false; 
+    return true;
+  });
+
+  const despesasGrafico = transacoesParaGrafico
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.categoria] = (acc[t.categoria] || 0) + (Number(t.valor) || 0);
       return acc;
     }, {});
 
-  const pagamentosGrafico = transacoesDaAbaAtiva
+  const pagamentosGrafico = transacoesParaGrafico
     .filter(t => t.tipo === 'despesa')
     .reduce((acc, t) => {
       acc[t.pagamento] = (acc[t.pagamento] || 0) + (Number(t.valor) || 0);
       return acc;
     }, {});
     
-  const totalDespesasAtivas = transacoesDaAbaAtiva.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+  const totalDespesasAtivas = transacoesParaGrafico.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
   const despesasArray = Object.entries(despesasGrafico).sort((a, b) => b[1] - a[1]);
   const pagamentosArray = Object.entries(pagamentosGrafico).sort((a, b) => b[1] - a[1]);
@@ -801,7 +823,7 @@ function App() {
     const isFixo = ehRecorrente && tipoRecorrencia === 'fixo';
     
     const parcelas = isParcelado ? qtdParcelas : (isFixo ? 12 : 1);
-    const valorFinalTransacao = isParcelado ? (valorNumerico / qtdParcelas) : valorNumerico;
+    const valorFinalTransacao = isParcelado ? (tipoValorParcela === 'total' ? (valorNumerico / qtdParcelas) : valorNumerico) : valorNumerico;
 
     const payloadParaAPI = {
       id: editandoId || 0,
@@ -850,7 +872,6 @@ function App() {
           await axios.post(TRANSACOES_API_URL, payloadCriacao);
         }
         
-        // Força a recarga de todas as transações para já atualizar a home na hora
         await carregarTransacoes();
       }
       
@@ -861,6 +882,7 @@ function App() {
       setObservacaoInput('');
       setEhRecorrente(false);
       setTipoRecorrencia('fixo');
+      setTipoValorParcela('total');
       setQtdParcelas(2);
       setPagoInput(true);
       setEditandoId(null);
@@ -1333,7 +1355,7 @@ function App() {
         >
           {/* ABA 0: SEMPRE CATEGORIAS */}
           {abaGrafico === 0 && (
-            <div className="d-flex align-items-center justify-content-between mt-3">
+            <div className="d-flex align-items-center justify-content-between mt-3 px-1">
               
               {/* O DONUT CHART (SVG) PIZZA NA ESQUERDA */}
               <div 
@@ -1481,7 +1503,7 @@ function App() {
 
           {/* ABA 1 + GERAL: FORMAS DE PAGAMENTO */}
           {abaGrafico === 1 && !isCardFlipped && (
-            <div className="d-flex align-items-center justify-content-between mt-3">
+            <div className="d-flex align-items-center justify-content-between mt-3 px-1">
               
               <div style={{ width: '150px', height: '150px', position: 'relative', marginLeft: '-10px' }}>
                 {totalDespesasAtivas === 0 ? (
@@ -1946,6 +1968,7 @@ function App() {
           setShowBottomSheet(false);
           setEditandoId(null);
           setTipoRecorrencia('fixo');
+          setTipoValorParcela('total'); 
           setQtdParcelas(2);
           setPagoInput(true);
         }} 
@@ -2134,58 +2157,78 @@ function App() {
             />
           </div>
           
-          {ehRecorrente && (
-            <div className="card bg-dark border-secondary border-opacity-25 p-3 mb-3 rounded-4 shadow-sm">
-              {editandoId ? (
-                <small className="text-warning text-center d-block opacity-75">
-                  <FiAlertCircle className="me-1 mb-1" /> Você está editando apenas esta parcela individual. Para mudar a regra geral de recorrência, exclua e crie um novo lançamento.
-                </small>
-              ) : (
-                <>
-                  <div className="d-flex gap-2 mb-3">
-                    <button
-                      className={`btn flex-fill rounded-pill py-2 small fw-bold border-0 ${tipoRecorrencia === 'fixo' ? 'text-white' : 'text-light opacity-50'}`}
-                      style={{ backgroundColor: tipoRecorrencia === 'fixo' ? '#3b82f6' : '#27272a' }}
-                      onClick={() => setTipoRecorrencia('fixo')}
-                    >
-                      Conta Fixa (Mensal)
-                    </button>
-                    <button
-                      className={`btn flex-fill rounded-pill py-2 small fw-bold border-0 ${tipoRecorrencia === 'parcelado' ? 'text-white' : 'text-light opacity-50'}`}
-                      style={{ backgroundColor: tipoRecorrencia === 'parcelado' ? '#8b5cf6' : '#27272a' }}
-                      onClick={() => setTipoRecorrencia('parcelado')}
-                    >
-                      Compra Parcelada
-                    </button>
-                  </div>
-
-                  {tipoRecorrencia === 'parcelado' && (
-                    <div>
-                      <label className="form-label text-light opacity-75 small mb-1">Quantidade de Parcelas</label>
-                      <div className="d-flex align-items-center gap-3">
-                        <input
-                          type="range"
-                          className="form-range flex-grow-1 custom-range"
-                          min="2"
-                          max="24"
-                          value={qtdParcelas}
-                          onChange={(e) => setQtdParcelas(parseInt(e.target.value))}
-                        />
-                        <span className="fw-bold text-white fs-5">{qtdParcelas}x</span>
-                      </div>
-                      <small className="text-light opacity-50 d-block mt-2">
-                        O valor total de R$ {valorInput || '0,00'} será dividido em {qtdParcelas} vezes de R$ {valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) / qtdParcelas) : '0,00'}.
-                      </small>
-                    </div>
-                  )}
-                  {tipoRecorrencia === 'fixo' && (
-                    <small className="text-light opacity-50 d-block text-center mt-1">
-                      O valor de R$ {valorInput || '0,00'} será projetado automaticamente por 12 meses.
-                    </small>
-                  )}
-                </>
-              )}
+          {ehRecorrente && tipoRecorrencia === 'parcelado' && (
+            <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
+              <label className="form-check-label text-light opacity-75 ms-0" htmlFor="toggleTotal">É o valor total do lançamento?</label>
+              <input 
+                className="form-check-input ms-3 shadow-none mt-0" 
+                type="checkbox" 
+                role="switch" 
+                id="toggleTotal" 
+                style={{ width: '45px', height: '24px', cursor: 'pointer' }}
+                checked={tipoValorParcela === 'total'}
+                onChange={(e) => setTipoValorParcela(e.target.checked ? 'total' : 'parcela')}
+              />
             </div>
+          )}
+
+          {ehRecorrente && (
+            <>
+              <div className="d-flex justify-content-between mb-3 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '300px' }}>
+                <button
+                  className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'fixo' ? 'text-white' : 'text-light opacity-50'}`}
+                  style={{ backgroundColor: tipoRecorrencia === 'fixo' ? '#3b82f6' : 'transparent', transition: '0.2s' }}
+                  onClick={() => setTipoRecorrencia('fixo')}
+                >
+                  Conta Fixa
+                </button>
+                <button
+                  className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'parcelado' ? 'text-white' : 'text-light opacity-50'}`}
+                  style={{ backgroundColor: tipoRecorrencia === 'parcelado' ? '#8b5cf6' : 'transparent', transition: '0.2s' }}
+                  onClick={() => setTipoRecorrencia('parcelado')}
+                >
+                  Parcelada
+                </button>
+              </div>
+
+              <div className="card bg-dark border-secondary border-opacity-25 p-3 mb-3 rounded-4 shadow-sm">
+                {editandoId ? (
+                  <small className="text-warning text-center d-block opacity-75">
+                    <FiAlertCircle className="me-1 mb-1" /> Você está editando apenas esta parcela individual. Para mudar a regra geral de recorrência, exclua e crie um novo lançamento.
+                  </small>
+                ) : (
+                  <>
+                    {tipoRecorrencia === 'parcelado' && (
+                      <div>
+                        <label className="form-label text-light opacity-75 small mb-1">Quantidade de Parcelas</label>
+                        <div className="d-flex align-items-center gap-3">
+                          <input
+                            type="range"
+                            className="form-range flex-grow-1 custom-range"
+                            min="2"
+                            max="24"
+                            value={qtdParcelas}
+                            onChange={(e) => setQtdParcelas(parseInt(e.target.value))}
+                          />
+                          <span className="fw-bold text-white fs-5">{qtdParcelas}x</span>
+                        </div>
+                        <div className="text-light opacity-50 mt-2 text-center lh-sm" style={{ fontSize: '12px' }}>
+                          {tipoValorParcela === 'total' 
+                            ? <>Total de R$ {valorInput || '0,00'} dividido em {qtdParcelas}x de <strong>{valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) / qtdParcelas) : 'R$ 0,00'}</strong>.</>
+                            : <>{qtdParcelas}x de R$ {valorInput || '0,00'} (Total: <strong>{valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) * qtdParcelas) : 'R$ 0,00'}</strong>).</>
+                          }
+                        </div>
+                      </div>
+                    )}
+                    {tipoRecorrencia === 'fixo' && (
+                      <small className="text-light opacity-50 d-block text-center mt-1">
+                        O valor de R$ {valorInput || '0,00'} será projetado automaticamente por 12 meses.
+                      </small>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
           )}
 
           <button 
