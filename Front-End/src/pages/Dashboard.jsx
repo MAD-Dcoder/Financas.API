@@ -624,6 +624,14 @@ function Dashboard() {
         .svg-chart-circle-hovered { transform: scale(1.03); stroke-width: 6; opacity: 1 !important; z-index: 10; }
         .svg-chart-circle-dimmed { opacity: 0.15; transform: scale(0.98); }
         
+        /* 
+          TRAVA DE ROLAGEM HORIZONTAL
+          Impede que a tela suba/desça sem querer ao passar o gráfico para o lado 
+        */
+        .swipeable-area {
+          touch-action: pan-y;
+        }
+        
         /* Letreiro bem fino, compacto e ajustado entre os cards */
         .dashboard-ticker {
           width: 100%;

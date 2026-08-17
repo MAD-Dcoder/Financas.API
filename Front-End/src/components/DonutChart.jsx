@@ -57,12 +57,12 @@ function DonutChart({
         </div>
       </div>
 
-      {/* CONTAINER DO SWIPE ISOLADO */}
+      {/* CONTAINER DO SWIPE ISOLADO COM A TRAVA CSS */}
       <div 
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="w-100"
+        className="w-100 swipeable-area" 
       >
         {/* ABA 0: SEMPRE CATEGORIAS */}
         {abaGrafico === 0 && (
