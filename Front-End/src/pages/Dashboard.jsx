@@ -594,11 +594,11 @@ function Dashboard ({ temaAtual, toggleTema }) {
   };
 
   const dashboardTickerText = (
-    <>
-      <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
-      <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
-    </>
-  );
+  <>
+    <span>📦 COMPREI NO IMPULSO 🤡 Mas calma que o frete foi grátis!</span>
+    <span>🎯 META FINANCEIRA 🏃‍♂️ Tentar não gastar dinheiro até o final do dia (nível: impossível).</span>
+  </>
+);
 
   const isDark = temaAtual === 'dark';
 
@@ -653,7 +653,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
         }
         .dashboard-ticker-content {
           display: inline-block;
-          animation: ticker-scroll 40s linear infinite;
+          animation: ticker-scroll 20s linear infinite;
           
           /* AQUI: Amarelo no modo escuro, e um Verde Escuro (ou Laranja) no modo claro */
           color: ${isDark ? '#fae902be' : '#d97706'}; 
