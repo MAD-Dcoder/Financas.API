@@ -520,7 +520,6 @@ function Dashboard() {
     setShowBottomSheet(true);      
   };
 
-  // !!! BUG CORRIGIDO AQUI: A Origem e o Destino agora respeitam se é Despesa ou Receita !!!
   const handleToggleStatusPagamento = async () => {
     setAnimatingStatusId(transacaoSelecionada.id);
     setTimeout(() => setAnimatingStatusId(null), 300);
@@ -594,10 +593,17 @@ function Dashboard() {
     }
   };
 
+ const dashboardTickerText = (
+    <>
+      <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
+      <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
+    </>
+  );
+
   return (
     <div className="app-container pt-4 px-3">
       <style>{`
-        .flip-container { perspective: 1000px; margin-bottom: 1.5rem; cursor: pointer; }
+        .flip-container { perspective: 1000px; margin-bottom: 0.5rem; cursor: pointer; }
         .flip-card-inner { position: relative; width: 100%; min-height: 210px; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
         .flip-card-front, .flip-card-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; }
         .flip-card-front { transform: rotateY(0deg); }
@@ -617,10 +623,49 @@ function Dashboard() {
         .svg-chart-circle { transition: stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1), stroke-width 0.3s ease, opacity 0.3s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center; }
         .svg-chart-circle-hovered { transform: scale(1.03); stroke-width: 6; opacity: 1 !important; z-index: 10; }
         .svg-chart-circle-dimmed { opacity: 0.15; transform: scale(0.98); }
+        
+        /* Letreiro bem fino, compacto e ajustado entre os cards */
+        .dashboard-ticker {
+          width: 100%;
+          overflow: hidden;
+          background: rgba(16, 185, 129, 0.03);
+          border-top: 1px dashed rgba(16, 185, 129, 0.12);
+          border-bottom: 1px dashed rgba(16, 185, 129, 0.12);
+          padding: 4px 0;
+          margin: 0.4rem 0 0.6rem 0;
+          display: flex;
+          white-space: nowrap;
+        }
+        .dashboard-ticker-content {
+          display: inline-block;
+          animation: ticker-scroll 40s linear infinite;
+          color: #fae902be;
+          font-family: monospace, sans-serif;
+          font-size: 0.68rem;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          opacity: 0.9;
+        }
+        .dashboard-ticker-content span {
+          margin: 0 14px;
+        }
+        @keyframes ticker-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
       `}</style>
 
       <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} />
       <FlipCard isCardFlipped={isCardFlipped} setIsCardFlipped={setIsCardFlipped} showBalance={showBalance} saldoAtual={saldoAtual} receitasDoMes={receitasDoMes} despesasDoMes={despesasDoMes} mesFiltro={mesFiltro} corCartao={corCartao} apelidoCartao={apelidoCartao} diaVencimento={diaVencimento} diaFechamento={diaFechamento} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} totalFaturaMes={totalFaturaMes} statusFatura={statusFatura} mesVencimentoFatura={mesVencimentoFatura} setShowCardSettings={setShowCardSettings} setTempDiaVencimento={setTempDiaVencimento} setTempDiaFechamento={setTempDiaFechamento} setTempCor={setTempCor} setTempApelido={setTempApelido} setTempFinal={setTempFinal} setTempNome={setTempNome} setTempBandeira={setTempBandeira} />
+      
+      {/* LETREIRO INTERMEDIÁRIO MAIS FINO E COM O NOVO TEXTO */}
+      <div className="dashboard-ticker">
+        <div className="dashboard-ticker-content">
+          {dashboardTickerText}
+          {dashboardTickerText}
+        </div>
+      </div>
+
       <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} />
       <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} />
       <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} />
@@ -629,7 +674,7 @@ function Dashboard() {
       <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} />
       <TransactionForm showBottomSheet={showBottomSheet} setShowBottomSheet={setShowBottomSheet} usuarioLogado={usuarioLogado} carregarTransacoes={carregarTransacoes} transacaoParaEditar={transacaoParaEditar} setTransacaoParaEditar={setTransacaoParaEditar} />
       <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} />
-    </div>
+  </div>
   );
 }
 

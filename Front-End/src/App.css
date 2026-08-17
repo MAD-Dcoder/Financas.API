@@ -325,3 +325,37 @@
     opacity: 0.8;
   }
 }
+
+/* ==========================================
+   FAIXA / LETREIRO INTERMEDIÁRIO (DASHBOARD)
+========================================== */
+.dashboard-ticker {
+  width: 100%;
+  overflow: hidden;
+  background: rgba(16, 185, 129, 0.05); /* Um verdinho bem sutil de fundo */
+  border-top: 1px dashed rgba(16, 185, 129, 0.2);
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.2);
+  padding: 10px 0;
+  margin: 1.5rem 0;
+  display: flex;
+  white-space: nowrap;
+}
+
+.dashboard-ticker-content {
+  display: inline-block;
+  animation: ticker-scroll 30s linear infinite;
+  color: #10b981; /* Verde esmeralda do Firmo */
+  font-family: monospace, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.dashboard-ticker-content span {
+  margin: 0 20px;
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
