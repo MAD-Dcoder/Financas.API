@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiMoreVertical } from 'react-icons/fi';
+import { FiMoreVertical, FiRefreshCw } from 'react-icons/fi';
 import { formatarMoeda } from '../utils/formatters';
 
 function FlipCard({
@@ -34,10 +34,42 @@ function FlipCard({
   };
 
   return (
-    <section className="flip-container" onClick={() => setIsCardFlipped(!isCardFlipped)}>
-      <div className="flip-card-inner" style={{ transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+    <section className="flip-container position-relative" style={{ perspective: '1000px', marginTop: '10px' }}>
+      
+      <div 
+        className="flip-card-inner position-relative" 
+        onClick={() => setIsCardFlipped(!isCardFlipped)}
+        style={{ 
+          transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+          transformStyle: 'preserve-3d',
+          zIndex: 1
+        }}
+      >
         
-        {/* CARTÃO GERAL (AJUSTADO PARA DESCER AS RECEITAS E DESPESAS) */}
+        {/* INDICADOR VISUAL (APARECE APENAS NA FRENTE) */}
+        {!isCardFlipped && (
+          <div 
+            className="position-absolute d-flex align-items-center" 
+            style={{ 
+              top: '15px', 
+              right: '15px', 
+              color: '#10b981', 
+              zIndex: 10,
+              background: 'rgba(16, 185, 129, 0.1)',
+              padding: '4px 8px',
+              borderRadius: '12px',
+              border: '1px solid rgba(16, 185, 129, 0.2)'
+            }}
+          >
+            <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', marginRight: '6px', fontWeight: 'bold' }}>
+              Verso
+            </span>
+            <FiRefreshCw size={14} />
+          </div>
+        )}
+        
+        {/* CARTÃO GERAL (FRONT) */}
         <div className="flip-card-front card dark-card p-4 d-flex flex-column justify-content-between h-100">
           <div>
             <p className="text-light opacity-75 mb-1">Saldo atual livre</p>
@@ -62,7 +94,7 @@ function FlipCard({
           </div>
         </div>
 
-        {/* CARTÃO DE CRÉDITO */}
+        {/* CARTÃO DE CRÉDITO (BACK) */}
         <div 
           className="flip-card-back shadow-lg h-100" 
           style={{ 
@@ -120,7 +152,6 @@ function FlipCard({
               </div>
             </div>
         </div>
-
       </div>
     </section>
   );
