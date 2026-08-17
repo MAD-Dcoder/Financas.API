@@ -9,8 +9,10 @@ function FlipCard({
   mesFiltro,
   corCartao, apelidoCartao, diaVencimento, diaFechamento, finalCartao, nomeCartao, bandeiraCartao,
   totalFaturaMes, statusFatura, mesVencimentoFatura,
-  setShowCardSettings, setTempDiaVencimento, setTempDiaFechamento, setTempCor, setTempApelido, setTempFinal, setTempNome, setTempBandeira
+  setShowCardSettings, setTempDiaVencimento, setTempDiaFechamento, setTempCor, setTempApelido, setTempFinal, setTempNome, setTempBandeira,
+  temaAtual
 }) {
+  const isDark = temaAtual === 'dark';
 
   const renderLogoBandeira = () => {
     if (bandeiraCartao === 'Visa') {
@@ -70,24 +72,24 @@ function FlipCard({
         )}
         
         {/* CARTÃO GERAL (FRONT) */}
-        <div className="flip-card-front card dark-card p-4 d-flex flex-column justify-content-between h-100">
+        <div className={`flip-card-front card p-4 d-flex flex-column justify-content-between h-100 ${isDark ? 'dark-card' : 'bg-white shadow-sm border-0'}`}>
           <div>
-            <p className="text-light opacity-75 mb-1">Saldo atual livre</p>
-            <h1 className="mb-0 fw-bold text-white">
+            <p className={`mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Saldo atual livre</p>
+            <h1 className={`mb-0 fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>
               {showBalance ? formatarMoeda(saldoAtual) : 'R$ •••••••'}
             </h1>
           </div>
           
           <div className="d-flex justify-content-between mt-auto pt-4" style={{ marginBottom: '-8px' }}>
             <div>
-               <small className="text-light opacity-75 d-block mb-1">Receitas ({mesFiltro.nome}) ↙</small>
+               <small className={`d-block mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Receitas ({mesFiltro.nome}) ↙</small>
                <span className="text-emerald fw-bold">
                  {showBalance ? formatarMoeda(receitasDoMes) : 'R$ •••••'}
                </span>
             </div>
             <div className="text-end">
-               <small className="text-light opacity-75 d-block mb-1">Despesas ({mesFiltro.nome}) ↗</small>
-               <span className="text-white fw-bold">
+               <small className={`d-block mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Despesas ({mesFiltro.nome}) ↗</small>
+               <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>
                  {showBalance ? formatarMoeda(despesasDoMes) : 'R$ •••••'}
                </span>
             </div>

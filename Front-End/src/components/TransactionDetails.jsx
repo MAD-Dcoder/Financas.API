@@ -12,24 +12,34 @@ function TransactionDetails({
   menuAcaoDetalhes, setMenuAcaoDetalhes,
   showBalance, obterIconeCategoria,
   animatingStatusId, handleToggleStatusPagamento,
-  handleAbrirEdicao, handleEfetuarExclusao, isDeleting
+  handleAbrirEdicao, handleEfetuarExclusao, isDeleting,
+  temaAtual
 }) {
+  const isDark = temaAtual === 'dark';
+
   return (
     <Offcanvas 
       show={!!transacaoSelecionada} 
       onHide={() => { setTransacaoSelecionada(null); setMenuAcaoDetalhes(0); }} 
       placement="bottom" 
-      style={{ height: 'auto', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff', paddingBottom: '20px' }}
+      style={{ 
+        height: 'auto', 
+        borderTopLeftRadius: '24px', 
+        borderTopRightRadius: '24px', 
+        backgroundColor: isDark ? '#1e1e24' : '#ffffff', 
+        color: isDark ? '#fff' : '#212529', 
+        paddingBottom: '20px' 
+      }}
     >
       <Offcanvas.Header className="pb-0 border-0 mt-2 d-flex align-items-center justify-content-center position-relative">
-        <Offcanvas.Title className="fw-bold fs-6 text-white m-0">
+        <Offcanvas.Title className={`fw-bold fs-6 m-0 ${isDark ? 'text-white' : 'text-dark'}`}>
           Detalhes do Lançamento
         </Offcanvas.Title>
 
         <div className="position-absolute end-0 top-50 translate-middle-y pe-3 d-flex align-items-center gap-3 mt-2">
           {!menuAcaoDetalhes && (
             <button 
-              className="btn btn-link p-0 text-white shadow-none opacity-75 d-flex align-items-center justify-content-center border-0"
+              className={`btn btn-link p-0 shadow-none d-flex align-items-center justify-content-center border-0 ${isDark ? 'text-white opacity-75' : 'text-danger'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setMenuAcaoDetalhes(2); 
@@ -40,7 +50,7 @@ function TransactionDetails({
           )}
           <button 
             type="button" 
-            className="btn-close btn-close-white shadow-none" 
+            className={`btn-close shadow-none ${isDark ? 'btn-close-white' : ''}`} 
             aria-label="Close" 
             onClick={() => { setTransacaoSelecionada(null); setMenuAcaoDetalhes(0); }}
           ></button>
@@ -50,11 +60,11 @@ function TransactionDetails({
       {transacaoSelecionada && (
         <Offcanvas.Body>
           <div className={`text-center ${menuAcaoDetalhes ? 'mb-2' : 'mb-4'}`}>
-            <div className="bg-secondary bg-opacity-25 p-3 rounded-circle d-inline-block text-white mb-2">
+            <div className={`p-3 rounded-circle d-inline-block mb-2 ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark border'}`}>
               {obterIconeCategoria(transacaoSelecionada.categoria)}
             </div>
-            <h4 className="fw-bold mb-1">{transacaoSelecionada.titulo}</h4>
-            <h2 className={transacaoSelecionada.tipo === 'despesa' ? 'text-white' : 'text-emerald'}>
+            <h4 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.titulo}</h4>
+            <h2 className={transacaoSelecionada.tipo === 'despesa' ? (isDark ? 'text-white' : 'text-dark') : 'text-emerald'}>
               {showBalance 
                 ? <>{transacaoSelecionada.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(transacaoSelecionada.valor)}</>
                 : 'R$ •••••••'
@@ -62,20 +72,31 @@ function TransactionDetails({
             </h2>
           </div>
 
-          <div className={`card dark-card p-3 ${menuAcaoDetalhes ? 'mb-2' : 'mb-4'} bg-dark border-0`}>
+          <div className={`card p-3 ${menuAcaoDetalhes ? 'mb-2' : 'mb-4'} border-0 ${isDark ? 'dark-card bg-dark' : 'bg-light'}`}>
             
             {transacaoSelecionada.recorrente && (
-              <div className="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-25">
-                <span className="text-light opacity-75"><FiRefreshCw className="me-2"/> Tipo de Lançamento</span>
-                <span className="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 d-flex align-items-center">
+              <div className={`d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-secondary border-opacity-10'}`}>
+                <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiRefreshCw className="me-2"/> Tipo de Lançamento</span>
+                <span 
+                  className="badge d-flex align-items-center fw-bold"
+                  style={{ 
+                    backgroundColor: isDark ? '#1e3a8a' : '#dbeafe', 
+                    color: isDark ? '#60a5fa' : '#1d4ed8', 
+                    border: '1px solid',
+                    borderColor: isDark ? '#3b82f6' : '#93c5fd',
+                    padding: '6px 10px',
+                    borderRadius: '20px',
+                    letterSpacing: '0.3px'
+                  }}
+                >
                   Fixo / Parcelado
                 </span>
               </div>
             )}
 
             {!isPastOrToday(transacaoSelecionada.data) && (
-              <div className="d-flex justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-25 mt-1">
-                <span className="text-light opacity-75 d-flex align-items-center"><FiClock className="me-2"/> Status</span>
+              <div className={`d-flex justify-content-between mb-2 pb-2 border-bottom mt-1 ${isDark ? 'border-secondary border-opacity-25' : 'border-secondary border-opacity-10'}`}>
+                <span className={`d-flex align-items-center ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}><FiClock className="me-2"/> Status</span>
                 
                 <button 
                     className={`btn btn-sm rounded-pill fw-bold d-flex align-items-center justify-content-center ${animatingStatusId === transacaoSelecionada.id ? 'btn-status-anim' : ''}`}
@@ -85,7 +106,7 @@ function TransactionDetails({
                       borderStyle: 'solid', 
                       backgroundColor: 'transparent', 
                       borderColor: transacaoSelecionada.pago ? '#10b981' : '#f59e0b', 
-                      color: transacaoSelecionada.pago ? '#10b981' : '#f59e0b',
+                      color: transacaoSelecionada.pago ? '#10b981' : '#f59e0b', 
                       transition: 'all 0.2s ease', 
                       minWidth: '95px' 
                     }}
@@ -97,29 +118,29 @@ function TransactionDetails({
             )}
 
             <div className="d-flex justify-content-between mb-2 mt-2">
-              <span className="text-light opacity-75"><FiTag className="me-2"/> Categoria</span>
-              <span className="fw-bold text-white">{transacaoSelecionada.categoria}</span>
+              <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiTag className="me-2"/> Categoria</span>
+              <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.categoria}</span>
             </div>
             <div className="d-flex justify-content-between mb-2">
-              <span className="text-light opacity-75"><FiCalendar className="me-2"/> Data</span>
-              <span className="fw-bold text-white">{transacaoSelecionada.data}</span>
+              <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiCalendar className="me-2"/> Data</span>
+              <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.data}</span>
             </div>
             {transacaoSelecionada.hora && (
               <div className="d-flex justify-content-between mb-2">
-                <span className="text-light opacity-75"><FiClock className="me-2"/> Horário do Registro</span>
-                <span className="fw-bold text-white">{transacaoSelecionada.hora}</span>
+                <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiClock className="me-2"/> Horário do Registro</span>
+                <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.hora}</span>
               </div>
             )}
             <div className="d-flex justify-content-between">
-              <span className="text-light opacity-75"><FiCreditCard className="me-2"/> Forma de Pagamento</span>
-              <span className="fw-bold text-white">{transacaoSelecionada.pagamento}</span>
+              <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiCreditCard className="me-2"/> Forma de Pagamento</span>
+              <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.pagamento}</span>
             </div>
           </div>
 
           {transacaoSelecionada.observacao && !menuAcaoDetalhes && (
             <div className="mb-4">
-              <h6 className="text-light opacity-75 mb-2"><FiFileText className="me-2"/> Observações</h6>
-              <div className="card dark-card p-3 bg-dark border-0 text-white opacity-75">
+              <h6 className={`mb-2 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}><FiFileText className="me-2"/> Observações</h6>
+              <div className={`card p-3 border-0 ${isDark ? 'dark-card bg-dark text-white opacity-75' : 'bg-light text-dark'}`}>
                 {transacaoSelecionada.observacao}
               </div>
             </div>
@@ -127,8 +148,8 @@ function TransactionDetails({
 
           {!menuAcaoDetalhes && (
             <button 
-              className="btn btn-secondary w-100 py-3 rounded-4 fw-bold text-white d-flex align-items-center justify-content-center gap-2 mt-2 shadow-none border-0"
-              style={{ backgroundColor: '#27272a' }}
+              className={`btn w-100 py-3 rounded-4 fw-bold d-flex align-items-center justify-content-center gap-2 mt-2 shadow-none border-0 ${isDark ? 'btn-secondary text-white' : 'btn-light text-dark border'}`}
+              style={isDark ? { backgroundColor: '#27272a' } : {}}
               onClick={handleAbrirEdicao}
             >
               <FiEdit2 size={18} /> Editar dados do lançamento
@@ -137,14 +158,14 @@ function TransactionDetails({
 
           {/* STEP 2: AVISO DE EXCLUSÃO */}
           {menuAcaoDetalhes === 2 && (
-            <div className="p-3 rounded-4 bg-dark border border-danger border-opacity-50 text-center mt-2">
+            <div className={`p-3 rounded-4 border border-danger border-opacity-50 text-center mt-2 ${isDark ? 'bg-dark' : 'bg-white shadow-sm'}`}>
               <div className="mb-3">
                 <FiAlertCircle size={36} className="text-danger mb-2" />
-                <p className="text-white fw-bold mb-1">Excluir Lançamento?</p>
+                <p className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>Excluir Lançamento?</p>
                 {transacaoSelecionada.recorrente ? (
-                  <p className="text-light opacity-75 small mb-0">Este lançamento faz parte de uma série. Como deseja prosseguir?</p>
+                  <p className={`small mb-0 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Este lançamento faz parte de uma série. Como deseja prosseguir?</p>
                 ) : (
-                  <p className="text-light opacity-75 small mb-0">Essa ação não poderá ser desfeita.</p>
+                  <p className={`small mb-0 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Essa ação não poderá ser desfeita.</p>
                 )}
               </div>
               
@@ -200,7 +221,7 @@ function TransactionDetails({
                   </button>
                 )}
                 <button 
-                  className="btn btn-link text-light opacity-75 mt-2 shadow-none border-0" 
+                  className={`btn btn-link mt-2 shadow-none border-0 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} 
                   onClick={() => setMenuAcaoDetalhes(0)} 
                   disabled={isDeleting}
                 >

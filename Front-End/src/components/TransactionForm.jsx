@@ -9,8 +9,10 @@ import api from '../api/axios';
 function TransactionForm({
   showBottomSheet, setShowBottomSheet,
   usuarioLogado, carregarTransacoes,
-  transacaoParaEditar, setTransacaoParaEditar
+  transacaoParaEditar, setTransacaoParaEditar,
+  temaAtual
 }) {
+  const isDark = temaAtual === 'dark';
   const TRANSACOES_API_URL = '/Transacoes';
 
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
@@ -31,7 +33,6 @@ function TransactionForm({
 
   const editandoId = transacaoParaEditar ? transacaoParaEditar.id : null;
 
-  // Preenche o formulário automaticamente se for edição
   useEffect(() => {
     if (transacaoParaEditar) {
       setValorInput((Number(transacaoParaEditar.valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -45,7 +46,6 @@ function TransactionForm({
       setEhRecorrente(transacaoParaEditar.recorrente || false);
       setPagoInput(transacaoParaEditar.pago !== false);
     } else {
-      // Limpa tudo se for um novo lançamento
       setValorInput('');
       setTituloInput('');
       setCategoriaInput('');
@@ -160,31 +160,47 @@ function TransactionForm({
     setTransacaoParaEditar(null);
   };
 
+  const inputStyleClass = isDark 
+    ? "form-control bg-dark border-secondary text-white shadow-none" 
+    : "form-control bg-light border-light-subtle text-dark shadow-none";
+
+  const selectStyleClass = isDark 
+    ? "form-select bg-dark border-secondary text-white shadow-none" 
+    : "form-select bg-light border-light-subtle text-dark shadow-none";
+
   return (
     <Offcanvas 
       show={showBottomSheet} 
       onHide={fecharModal} 
       placement="bottom" 
-      style={{ height: 'auto', maxHeight: '90vh', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', backgroundColor: '#1e1e24', color: '#fff' }}
+      style={{ 
+        height: 'auto', 
+        maxHeight: '90vh', 
+        borderTopLeftRadius: '24px', 
+        borderTopRightRadius: '24px', 
+        backgroundColor: isDark ? '#1e1e24' : '#ffffff', 
+        color: isDark ? '#fff' : '#212529' 
+      }}
     >
-      <Offcanvas.Header closeButton closeVariant="white" className="pb-0 border-0 mt-2">
-        <Offcanvas.Title className="w-100 text-center fw-bold fs-6 text-white">
+      <Offcanvas.Header closeButton closeVariant={isDark ? "white" : undefined} className="pb-0 border-0 mt-2">
+        <Offcanvas.Title className={`w-100 text-center fw-bold fs-6 ${isDark ? 'text-white' : 'text-dark'}`}>
           {editandoId ? 'Editar Lançamento' : 'Novo Lançamento'}
         </Offcanvas.Title>
       </Offcanvas.Header>
       <Offcanvas.Body style={{ overflowY: 'auto', paddingBottom: '0' }}>
         
         <div className="mt-2">
-          <div className="d-flex justify-content-center mb-3 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '250px' }}>
+          {/* SELETOR DESPESA / RECEITA */}
+          <div className={`d-flex justify-content-center mb-3 rounded-pill p-1 mx-auto ${isDark ? 'bg-dark' : 'bg-light border'}`} style={{ maxWidth: '250px' }}>
             <button 
-              className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'despesa' ? 'text-white' : 'text-light opacity-50'}`} 
+              className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'despesa' ? 'text-white' : (isDark ? 'text-light opacity-50' : 'text-secondary')}`} 
               style={{ backgroundColor: tipoTransacao === 'despesa' ? '#374151' : 'transparent' }}
               onClick={() => { setTipoTransacao('despesa'); setCategoriaInput(''); }}
             >
               Despesa
             </button>
             <button 
-              className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'receita' ? 'text-dark' : 'text-light opacity-50'}`} 
+              className={`btn rounded-pill w-50 fw-bold border-0 ${tipoTransacao === 'receita' ? (isDark ? 'text-dark' : 'text-white') : (isDark ? 'text-light opacity-50' : 'text-secondary')}`} 
               style={{ backgroundColor: tipoTransacao === 'receita' ? '#10b981' : 'transparent' }}
               onClick={() => { setTipoTransacao('receita'); setCategoriaInput(''); }}
             >
@@ -192,13 +208,22 @@ function TransactionForm({
             </button>
           </div>
 
+          {/* VALOR */}
           <div className="text-center mb-3">
-            <small className="text-light opacity-75 fw-bold d-block mb-1">VALOR</small>
+            <small className={`fw-bold d-block mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>VALOR</small>
             <input 
               type="text" 
               inputMode="numeric"
-              className={`form-control bg-transparent border-0 text-center fw-bold fs-1 py-0 shadow-none w-100 ${tipoTransacao === 'despesa' ? 'text-white input-valor-despesa' : 'text-emerald input-valor-receita'}`} 
-              style={{ color: tipoTransacao === 'receita' ? '#10b981 !important' : '#ffffff' }}
+              className={`form-control bg-transparent border-0 text-center fw-bold fs-1 py-0 shadow-none w-100 ${
+                tipoTransacao === 'despesa' 
+                  ? (isDark ? 'text-white input-valor-despesa' : 'input-valor-despesa-light') 
+                  : 'text-emerald input-valor-receita' 
+              }`} 
+              style={{ 
+                color: tipoTransacao === 'receita' 
+                  ? '#10b981' 
+                  : (isDark ? '#ffffff' : (valorInput ? '#212529' : 'rgba(33, 37, 41, 0.35)')) 
+              }}
               placeholder="R$ 0,00" 
               value={valorInput ? `R$ ${valorInput}` : ''}
               onChange={handleValorChange}
@@ -206,14 +231,15 @@ function TransactionForm({
           </div>
         </div>
 
+        {/* CAMPOS DO FORMULÁRIO */}
         <div className="d-flex flex-column gap-2 mb-3">
           <div className="row g-2">
             <div className="col-6">
-              <label className="form-label text-light opacity-75 small mb-1">Título</label>
+              <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Título</label>
               <div style={{ position: 'relative' }}>
                 <input 
                   type="text" 
-                  className="form-control bg-dark border-secondary text-white shadow-none" 
+                  className={inputStyleClass} 
                   placeholder="Ex: Troca de óleo" 
                   value={tituloInput}
                   onChange={(e) => setTituloInput(e.target.value)}
@@ -228,9 +254,9 @@ function TransactionForm({
               </div>
             </div>
             <div className="col-6">
-              <label className="form-label text-light opacity-75 small mb-1">Categoria</label>
+              <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Categoria</label>
               <select 
-                className="form-select bg-dark border-secondary text-white shadow-none"
+                className={selectStyleClass}
                 value={categoriaInput}
                 onChange={(e) => setCategoriaInput(e.target.value)}
               >
@@ -259,9 +285,9 @@ function TransactionForm({
           
           <div className="row g-2">
             <div className="col-6">
-              <label className="form-label text-light opacity-75 small mb-1">Forma de Pagamento</label>
+              <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Forma de Pagamento</label>
               <select 
-                className="form-select bg-dark border-secondary text-white shadow-none"
+                className={selectStyleClass}
                 value={pagamentoInput}
                 onChange={(e) => setPagamentoInput(e.target.value)}
               >
@@ -274,10 +300,10 @@ function TransactionForm({
               </select>
             </div>
             <div className="col-6">
-              <label className="form-label text-light opacity-75 small mb-1">Data</label>
+              <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Data</label>
               <input 
                 type="date" 
-                className="form-control bg-dark border-secondary text-white shadow-none" 
+                className={inputStyleClass} 
                 value={dataInput}
                 onChange={(e) => setDataInput(e.target.value)}
               />
@@ -285,10 +311,10 @@ function TransactionForm({
           </div>
 
           <div>
-            <label className="form-label text-light opacity-75 small mb-1">Observação</label>
+            <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Observação</label>
             <div style={{ position: 'relative' }}>
               <textarea 
-                className="form-control bg-dark border-secondary text-white shadow-none" 
+                className={inputStyleClass} 
                 rows="2"
                 placeholder="Detalhes adicionais (Opcional)" 
                 value={observacaoInput}
@@ -305,9 +331,10 @@ function TransactionForm({
           </div>
         </div>
 
+        {/* SWITCHES */}
         {isDataInputFuture(dataInput) && (
           <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
-            <label className="form-check-label text-light opacity-75 ms-0" htmlFor="statusPago">Lançamento já foi pago/recebido?</label>
+            <label className={`form-check-label ms-0 ${isDark ? 'text-light opacity-75' : 'text-dark'}`} htmlFor="statusPago">Lançamento já foi pago/recebido?</label>
             <input 
               className="form-check-input ms-3 shadow-none mt-0" 
               type="checkbox" 
@@ -321,7 +348,7 @@ function TransactionForm({
         )}
 
         <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
-          <label className="form-check-label text-light opacity-75 ms-0" htmlFor="recorrente">É uma transação fixa/recorrente?</label>
+          <label className={`form-check-label ms-0 ${isDark ? 'text-light opacity-75' : 'text-dark'}`} htmlFor="recorrente">É uma transação fixa/recorrente?</label>
           <input 
             className="form-check-input ms-3 shadow-none mt-0" 
             type="checkbox" 
@@ -336,7 +363,7 @@ function TransactionForm({
         
         {ehRecorrente && tipoRecorrencia === 'parcelado' && (
           <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
-            <label className="form-check-label text-light opacity-75 ms-0" htmlFor="toggleTotal">É o valor total do lançamento?</label>
+            <label className={`form-check-label ms-0 ${isDark ? 'text-light opacity-75' : 'text-dark'}`} htmlFor="toggleTotal">É o valor total do lançamento?</label>
             <input 
               className="form-check-input ms-3 shadow-none mt-0" 
               type="checkbox" 
@@ -349,18 +376,19 @@ function TransactionForm({
           </div>
         )}
 
+        {/* DETALHES DE RECORRÊNCIA */}
         {ehRecorrente && (
           <>
-            <div className="d-flex justify-content-between mb-3 bg-dark rounded-pill p-1 mx-auto" style={{ maxWidth: '300px' }}>
+            <div className={`d-flex justify-content-between mb-3 rounded-pill p-1 mx-auto ${isDark ? 'bg-dark' : 'bg-light border'}`} style={{ maxWidth: '300px' }}>
               <button
-                className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'fixo' ? 'text-white' : 'text-light opacity-50'}`}
+                className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'fixo' ? 'text-white' : (isDark ? 'text-light opacity-50' : 'text-secondary')}`}
                 style={{ backgroundColor: tipoRecorrencia === 'fixo' ? '#3b82f6' : 'transparent', transition: '0.2s' }}
                 onClick={() => setTipoRecorrencia('fixo')}
               >
                 Conta Fixa
               </button>
               <button
-                className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'parcelado' ? 'text-white' : 'text-light opacity-50'}`}
+                className={`btn rounded-pill w-50 fw-bold border-0 ${tipoRecorrencia === 'parcelado' ? 'text-white' : (isDark ? 'text-light opacity-50' : 'text-secondary')}`}
                 style={{ backgroundColor: tipoRecorrencia === 'parcelado' ? '#8b5cf6' : 'transparent', transition: '0.2s' }}
                 onClick={() => setTipoRecorrencia('parcelado')}
               >
@@ -368,7 +396,7 @@ function TransactionForm({
               </button>
             </div>
 
-            <div className="card bg-dark border-secondary border-opacity-25 p-3 mb-3 rounded-4 shadow-sm">
+            <div className={`card p-3 mb-3 rounded-4 shadow-sm ${isDark ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light-subtle'}`}>
               {editandoId ? (
                 <small className="text-warning text-center d-block opacity-75">
                   <FiAlertCircle className="me-1 mb-1" /> Você está editando apenas esta parcela individual. Para mudar a regra geral de recorrência, exclua e crie um novo lançamento.
@@ -377,7 +405,7 @@ function TransactionForm({
                 <>
                   {tipoRecorrencia === 'parcelado' && (
                     <div>
-                      <label className="form-label text-light opacity-75 small mb-1">Quantidade de Parcelas</label>
+                      <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Quantidade de Parcelas</label>
                       <div className="d-flex align-items-center gap-3">
                         <input
                           type="range"
@@ -387,9 +415,9 @@ function TransactionForm({
                           value={qtdParcelas}
                           onChange={(e) => setQtdParcelas(parseInt(e.target.value))}
                         />
-                        <span className="fw-bold text-white fs-5">{qtdParcelas}x</span>
+                        <span className={`fw-bold fs-5 ${isDark ? 'text-white' : 'text-dark'}`}>{qtdParcelas}x</span>
                       </div>
-                      <div className="text-light opacity-50 mt-2 text-center lh-sm" style={{ fontSize: '12px' }}>
+                      <div className={`mt-2 text-center lh-sm ${isDark ? 'text-light opacity-50' : 'text-secondary'}`} style={{ fontSize: '12px' }}>
                         {tipoValorParcela === 'total' 
                           ? <>Total de R$ {valorInput || '0,00'} dividido em {qtdParcelas}x de <strong>{valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) / qtdParcelas) : 'R$ 0,00'}</strong>.</>
                           : <>{qtdParcelas}x de R$ {valorInput || '0,00'} (Total: <strong>{valorInput ? formatarMoeda(parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) * qtdParcelas) : 'R$ 0,00'}</strong>).</>
@@ -398,7 +426,7 @@ function TransactionForm({
                     </div>
                   )}
                   {tipoRecorrencia === 'fixo' && (
-                    <small className="text-light opacity-50 d-block text-center mt-1">
+                    <small className={`d-block text-center mt-1 ${isDark ? 'text-light opacity-50' : 'text-secondary'}`}>
                       O valor de R$ {valorInput || '0,00'} será projetado automaticamente por 12 meses.
                     </small>
                   )}
@@ -408,8 +436,9 @@ function TransactionForm({
           </>
         )}
 
+        {/* BOTÃO PRINCIPAL */}
         <button 
-          className={`btn w-100 py-3 rounded-4 fw-bold shadow border-0 mt-2 ${isSubmitting ? 'text-white' : 'text-dark'}`}
+          className="btn w-100 py-3 rounded-4 fw-bold shadow border-0 mt-2 text-white"
           style={{ backgroundColor: isSubmitting ? '#6b7280' : '#10b981', transition: '0.3s' }}
           onClick={handleConfirmarLancamento}
           disabled={isSubmitting} 

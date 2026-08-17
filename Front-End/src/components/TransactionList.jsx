@@ -9,16 +9,18 @@ function TransactionList({
   mesFiltro, setShowMonthSelector,
   transacoesAgrupadas,
   setTransacaoSelecionada, setMenuAcaoDetalhes,
-  showBalance, obterIconeCategoria
+  showBalance, obterIconeCategoria, temaAtual
 }) {
+  const isDark = temaAtual === 'dark';
+
   return (
     <>
       {/* BARRA DE PESQUISA GERAL */}
-      <div className="d-flex align-items-center bg-dark bg-opacity-50 rounded-pill px-3 py-2 mb-4 border border-secondary border-opacity-25 shadow-sm">
-        <FiSearch className="text-light opacity-50 me-2" size={18} />
+      <div className={`d-flex align-items-center rounded-pill px-3 py-2 mb-4 border shadow-sm ${isDark ? 'bg-dark bg-opacity-50 border-secondary border-opacity-25' : 'bg-white border-light'}`}>
+        <FiSearch className={`me-2 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`} size={18} />
         <input 
           type="text" 
-          className="form-control bg-transparent border-0 text-white shadow-none p-0 input-busca" 
+          className={`form-control bg-transparent border-0 shadow-none p-0 input-busca ${isDark ? 'text-white' : 'text-dark'}`} 
           placeholder="Pesquisar" 
           value={termoBusca}
           onChange={(e) => setTermoBusca(e.target.value)}
@@ -29,7 +31,7 @@ function TransactionList({
       {/* LISTA DE TRANSAÇÕES AGRUPADAS POR DATA E BOTÃO DE MÊS */}
       <section className="mb-4 pb-5">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h6 className="text-white mb-0 fw-bold text-truncate me-2">
+          <h6 className={`mb-0 fw-bold text-truncate me-2 ${isDark ? 'text-white' : 'text-dark'}`}>
             {termoBusca 
               ? 'Resultados da busca' 
               : selectedCategory 
@@ -39,7 +41,7 @@ function TransactionList({
           </h6>
           
           <button 
-            className="btn badge bg-secondary bg-opacity-25 text-light px-3 py-2 rounded-pill text-uppercase d-flex align-items-center gap-1 border-0 shadow-sm flex-shrink-0" 
+            className={`btn badge px-3 py-2 rounded-pill text-uppercase d-flex align-items-center gap-1 border-0 shadow-sm flex-shrink-0 ${isDark ? 'bg-secondary bg-opacity-25 text-light' : 'bg-white text-dark border-light'}`} 
             style={{ fontSize: '11px', letterSpacing: '0.5px' }}
             onClick={() => setShowMonthSelector(true)}
           >
@@ -48,15 +50,15 @@ function TransactionList({
         </div>
         
         {transacoesAgrupadas.length === 0 ? (
-          <div className="card dark-card text-center p-4">
-            <p className="text-light opacity-50 mb-0">Nenhuma transação encontrada.</p>
-            {!termoBusca && !selectedCategory && <small className="text-light opacity-50">Que tal adicionar alguma?</small>}
+          <div className={`card text-center p-4 ${isDark ? 'dark-card' : 'bg-white border-0 shadow-sm'}`}>
+            <p className={`mb-0 ${isDark ? 'text-light opacity-50' : 'text-secondary'}`}>Nenhuma transação encontrada.</p>
+            {!termoBusca && !selectedCategory && <small className={isDark ? 'text-light opacity-50' : 'text-secondary'}>Que tal adicionar alguma?</small>}
           </div>
         ) : (
           transacoesAgrupadas.map(grupo => (
             <div key={grupo.dataString} className="mb-4">
               
-              <small className="text-light opacity-50 fw-bold d-block mb-2 ms-2">
+              <small className={`fw-bold d-block mb-2 ms-2 ${isDark ? 'text-light opacity-50' : 'text-secondary'}`}>
                 {formatarCabecalhoData(grupo.dataString)}
               </small>
 
@@ -73,17 +75,17 @@ function TransactionList({
                 return (
                   <div 
                     key={t.id} 
-                    className="card dark-card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-list-item border-0 shadow-sm"
+                    className={`card p-3 d-flex flex-row justify-content-between align-items-center mb-2 transaction-list-item border-0 shadow-sm ${isDark ? 'dark-card' : 'bg-white'}`}
                     style={{ cursor: 'pointer', opacity: (isPast || t.pago) ? 1 : 0.6 }} 
                     onClick={() => { setTransacaoSelecionada(t); setMenuAcaoDetalhes(0); }}
                   >
                     <div className="d-flex align-items-center">
-                        <div className="bg-secondary bg-opacity-25 p-2 rounded-circle me-3 text-white d-flex align-items-center justify-content-center" style={{ width: '38px', height: '38px' }}>
+                        <div className={`p-2 rounded-circle me-3 d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`} style={{ width: '38px', height: '38px' }}>
                           {obterIconeCategoria(t.categoria)}
                         </div>
                         <div>
-                          <h6 className="mb-0 text-white" style={{ fontSize: '15px' }}>{t.titulo}</h6>
-                          <small className="text-light opacity-75 d-flex align-items-center mt-1" style={{ fontSize: '11px' }}>
+                          <h6 className={`mb-0 ${isDark ? 'text-white' : 'text-dark'}`} style={{ fontSize: '15px' }}>{t.titulo}</h6>
+                          <small className={`d-flex align-items-center mt-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{ fontSize: '11px' }}>
                             {!isPast && (
                               t.pago 
                                 ? <FiCheckCircle className="text-emerald me-1" size={10} /> 
@@ -94,7 +96,7 @@ function TransactionList({
                         </div>
                     </div>
                     <div className="text-end">
-                      <span className={t.tipo === 'despesa' ? 'text-white fw-bold d-block mb-0' : 'text-emerald fw-bold d-block mb-0'}>
+                      <span className={t.tipo === 'despesa' ? `fw-bold d-block mb-0 ${isDark ? 'text-white' : 'text-dark'}` : 'text-emerald fw-bold d-block mb-0'}>
                         {showBalance 
                           ? <>{t.tipo === 'despesa' ? '- ' : '+ '} {formatarMoeda(t.valor)}</>
                           : '••••••••'

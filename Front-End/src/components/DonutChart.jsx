@@ -13,18 +13,20 @@ function DonutChart({
   despesasGrafico, pagamentosGrafico,
   despesasArray, pagamentosArray,
   historicoData, maxFaturaHist,
-  listaMeses, setMesFiltro
+  listaMeses, setMesFiltro, temaAtual
 }) {
+  const isDark = temaAtual === 'dark';
+
   return (
-    <section className="card dark-card p-4 mb-4">
+    <section className={`card p-4 mb-4 ${isDark ? 'dark-card' : 'border-0 shadow-sm bg-white'}`}>
       
       {/* CABEÇALHO DO CARD DE GRÁFICOS */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <small className="text-light opacity-75 d-block" style={{ fontSize: '11px' }}>
+          <small className={`d-block ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{ fontSize: '11px' }}>
             {isCardFlipped ? 'Este mês (Cartão)' : 'Este mês (Geral)'}
           </small>
-          <h6 className="mb-0 fw-bold text-white d-flex align-items-center gap-2">
+          <h6 className={`mb-0 fw-bold d-flex align-items-center gap-2 ${isDark ? 'text-white' : 'text-dark'}`}>
             {isCardFlipped 
               ? (abaGrafico === 0 ? 'Distribuição por Categoria' : 'Histórico de Faturas') 
               : (abaGrafico === 0 ? 'Distribuição por Categoria' : 'Formas de Pagamento')
@@ -34,13 +36,13 @@ function DonutChart({
         
         <div className="d-flex align-items-center gap-3">
           {/* PONTINHOS DO SWIPE INDICATOR */}
-          <div className="d-flex align-items-center gap-1 bg-dark bg-opacity-50 px-2 py-1 rounded-pill">
+          <div className={`d-flex align-items-center gap-1 px-2 py-1 rounded-pill ${isDark ? 'bg-dark bg-opacity-50' : 'bg-light'}`}>
             <span 
               style={{ 
                 width: abaGrafico === 0 ? '16px' : '6px', 
                 height: '6px', 
                 borderRadius: '3px', 
-                backgroundColor: abaGrafico === 0 ? '#10b981' : '#6b7280', 
+                backgroundColor: abaGrafico === 0 ? '#10b981' : (isDark ? '#6b7280' : '#adb5bd'), 
                 transition: '0.3s'
               }}
             ></span>
@@ -49,7 +51,7 @@ function DonutChart({
                 width: abaGrafico === 1 ? '16px' : '6px', 
                 height: '6px', 
                 borderRadius: '3px', 
-                backgroundColor: abaGrafico === 1 ? '#10b981' : '#6b7280', 
+                backgroundColor: abaGrafico === 1 ? '#10b981' : (isDark ? '#6b7280' : '#adb5bd'), 
                 transition: '0.3s'
               }}
             ></span>
@@ -78,13 +80,13 @@ function DonutChart({
               }}
             >
               {totalDespesasAtivas === 0 ? (
-                <div className="w-100 h-100 rounded-circle bg-dark d-flex align-items-center justify-content-center border border-secondary border-opacity-25">
-                  <FiCoffee className="text-light opacity-25" size={28}/>
+                <div className={`w-100 h-100 rounded-circle d-flex align-items-center justify-content-center border ${isDark ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}>
+                  <FiCoffee className={isDark ? "text-light opacity-25" : "text-secondary opacity-50"} size={28}/>
                 </div>
               ) : (
                 <>
                   <svg viewBox="0 0 42 42" className="w-100 h-100" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
-                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#27272a" strokeWidth="4"></circle>
+                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? "#27272a" : "#f1f3f5"} strokeWidth="4"></circle>
                     {svgSegments.map(seg => {
                       const isHighlighted = (hoveredCategory === seg.key) || (selectedCategory === seg.key);
                       const isDimmed = (hoveredCategory || selectedCategory) && !isHighlighted;
@@ -119,15 +121,15 @@ function DonutChart({
                   <div className="position-absolute top-50 start-50 translate-middle text-center w-100 pe-none d-flex flex-column align-items-center justify-content-center" style={{ padding: '0 20px' }}>
                     {hoveredCategory || selectedCategory ? (
                       <>
-                        <span className="text-light opacity-75 text-truncate w-100 d-block" style={{fontSize: '11px'}}>{hoveredCategory || selectedCategory}</span>
-                        <span className="fw-bold text-white" style={{fontSize: '14px', textShadow: '0px 2px 4px rgba(0,0,0,0.5)'}}>
+                        <span className={`text-truncate w-100 d-block ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{fontSize: '11px'}}>{hoveredCategory || selectedCategory}</span>
+                        <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`} style={{fontSize: '14px', textShadow: isDark ? '0px 2px 4px rgba(0,0,0,0.5)' : 'none'}}>
                           {showBalance ? formatarMoeda((abaGrafico === 0 ? despesasGrafico : pagamentosGrafico)[hoveredCategory || selectedCategory]) : 'R$ •••••'}
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-light opacity-50 text-uppercase d-block" style={{fontSize: '10px', letterSpacing: '0.5px'}}>Total</span>
-                        <span className="fw-bold text-white" style={{fontSize: '14px'}}>{showBalance ? formatarMoeda(totalDespesasAtivas) : 'R$ •••••'}</span>
+                        <span className={`text-uppercase d-block ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`} style={{fontSize: '10px', letterSpacing: '0.5px'}}>Total</span>
+                        <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`} style={{fontSize: '14px'}}>{showBalance ? formatarMoeda(totalDespesasAtivas) : 'R$ •••••'}</span>
                       </>
                     )}
                   </div>
@@ -138,7 +140,7 @@ function DonutChart({
             {/* LEGENDA (INTERATIVA E ORDENADA) NA DIREITA */}
             <div className="d-flex flex-column gap-1 text-end" style={{ fontSize: '13px', width: '135px' }}>
               {totalDespesasAtivas === 0 ? (
-                <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
+                <span className={`text-center w-100 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`}>Sem despesas</span>
               ) : (
                 (abaGrafico === 0 ? despesasArray : pagamentosArray).map(([cat, valor]) => {
                   const porcentagem = ((Number(valor) || 0) / totalDespesasAtivas * 100).toFixed(0);
@@ -153,17 +155,17 @@ function DonutChart({
                         cursor: 'pointer', 
                         transition: '0.2s', 
                         opacity: isDimmed ? 0.4 : 1,
-                        background: selectedCategory === cat ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        background: selectedCategory === cat ? (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent',
                         paddingTop: '3px', paddingBottom: '3px'
                       }}
                       onMouseEnter={() => setHoveredCategory(cat)}
                       onMouseLeave={() => setHoveredCategory(null)}
                       onClick={(e) => { e.stopPropagation(); setSelectedCategory(selectedCategory === cat ? null : cat); setHoveredCategory(null); }}
                     >
-                      <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '95px' }}>
+                      <span className={`d-flex align-items-center text-truncate ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{ maxWidth: '95px' }}>
                         <span className="rounded-circle me-2 flex-shrink-0" style={{ width: '8px', height: '8px', backgroundColor: corCat }}></span> {cat}
                       </span>
-                      <span className="fw-bold text-white">{showBalance ? `${porcentagem}%` : '***'}</span>
+                      <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{showBalance ? `${porcentagem}%` : '***'}</span>
                     </div>
                   );
                 })
@@ -193,19 +195,19 @@ function DonutChart({
                     }
                   }}
                 >
-                  <span className="text-light opacity-75 mb-2" style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
+                  <span className={`mb-2 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{ fontSize: '9px', whiteSpace: 'nowrap' }}>
                     {showBalance ? ((Number(hist.total) || 0) > 0 ? `R$ ${Math.round(hist.total)}` : '-') : '***'}
                   </span>
                   <div 
                     style={{ 
                       width: '14px', 
                       height: `${heightPct}%`, 
-                      backgroundColor: i === 4 ? '#4f46e5' : '#3f3f46', 
+                      backgroundColor: i === 4 ? '#4f46e5' : (isDark ? '#3f3f46' : '#e9ecef'), 
                       borderRadius: '4px 4px 0 0',
                       transition: 'height 0.5s ease-in-out'
                     }}
                   ></div>
-                  <span className="text-white mt-2 fw-bold opacity-75" style={{ fontSize: '10px' }}>{hist.nome}</span>
+                  <span className={`mt-2 fw-bold ${isDark ? 'text-white opacity-75' : 'text-dark'}`} style={{ fontSize: '10px' }}>{hist.nome}</span>
                 </div>
               );
             })}
@@ -218,13 +220,13 @@ function DonutChart({
             
             <div style={{ width: '150px', height: '150px', position: 'relative', marginLeft: '-10px' }}>
               {totalDespesasAtivas === 0 ? (
-                <div className="w-100 h-100 rounded-circle bg-dark d-flex align-items-center justify-content-center border border-secondary border-opacity-25">
-                  <FiCreditCard className="text-light opacity-25" size={28}/>
+                <div className={`w-100 h-100 rounded-circle d-flex align-items-center justify-content-center border ${isDark ? 'bg-dark border-secondary border-opacity-25' : 'bg-light border-light'}`}>
+                  <FiCreditCard className={isDark ? "text-light opacity-25" : "text-secondary opacity-50"} size={28}/>
                 </div>
               ) : (
                 <>
                   <svg viewBox="0 0 42 42" className="w-100 h-100" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
-                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#27272a" strokeWidth="4"></circle>
+                    <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? "#27272a" : "#f1f3f5"} strokeWidth="4"></circle>
                     {svgSegments.map(seg => {
                       const isHighlighted = (hoveredCategory === seg.key) || (selectedCategory === seg.key);
                       const isDimmed = (hoveredCategory || selectedCategory) && !isHighlighted;
@@ -262,15 +264,15 @@ function DonutChart({
                   <div className="position-absolute top-50 start-50 translate-middle text-center w-100 pe-none d-flex flex-column align-items-center justify-content-center" style={{ padding: '0 20px' }}>
                     {hoveredCategory || selectedCategory ? (
                       <>
-                        <span className="text-light opacity-75 text-truncate w-100 d-block" style={{fontSize: '11px'}}>{hoveredCategory || selectedCategory}</span>
-                        <span className="fw-bold text-white" style={{fontSize: '14px', textShadow: '0px 2px 4px rgba(0,0,0,0.5)'}}>
+                        <span className={`text-truncate w-100 d-block ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{fontSize: '11px'}}>{hoveredCategory || selectedCategory}</span>
+                        <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`} style={{fontSize: '14px', textShadow: isDark ? '0px 2px 4px rgba(0,0,0,0.5)' : 'none'}}>
                           {showBalance ? formatarMoeda((abaGrafico === 0 ? despesasGrafico : pagamentosGrafico)[hoveredCategory || selectedCategory]) : 'R$ •••••'}
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-light opacity-50 text-uppercase d-block" style={{fontSize: '10px', letterSpacing: '0.5px'}}>Total</span>
-                        <span className="fw-bold text-white" style={{fontSize: '14px'}}>{showBalance ? formatarMoeda(totalDespesasAtivas) : 'R$ •••••'}</span>
+                        <span className={`text-uppercase d-block ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`} style={{fontSize: '10px', letterSpacing: '0.5px'}}>Total</span>
+                        <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`} style={{fontSize: '14px'}}>{showBalance ? formatarMoeda(totalDespesasAtivas) : 'R$ •••••'}</span>
                       </>
                     )}
                   </div>
@@ -281,7 +283,7 @@ function DonutChart({
             {/* LEGENDA ORDENADA */}
             <div className="d-flex flex-column gap-1 text-end" style={{ fontSize: '13px', width: '135px' }}>
               {totalDespesasAtivas === 0 ? (
-                <span className="text-light opacity-50 text-center w-100">Sem despesas</span>
+                <span className={`text-center w-100 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`}>Sem despesas</span>
               ) : (
                 pagamentosArray.map(([cat, valor]) => {
                   const porcentagem = ((Number(valor) || 0) / totalDespesasAtivas * 100).toFixed(0);
@@ -296,17 +298,17 @@ function DonutChart({
                         cursor: 'pointer', 
                         transition: '0.2s', 
                         opacity: isDimmed ? 0.4 : 1,
-                        background: selectedCategory === cat ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        background: selectedCategory === cat ? (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent',
                         paddingTop: '3px', paddingBottom: '3px'
                       }}
                       onMouseEnter={() => setHoveredCategory(cat)}
                       onMouseLeave={() => setHoveredCategory(null)}
                       onClick={(e) => { e.stopPropagation(); setSelectedCategory(selectedCategory === cat ? null : cat); setHoveredCategory(null); }}
                     >
-                      <span className="d-flex align-items-center text-light opacity-75 text-truncate" style={{ maxWidth: '95px' }}>
+                      <span className={`d-flex align-items-center text-truncate ${isDark ? 'text-light opacity-75' : 'text-secondary'}`} style={{ maxWidth: '95px' }}>
                         <span className="rounded-circle me-2 flex-shrink-0" style={{ width: '8px', height: '8px', backgroundColor: corCat }}></span> {cat}
                       </span>
-                      <span className="fw-bold text-white">{showBalance ? `${porcentagem}%` : '***'}</span>
+                      <span className={`fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>{showBalance ? `${porcentagem}%` : '***'}</span>
                     </div>
                   );
                 })

@@ -25,7 +25,7 @@ import {
 } from '../utils/constants';
 import { isPastOrToday } from '../utils/dateUtils';
 
-function Dashboard() {
+function Dashboard ({ temaAtual, toggleTema }) {  
   const TRANSACOES_API_URL = '/Transacoes';
 
   const { usuarioLogado, isLoggedIn, handleLogout } = useContext(AuthContext);
@@ -593,15 +593,17 @@ function Dashboard() {
     }
   };
 
- const dashboardTickerText = (
+  const dashboardTickerText = (
     <>
       <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
       <span>🔮 BUGS FORAM PREVISTOS NESTA VERSÃO DO FIRMO  💰 Dica: A melhor forma de economizar é não sair de casa, não comer, não beber e não viver. Siga-me para mais dicas!</span>
     </>
   );
 
+  const isDark = temaAtual === 'dark';
+
   return (
-    <div className="app-container pt-4 px-3">
+    <div className="app-container pt-4 px-3" style={{ minHeight: '100vh', backgroundColor: isDark ? '#121214' : '#f0f2f5', transition: 'background-color 0.3s ease' }}>
       <style>{`
         .flip-container { perspective: 1000px; margin-bottom: 0.5rem; cursor: pointer; }
         .flip-card-inner { position: relative; width: 100%; min-height: 210px; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
@@ -636,9 +638,14 @@ function Dashboard() {
         .dashboard-ticker {
           width: 100%;
           overflow: hidden;
-          background: rgba(16, 185, 129, 0.03);
-          border-top: 1px dashed rgba(16, 185, 129, 0.12);
-          border-bottom: 1px dashed rgba(16, 185, 129, 0.12);
+          
+          /* AQUI: Fundo verde super transparente no Dark, e fundo Dourado super transparente no Light */
+          background: ${isDark ? 'rgba(16, 185, 129, 0.03)' : 'rgba(217, 119, 6, 0.05)'};
+          
+          /* AQUI: Borda pontilhada verde no Dark, e Dourada no Light */
+          border-top: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
+          border-bottom: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
+          
           padding: 4px 0;
           margin: 0.4rem 0 0.6rem 0;
           display: flex;
@@ -647,7 +654,10 @@ function Dashboard() {
         .dashboard-ticker-content {
           display: inline-block;
           animation: ticker-scroll 40s linear infinite;
-          color: #fae902be;
+          
+          /* AQUI: Amarelo no modo escuro, e um Verde Escuro (ou Laranja) no modo claro */
+          color: ${isDark ? '#fae902be' : '#d97706'}; 
+          
           font-family: monospace, sans-serif;
           font-size: 0.68rem;
           letter-spacing: 1px;
@@ -663,8 +673,8 @@ function Dashboard() {
         }
       `}</style>
 
-      <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} />
-      <FlipCard isCardFlipped={isCardFlipped} setIsCardFlipped={setIsCardFlipped} showBalance={showBalance} saldoAtual={saldoAtual} receitasDoMes={receitasDoMes} despesasDoMes={despesasDoMes} mesFiltro={mesFiltro} corCartao={corCartao} apelidoCartao={apelidoCartao} diaVencimento={diaVencimento} diaFechamento={diaFechamento} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} totalFaturaMes={totalFaturaMes} statusFatura={statusFatura} mesVencimentoFatura={mesVencimentoFatura} setShowCardSettings={setShowCardSettings} setTempDiaVencimento={setTempDiaVencimento} setTempDiaFechamento={setTempDiaFechamento} setTempCor={setTempCor} setTempApelido={setTempApelido} setTempFinal={setTempFinal} setTempNome={setTempNome} setTempBandeira={setTempBandeira} />
+      <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} temaAtual={temaAtual} />
+      <FlipCard isCardFlipped={isCardFlipped} setIsCardFlipped={setIsCardFlipped} showBalance={showBalance} saldoAtual={saldoAtual} receitasDoMes={receitasDoMes} despesasDoMes={despesasDoMes} mesFiltro={mesFiltro} corCartao={corCartao} apelidoCartao={apelidoCartao} diaVencimento={diaVencimento} diaFechamento={diaFechamento} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} totalFaturaMes={totalFaturaMes} statusFatura={statusFatura} mesVencimentoFatura={mesVencimentoFatura} setShowCardSettings={setShowCardSettings} setTempDiaVencimento={setTempDiaVencimento} setTempDiaFechamento={setTempDiaFechamento} setTempCor={setTempCor} setTempApelido={setTempApelido} setTempFinal={setTempFinal} setTempNome={setTempNome} setTempBandeira={setTempBandeira} temaAtual={temaAtual} />
       
       {/* LETREIRO INTERMEDIÁRIO MAIS FINO E COM O NOVO TEXTO */}
       <div className="dashboard-ticker">
@@ -674,14 +684,14 @@ function Dashboard() {
         </div>
       </div>
 
-      <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} />
-      <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} />
-      <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} />
-      <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} />
-      <CardSettings showCardSettings={showCardSettings} setShowCardSettings={setShowCardSettings} diaVencimento={diaVencimento} diaFechamento={diaFechamento} corCartao={corCartao} apelidoCartao={apelidoCartao} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} tempDiaVencimento={tempDiaVencimento} setTempDiaVencimento={setTempDiaVencimento} tempDiaFechamento={tempDiaFechamento} setTempDiaFechamento={setTempDiaFechamento} tempCor={tempCor} setTempCor={setTempCor} tempApelido={tempApelido} setTempApelido={setTempApelido} tempFinal={tempFinal} setTempFinal={setTempFinal} tempNome={tempNome} setTempNome={setTempNome} tempBandeira={tempBandeira} setTempBandeira={setTempBandeira} handleSalvarConfigCartao={handleSalvarConfigCartao} />
-      <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} />
-      <TransactionForm showBottomSheet={showBottomSheet} setShowBottomSheet={setShowBottomSheet} usuarioLogado={usuarioLogado} carregarTransacoes={carregarTransacoes} transacaoParaEditar={transacaoParaEditar} setTransacaoParaEditar={setTransacaoParaEditar} />
-      <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} />
+      <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} temaAtual={temaAtual}/>
+      <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
+      <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} temaAtual={temaAtual} />
+      <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
+      <CardSettings showCardSettings={showCardSettings} setShowCardSettings={setShowCardSettings} diaVencimento={diaVencimento} diaFechamento={diaFechamento} corCartao={corCartao} apelidoCartao={apelidoCartao} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} tempDiaVencimento={tempDiaVencimento} setTempDiaVencimento={setTempDiaVencimento} tempDiaFechamento={tempDiaFechamento} setTempDiaFechamento={setTempDiaFechamento} tempCor={tempCor} setTempCor={setTempCor} tempApelido={tempApelido} setTempApelido={setTempApelido} tempFinal={tempFinal} setTempFinal={setTempFinal} tempNome={tempNome} setTempNome={setTempNome} tempBandeira={tempBandeira} setTempBandeira={setTempBandeira} handleSalvarConfigCartao={handleSalvarConfigCartao} temaAtual={temaAtual} />
+      <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} temaAtual={temaAtual} />
+      <TransactionForm showBottomSheet={showBottomSheet} setShowBottomSheet={setShowBottomSheet} usuarioLogado={usuarioLogado} carregarTransacoes={carregarTransacoes} transacaoParaEditar={transacaoParaEditar} setTransacaoParaEditar={setTransacaoParaEditar} temaAtual={temaAtual} />
+      <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} />
   </div>
   );
 }
