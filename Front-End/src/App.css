@@ -1,12 +1,13 @@
-/* Espaço no fundo para a barra inferior não esconder o conteúdo */
+/* =========================================
+   ESTRUTURA GERAL E LAYOUT DO APP
+========================================= */
 .app-container {
   padding-bottom: 90px; 
   min-height: 100vh;
-  max-width: 600px; /* Mantém com cara de app de celular mesmo se abrir no PC */
+  max-width: 600px;
   margin: 0 auto;
 }
 
-/* Cartões levemente mais claros que o fundo preto para dar profundidade */
 .dark-card {
   background-color: #1e1e24;
   border-radius: 20px;
@@ -14,10 +15,10 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Cores vibrantes para o dinheiro */
 .text-emerald {
   color: #10b981;
 }
+
 .text-danger-custom {
   color: #ef4444;
 }
@@ -53,7 +54,6 @@
   color: #10b981;
 }
 
-/* Posicionamento do botão central para ele vazar a barra */
 .fab-container {
   position: absolute;
   top: -30px; 
@@ -61,7 +61,6 @@
   transform: translateX(-50%);
 }
 
-/* O botão gordinho com glow */
 .fab-button {
   width: 65px;
   height: 65px;
@@ -72,7 +71,7 @@
   justify-content: center;
   align-items: center;
   color: #121214;
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); /* O Glow Verde */
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -82,8 +81,247 @@
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.6);
 }
 
-/* Placeholder super claro para a barra de busca */
 .input-busca::placeholder {
   color: rgba(255, 255, 255, 0.15) !important;
   font-weight: 300;
+}
+
+/* ==========================================
+   INPUTS SUAVES E ANIMAÇÕES (LOGIN/CADASTRO)
+========================================== */
+.soft-input-group {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.soft-input {
+  background-color: rgba(20, 20, 24, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  padding: 14px 16px 14px 44px !important;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.soft-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.soft-input:focus {
+  outline: none;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+  background-color: rgba(30, 30, 36, 0.9) !important;
+}
+
+.input-icon-left {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  transition: color 0.3s;
+}
+
+.soft-input:focus ~ .input-icon-left {
+  color: #10b981;
+}
+
+.input-icon-right {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: color 0.2s;
+  z-index: 10;
+}
+
+.input-icon-right:hover {
+  color: #ffffff;
+}
+
+.slide-down-fade {
+  animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: hidden;
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-10px); max-height: 0; margin-bottom: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 80px; margin-bottom: 1.25rem; }
+}
+
+/* ==========================================
+   LETREIRO INFINITO (MARQUEE)
+========================================== */
+.marquee-wrapper {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px 0;
+  display: flex;
+  white-space: nowrap;
+}
+
+.marquee-content {
+  display: inline-block;
+  animation: marquee-scroll 25s linear infinite;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: monospace, sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+}
+
+.marquee-content span {
+  margin: 0 15px;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ==========================================
+   OVERLAY DE CARREGAMENTO (BLUR)
+========================================== */
+.auth-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(18, 18, 20, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* ==========================================
+   CIFRÃO ENERGIZADO (ESTILO RAIO)
+========================================== */
+.currency-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.currency-svg {
+  width: 75px;
+  height: 75px;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
+}
+
+.currency-bg-path {
+  fill: none;
+  stroke: rgba(16, 185, 129, 0.2);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.currency-lightning-path {
+  fill: none;
+  stroke: #34d99f;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 60 180;
+  animation: dash-animation 1.5s linear infinite;
+}
+
+@keyframes dash-animation {
+  0% { stroke-dashoffset: 240; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* ==========================================
+   CORREÇÃO DO AUTOCOMPLETE (FUNDO BRANCO)
+========================================== */
+.soft-input:-webkit-autofill,
+.soft-input:-webkit-autofill:hover, 
+.soft-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #202024 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.soft-input:-webkit-autofill ~ .input-icon-left,
+.soft-input:-webkit-autofill ~ .input-icon-right {
+  color: #71717a !important;
+}
+
+/* ==========================================
+   LOADER DE BOLINHAS INTERATIVAS (ESTILO TECH)
+========================================== */
+.dots-loader-container {
+  position: relative;
+  width: 70px;
+  height: 50px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #10b981; /* Verde esmeralda */
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+  animation: dot-dance 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* Cada bolinha tem um comportamento orbital ligeiramente deslocado para parecer que interagem */
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: -0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: -0.4s;
+}
+
+@keyframes dot-dance {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+  /* Elas se aproximam e se fundem no centro */
+  35% {
+    transform: translate(0, 0) scale(1.4);
+    background-color: #34d99f;
+    box-shadow: 0 0 16px rgba(52, 217, 159, 1);
+  }
+  50% {
+    transform: translate(0, 0) scale(0.5); /* Viram quase um ponto único juntas */
+    opacity: 0.4;
+  }
+  /* Elas se soltam e vão para posições diferentes */
+  75% {
+    transform: translate(-22px, 12px) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(22px, -12px) scale(1);
+    opacity: 0.8;
+  }
 }
