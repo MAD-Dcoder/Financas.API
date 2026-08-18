@@ -9,7 +9,7 @@ function FlipCard({
   mesFiltro,
   corCartao, apelidoCartao, diaVencimento, diaFechamento, finalCartao, nomeCartao, bandeiraCartao,
   totalFaturaMes, statusFatura, mesVencimentoFatura,
-  setShowCardSettings, setTempDiaVencimento, setTempDiaFechamento, setTempCor, setTempApelido, setTempFinal, setTempNome, setTempBandeira,
+  setShowCardSettings, setTempDiaVencimento, setTempDiaFechamento, setTempCor, setTempApelido, setTempFinal, setTempBandeira,
   temaAtual
 }) {
   const isDark = temaAtual === 'dark';
@@ -120,7 +120,7 @@ function FlipCard({
                   setTempCor(corCartao);
                   setTempApelido(apelidoCartao);
                   setTempFinal(finalCartao);
-                  setTempNome(nomeCartao);
+                  // setTempNome(nomeCartao); <-- REMOVIDO!
                   setTempBandeira(bandeiraCartao);
                   setShowCardSettings(true); 
                 }}

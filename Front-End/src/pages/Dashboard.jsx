@@ -47,24 +47,20 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [transacoes, setTransacoes] = useState([]);
 
   // ==========================================
-  // ESTADOS MÚLTIPLOS CARTÕES (CARROSSEL) - CARTÃO PRÉ-SETADO PADRÃO
+  // ESTADOS MÚLTIPLOS CARTÕES (BUSCANDO DA API)
   // ==========================================
-  const [meusCartoes, setMeusCartoes] = useState(() => {
-    const saved = localStorage.getItem(`firmo_cartoes_${usuarioLogado?.id}`);
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: Date.now(),
-        apelidoCartao: 'Nome do Cartão',
-        finalCartao: 'XXXX',
-        bandeiraCartao: 'Mastercard',
-        corCartao: 'linear-gradient(135deg, #059669 0%, #047857 100%)', // Verde da paleta do app
-        diaFechamento: '00',
-        diaVencimento: '00',
-        nomeCartao: (usuarioLogado?.nome || 'SEU NOME').toUpperCase()
-      }
-    ];
-  });
+  const [meusCartoes, setMeusCartoes] = useState([
+    {
+      id: null,
+      apelidoCartao: 'Novo Cartão',
+      finalCartao: 'XXXX',
+      bandeiraCartao: 'Mastercard',
+      corCartao: 'linear-gradient(135deg, #214d80c2 0%, #575a5cc4 100%)',
+      diaFechamento: '00',
+      diaVencimento: '00',
+      limiteTotal: 0
+    }
+  ]);
   
   const [cartaoAtivoIndex, setCartaoAtivoIndex] = useState(0);
   const cartaoAtivo = meusCartoes[cartaoAtivoIndex] || meusCartoes[0];
@@ -74,10 +70,49 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [tempCor, setTempCor] = useState('');
   const [tempApelido, setTempApelido] = useState('');
   const [tempFinal, setTempFinal] = useState('');
-  const [tempNome, setTempNome] = useState('');
   const [tempBandeira, setTempBandeira] = useState('');
+  const [tempLimite, setTempLimite] = useState('');
 
-  // CONTROLE DO FLIP PERFEITO: Preserva o card ativo exato e alinha o scroll sem voltar para o zero
+  // Função para atualizar em tempo real o cartão visualmente no carrossel
+  const handleAtualizarCartaoTemp = (campo, valor) => {
+    const novosCartoes = [...meusCartoes];
+    if (novosCartoes[cartaoAtivoIndex]) {
+      novosCartoes[cartaoAtivoIndex] = {
+        ...novosCartoes[cartaoAtivoIndex],
+        [campo]: valor
+      };
+      setMeusCartoes(novosCartoes);
+    }
+  };
+
+  // Carregar cartões do usuário direto da API
+  const carregarCartoes = async () => {
+    if (!isLoggedIn || !usuarioLogado?.id) return;
+    try {
+      const response = await api.get(`/Cartoes/usuario/${usuarioLogado.id}`);
+      if (response.data && response.data.length > 0) {
+        const cartoesDoBanco = response.data.map(c => ({
+          id: c.id,
+          apelidoCartao: c.nome || 'Nome do Cartão',
+          finalCartao: c.ultimosDigitos || 'XXXX',
+          bandeiraCartao: c.bandeira || 'Mastercard',
+          corCartao: c.corFundo || 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+          diaFechamento: String(c.diaFechamento).padStart(2, '0'),
+          diaVencimento: String(c.diaVencimento).padStart(2, '0'),
+          limiteTotal: c.limiteTotal || 0
+        }));
+        setMeusCartoes(cartoesDoBanco);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar cartões da API:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarCartoes();
+  }, [isLoggedIn, usuarioLogado]);
+
+  // CONTROLE DO FLIP PERFEITO
   const handleToggleFlip = (novoEstado) => {
     setIsCardFlipped(novoEstado);
     if (carrosselRef.current) {
@@ -99,8 +134,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
     setTempCor(cartaoAtivo.corCartao);
     setTempApelido(cartaoAtivo.apelidoCartao);
     setTempFinal(cartaoAtivo.finalCartao);
-    setTempNome(cartaoAtivo.nomeCartao);
     setTempBandeira(cartaoAtivo.bandeiraCartao);
+    setTempLimite(cartaoAtivo.limiteTotal || ''); 
   }, [cartaoAtivo]);
 
   useEffect(() => {
@@ -117,24 +152,35 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
   }, [isCardFlipped, cartaoAtivoIndex]);
 
-  const handleSalvarConfigCartao = () => {
-    const novosCartoes = [...meusCartoes];
-    novosCartoes[cartaoAtivoIndex] = {
-      ...novosCartoes[cartaoAtivoIndex],
-      diaVencimento: String(tempDiaVencimento || '00').padStart(2, '0'),
-      diaFechamento: String(tempDiaFechamento || '00').padStart(2, '0'),
-      corCartao: tempCor,
-      apelidoCartao: tempApelido || 'Nome do Cartão',
-      finalCartao: tempFinal || 'XXXX',
-      nomeCartao: (tempNome || 'SEU NOME').toUpperCase(),
-      bandeiraCartao: tempBandeira || 'Mastercard'
+  const handleSalvarConfigCartao = async () => {
+    const dadosCartao = {
+      id: cartaoAtivo.id ? Number(cartaoAtivo.id) : 0,
+      usuarioId: usuarioLogado.id,
+      nome: tempApelido || 'Novo Cartão',
+      ultimosDigitos: tempFinal || '0000',
+      bandeira: tempBandeira || 'Mastercard',
+      limiteTotal: parseFloat(tempLimite || 0),
+      diaVencimento: parseInt(tempDiaVencimento || '9', 10),
+      diaFechamento: parseInt(tempDiaFechamento || '2', 10),
+      corFundo: tempCor,
+      corTexto: '#FFFFFF'
     };
-    
-    setMeusCartoes(novosCartoes);
-    if (usuarioLogado) {
-      localStorage.setItem(`firmo_cartoes_${usuarioLogado.id}`, JSON.stringify(novosCartoes));
+  
+    try {
+      if (cartaoAtivo.id) {
+        await api.put(`/Cartoes/${cartaoAtivo.id}`, dadosCartao);
+      } else {
+        await api.post('/Cartoes', dadosCartao);
+      }
+
+      await carregarCartoes();
+      setShowCardSettings(false);
+      alert("Cartão salvo com sucesso!");
+  
+    } catch (error) {
+      console.error("Erro ao salvar o cartão no banco:", error);
+      alert("Houve um erro ao salvar o cartão.");
     }
-    setShowCardSettings(false);
   };
 
   const handleScrollCartoes = (e) => {
@@ -441,7 +487,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
     const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
 
-    // Fatura sempre aberta por padrão ou calculada normalmente
     const status = { texto: 'Aberta', cor: 'text-warning' }; 
 
     const total = transacoes.filter(t => {
@@ -627,7 +672,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
           const tDataObj = partesT.length === 3 ? new Date(partesT[2], partesT[1] - 1, partesT[0]) : new Date(2000, 0, 1);
           return tDataObj >= dataSelecionadaObj;
         });
-
+        
         await Promise.all(transacoesParaExcluir.map(t => api.delete(`${TRANSACOES_API_URL}/${t.id}`)));
 
         await carregarTransacoes();
@@ -768,7 +813,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
           return (
             <div 
               className={`carrossel-item ${isAtivo ? 'ativo' : 'inativo'}`} 
-              key={cartao.id}
+              key={cartao.id || index}
               id={`cartao-idx-${index}`}
               onClickCapture={(e) => {
                 if (!isAtivo && isCardFlipped) {
@@ -791,7 +836,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 diaVencimento={cartao.diaVencimento} 
                 diaFechamento={cartao.diaFechamento} 
                 finalCartao={cartao.finalCartao} 
-                nomeCartao={cartao.nomeCartao} 
+                nomeCartao={(usuarioLogado?.nome || 'USUÁRIO').toUpperCase()} 
                 bandeiraCartao={cartao.bandeiraCartao} 
                 totalFaturaMes={total} 
                 statusFatura={status} 
@@ -802,15 +847,15 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 setTempCor={setTempCor} 
                 setTempApelido={setTempApelido} 
                 setTempFinal={setTempFinal} 
-                setTempNome={setTempNome} 
                 setTempBandeira={setTempBandeira} 
+                setTempNome={() => {}}
                 temaAtual={temaAtual} 
               />
             </div>
           );
         })}
 
-        {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL */}
+        {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL (MÁXIMO 3 CARTÕES NO TOTAL) */}
         {isCardFlipped && (
           <div className="carrossel-item item-adicionar d-flex align-items-center">
             <div 
@@ -823,7 +868,62 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 color: isDark ? '#adb5bd' : '#6c757d',
                 backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
               }}
-              onClick={() => alert("Abrir formulário de cadastro de novo cartão!")}
+              onClick={async () => {
+                if (meusCartoes.length >= 3) {
+                  alert("Você atingiu o limite máximo de 3 cartões cadastrados.");
+                  return;
+                }
+
+                try {
+                  const rascunhoCartao = {
+                    id: 0,
+                    usuarioId: usuarioLogado.id,
+                    nome: 'Novo Cartão',
+                    ultimosDigitos: '0000',
+                    bandeira: 'Mastercard',
+                    limiteTotal: 0,
+                    diaVencimento: 9,
+                    diaFechamento: 2,
+                    corFundo: 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)',
+                    corTexto: '#FFFFFF'
+                  };
+
+                  const response = await api.post('/Cartoes', rascunhoCartao);
+                  const cartaoCriado = response.data;
+
+                  await carregarCartoes();
+                  
+                  const novaListaResp = await api.get(`/Cartoes/usuario/${usuarioLogado.id}`);
+                  const indexCriado = novaListaResp.data.findIndex(c => c.id === cartaoCriado.id);
+
+                  setTempApelido('Novo Cartão');
+                  setTempFinal('0000');
+                  setTempLimite('');
+                  setTempBandeira('Mastercard');
+                  setTempDiaVencimento('09');
+                  setTempDiaFechamento('02');
+                  setTempCor('linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
+
+                  if (indexCriado !== -1) {
+                    setCartaoAtivoIndex(indexCriado);
+                    // Rola o carrossel imediatamente para o cartão recém-criado ficar visível na frente
+                    setTimeout(() => {
+                      const el = document.getElementById(`cartao-idx-${indexCriado}`);
+                      if (el && carrosselRef.current) {
+                        carrosselRef.current.scrollTo({
+                          left: el.offsetLeft - (carrosselRef.current.offsetWidth - el.offsetWidth) / 2,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }, 50);
+                  }
+                  setShowCardSettings(true);
+
+                } catch (error) {
+                  console.error("Erro ao criar rascunho de cartão:", error);
+                  alert("Erro ao iniciar cadastro de novo cartão.");
+                }
+              }}
             >
               <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: '45px', height: '45px', backgroundColor: isDark ? '#2b2b31' : '#e9ecef' }}>
                  <span style={{ fontSize: '26px', lineHeight: '0', marginBottom: '4px' }}>+</span>
@@ -846,9 +946,48 @@ function Dashboard ({ temaAtual, toggleTema }) {
       <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
       <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} temaAtual={temaAtual} />
       <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
-      <CardSettings showCardSettings={showCardSettings} setShowCardSettings={setShowCardSettings} diaVencimento={cartaoAtivo.diaVencimento} diaFechamento={cartaoAtivo.diaFechamento} corCartao={cartaoAtivo.corCartao} apelidoCartao={cartaoAtivo.apelidoCartao} finalCartao={cartaoAtivo.finalCartao} nomeCartao={cartaoAtivo.nomeCartao} bandeiraCartao={cartaoAtivo.bandeiraCartao} tempDiaVencimento={tempDiaVencimento} setTempDiaVencimento={setTempDiaVencimento} tempDiaFechamento={tempDiaFechamento} setTempDiaFechamento={setTempDiaFechamento} tempCor={tempCor} setTempCor={setTempCor} tempApelido={tempApelido} setTempApelido={setTempApelido} tempFinal={tempFinal} setTempFinal={setTempFinal} tempNome={tempNome} setTempNome={setTempNome} tempBandeira={tempBandeira} setTempBandeira={setTempBandeira} handleSalvarConfigCartao={handleSalvarConfigCartao} temaAtual={temaAtual} />
+      
+      <CardSettings 
+        showCardSettings={showCardSettings} 
+        setShowCardSettings={setShowCardSettings} 
+        diaVencimento={cartaoAtivo.diaVencimento} 
+        diaFechamento={cartaoAtivo.diaFechamento} 
+        corCartao={cartaoAtivo.corCartao} 
+        apelidoCartao={cartaoAtivo.apelidoCartao} 
+        finalCartao={cartaoAtivo.finalCartao} 
+        bandeiraCartao={cartaoAtivo.bandeiraCartao} 
+        tempDiaVencimento={tempDiaVencimento} 
+        setTempDiaVencimento={setTempDiaVencimento} 
+        tempDiaFechamento={tempDiaFechamento} 
+        setTempDiaFechamento={setTempDiaFechamento} 
+        tempCor={tempCor} 
+        setTempCor={setTempCor} 
+        tempApelido={tempApelido} 
+        setTempApelido={setTempApelido} 
+        tempFinal={tempFinal} 
+        setTempFinal={setTempFinal} 
+        tempBandeira={tempBandeira} 
+        setTempBandeira={setTempBandeira} 
+        tempLimite={tempLimite}         
+        setTempLimite={setTempLimite}   
+        handleSalvarConfigCartao={handleSalvarConfigCartao} 
+        cartaoId={cartaoAtivo.id}
+        onDeletarCartao={() => carregarCartoes()}
+        temaAtual={temaAtual}
+        onAtualizarCartaoTemp={handleAtualizarCartaoTemp}
+      />
+      
       <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} temaAtual={temaAtual} />
-      <TransactionForm showBottomSheet={showBottomSheet} setShowBottomSheet={setShowBottomSheet} usuarioLogado={usuarioLogado} carregarTransacoes={carregarTransacoes} transacaoParaEditar={transacaoParaEditar} setTransacaoParaEditar={setTransacaoParaEditar} temaAtual={temaAtual} />
+      <TransactionForm 
+        showBottomSheet={showBottomSheet} 
+        setShowBottomSheet={setShowBottomSheet} 
+        usuarioLogado={usuarioLogado} 
+        carregarTransacoes={carregarTransacoes} 
+        transacaoParaEditar={transacaoParaEditar} 
+        setTransacaoParaEditar={setTransacaoParaEditar} 
+        meusCartoes={meusCartoes} 
+        temaAtual={temaAtual} 
+      />
       <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} />
     </div>
   );

@@ -10,6 +10,7 @@ function TransactionForm({
   showBottomSheet, setShowBottomSheet,
   usuarioLogado, carregarTransacoes,
   transacaoParaEditar, setTransacaoParaEditar,
+  meusCartoes = [], // Recebe a lista de cartões salvos do usuário
   temaAtual
 }) {
   const isDark = temaAtual === 'dark';
@@ -20,6 +21,7 @@ function TransactionForm({
   const [tituloInput, setTituloInput] = useState('');
   const [categoriaInput, setCategoriaInput] = useState('');
   const [pagamentoInput, setPagamentoInput] = useState('');
+  const [cartaoIdInput, setCartaoIdInput] = useState(''); // Estado para o ID do cartão selecionado
   const [dataInput, setDataInput] = useState(new Date().toISOString().substring(0,10));
   const [observacaoInput, setObservacaoInput] = useState('');
   const [ehRecorrente, setEhRecorrente] = useState(false);
@@ -39,6 +41,7 @@ function TransactionForm({
       setTituloInput(transacaoParaEditar.titulo || '');
       setCategoriaInput(transacaoParaEditar.categoria || '');
       setPagamentoInput(transacaoParaEditar.pagamento || '');
+      setCartaoIdInput(transacaoParaEditar.cartaoId || '');
       const partes = (transacaoParaEditar.data || '').split('/');
       setDataInput(partes.length === 3 ? `${partes[2]}-${partes[1]}-${partes[0]}` : new Date().toISOString().substring(0,10));
       setObservacaoInput(transacaoParaEditar.observacao || '');
@@ -50,6 +53,7 @@ function TransactionForm({
       setTituloInput('');
       setCategoriaInput('');
       setPagamentoInput('');
+      setCartaoIdInput(meusCartoes.length > 0 ? meusCartoes[0].id : '');
       setDataInput(new Date().toISOString().substring(0,10));
       setObservacaoInput('');
       setTipoTransacao('despesa');
@@ -59,7 +63,7 @@ function TransactionForm({
       setTipoValorParcela('total');
       setQtdParcelas(2);
     }
-  }, [transacaoParaEditar, showBottomSheet]);
+  }, [transacaoParaEditar, showBottomSheet, meusCartoes]);
 
   useEffect(() => {
     if (!editandoId && dataInput) {
@@ -88,6 +92,11 @@ function TransactionForm({
       return;
     }
 
+    if (pagamentoInput === 'Crédito' && !cartaoIdInput) {
+      alert("Por favor, selecione qual cartão de crédito será utilizado!");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const valorNumerico = parseFloat(valorInput.replace(/\./g, '').replace(',', '.'));
@@ -106,6 +115,7 @@ function TransactionForm({
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
       categoriaId: mapaCategoriasAPI[categoriaInput],
+      cartaoId: pagamentoInput === 'Crédito' ? Number(cartaoIdInput) : null, // Envia o ID do cartão selecionado
       valor: valorFinalTransacao,
       tipo: tipoTransacao,
       pago: pagoInput,
@@ -309,6 +319,25 @@ function TransactionForm({
               />
             </div>
           </div>
+
+          {/* SELETOR DE CARTÃO DINÂMICO (APARECE SÓ SE FOR CRÉDITO) */}
+          {pagamentoInput === 'Crédito' && (
+            <div>
+              <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Escolher Cartão</label>
+              <select 
+                className={selectStyleClass}
+                value={cartaoIdInput}
+                onChange={(e) => setCartaoIdInput(e.target.value)}
+              >
+                <option value="" disabled>Selecione o cartão...</option>
+                {meusCartoes.map((cartao) => (
+                  <option key={cartao.id} value={cartao.id}>
+                    {cartao.apelidoCartao} (Final {cartao.finalCartao})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Observação</label>

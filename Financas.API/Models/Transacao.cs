@@ -31,6 +31,9 @@ public class Transacao
     [Column("tipo")]
     public TipoTransacao Tipo { get; set; } = TipoTransacao.despesa;
 
+    [Column("cartao_id")]
+    public int? CartaoId { get; set; }
+
     [Column("data_transacao")]
     public DateTime DataTransacao { get; set; }
 

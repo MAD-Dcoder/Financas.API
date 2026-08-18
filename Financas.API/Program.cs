@@ -14,14 +14,19 @@ var options = new WebApplicationOptions
     Args = args,
     WebRootPath = "wwwroot"
 };
+
 var builder = WebApplication.CreateBuilder(options);
 
 // Desativa o recarregamento automático para evitar erro de limite de inotify no Linux do Render
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
 builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: false);
 
-// Porta dinâmica para o Render
-builder.WebHost.UseUrls("http://0.0.0.0:" + (Environment.GetEnvironmentVariable("PORT") ?? "8080"));
+// Configuração de portas: Dinâmica no Render, padrão do Visual Studio em Desenvolvimento
+if (!builder.Environment.IsDevelopment())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    builder.WebHost.UseUrls("http://0.0.0.0:" + port);
+}
 // ------------------------------
 
 // Permite aceitar os enums como texto no Swagger/JSON

@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Transacao> Transacoes => Set<Transacao>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Conta> Contas => Set<Conta>();
+    public DbSet<Cartao> Cartoes { get; set; }
 
     // Adicionados para incluir as tabelas faltantes no banco e nas migrations
     public DbSet<Categoria> Categorias => Set<Categoria>();
