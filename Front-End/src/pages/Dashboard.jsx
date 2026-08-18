@@ -47,30 +47,20 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [transacoes, setTransacoes] = useState([]);
 
   // ==========================================
-  // ESTADOS MÚLTIPLOS CARTÕES (CARROSSEL)
+  // ESTADOS MÚLTIPLOS CARTÕES (CARROSSEL) - CARTÃO PRÉ-SETADO PADRÃO
   // ==========================================
   const [meusCartoes, setMeusCartoes] = useState(() => {
     const saved = localStorage.getItem(`firmo_cartoes_${usuarioLogado?.id}`);
     if (saved) return JSON.parse(saved);
     return [
       {
-        id: 1,
-        apelidoCartao: 'Magazine Luiza',
-        finalCartao: '5515',
+        id: Date.now(),
+        apelidoCartao: 'Nome do Cartão',
+        finalCartao: 'XXXX',
         bandeiraCartao: 'Mastercard',
-        corCartao: 'linear-gradient(135deg, #004b87 0%, #002953 100%)',
-        diaFechamento: '02',
-        diaVencimento: '09',
-        nomeCartao: (usuarioLogado?.nome || 'SEU NOME').toUpperCase()
-      },
-      {
-        id: 2,
-        apelidoCartao: 'Nubank',
-        finalCartao: '3911',
-        bandeiraCartao: 'Mastercard',
-        corCartao: 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)',
-        diaFechamento: '16',
-        diaVencimento: '23',
+        corCartao: 'linear-gradient(135deg, #059669 0%, #047857 100%)', // Verde da paleta do app
+        diaFechamento: '00',
+        diaVencimento: '00',
         nomeCartao: (usuarioLogado?.nome || 'SEU NOME').toUpperCase()
       }
     ];
@@ -113,6 +103,20 @@ function Dashboard ({ temaAtual, toggleTema }) {
     setTempBandeira(cartaoAtivo.bandeiraCartao);
   }, [cartaoAtivo]);
 
+  useEffect(() => {
+    if (!isCardFlipped && carrosselRef.current) {
+      setTimeout(() => {
+        const ativoEl = document.getElementById(`cartao-idx-${cartaoAtivoIndex}`);
+        if (ativoEl) {
+          carrosselRef.current.scrollTo({
+            left: ativoEl.offsetLeft - (carrosselRef.current.offsetWidth - ativoEl.offsetWidth) / 2,
+            behavior: 'instant'
+          });
+        }
+      }, 10);
+    }
+  }, [isCardFlipped, cartaoAtivoIndex]);
+
   const handleSalvarConfigCartao = () => {
     const novosCartoes = [...meusCartoes];
     novosCartoes[cartaoAtivoIndex] = {
@@ -120,8 +124,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
       diaVencimento: String(tempDiaVencimento || '00').padStart(2, '0'),
       diaFechamento: String(tempDiaFechamento || '00').padStart(2, '0'),
       corCartao: tempCor,
-      apelidoCartao: tempApelido || 'Cartão Principal',
-      finalCartao: tempFinal || '0000',
+      apelidoCartao: tempApelido || 'Nome do Cartão',
+      finalCartao: tempFinal || 'XXXX',
       nomeCartao: (tempNome || 'SEU NOME').toUpperCase(),
       bandeiraCartao: tempBandeira || 'Mastercard'
     };
@@ -437,21 +441,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
     const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
 
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth() + 1;
-    const anoAtual = hoje.getFullYear();
-    const diaAtual = hoje.getDate();
-
-    let status;
-    if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual > dVenc)) {
-      status = { texto: 'Paga', cor: 'text-emerald' };
-    } 
-    else if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual >= dFechamento)) {
-      status = { texto: 'Fechada', cor: 'text-danger' };
-    } 
-    else {
-      status = { texto: 'Aberta', cor: 'text-warning' }; 
-    }
+    // Fatura sempre aberta por padrão ou calculada normalmente
+    const status = { texto: 'Aberta', cor: 'text-warning' }; 
 
     const total = transacoes.filter(t => {
       if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
@@ -726,7 +717,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
         }
         .carrossel-cartoes::-webkit-scrollbar { display: none; }
         
-        /* MODO SALDO LIVRE: Trava a rolagem e força o card ativo a ocupar exatamente 100% centralizado, sem deslocamento */
         .carrossel-cartoes.modo-saldo-livre {
           overflow-x: hidden;
           scroll-snap-type: none;
