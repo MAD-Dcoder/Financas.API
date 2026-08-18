@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import OffcanvasMenu from '../components/OffcanvasMenu';
 import CardSettings from '../components/CardSettings';
@@ -27,55 +27,57 @@ import { isPastOrToday } from '../utils/dateUtils';
 
 function Dashboard ({ temaAtual, toggleTema }) {  
   const TRANSACOES_API_URL = '/Transacoes';
-
   const { usuarioLogado, isLoggedIn, handleLogout } = useContext(AuthContext);
+  const isDark = temaAtual === 'dark';
+
+  const carrosselRef = useRef(null);
 
   const [showBalance, setShowBalance] = useState(true);
   const [showProfile, setShowProfile] = useState(false);  
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [showMonthSelector, setShowMonthSelector] = useState(false);
   const [transacaoSelecionada, setTransacaoSelecionada] = useState(null);
-  
   const [transacaoParaEditar, setTransacaoParaEditar] = useState(null);
-
   const [menuAcaoDetalhes, setMenuAcaoDetalhes] = useState(0); 
   const [abaGrafico, setAbaGrafico] = useState(0);
-
   const [isDeleting, setIsDeleting] = useState(false);
-  
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [showCardSettings, setShowCardSettings] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
   const [transacoes, setTransacoes] = useState([]);
 
   // ==========================================
-  // ESTADOS DO CARTÃO 
+  // ESTADOS MÚLTIPLOS CARTÕES (CARROSSEL)
   // ==========================================
-  const [diaVencimento, setDiaVencimento] = useState('00'); 
-  const [diaFechamento, setDiaFechamento] = useState('00'); 
-  const [corCartao, setCorCartao] = useState('linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)'); 
-  const [apelidoCartao, setApelidoCartao] = useState('Cartão Principal');
-  const [finalCartao, setFinalCartao] = useState('0000');
-  const [nomeCartao, setNomeCartao] = useState('SEU NOME');
-  const [bandeiraCartao, setBandeiraCartao] = useState('Mastercard'); 
-
-  useEffect(() => {
-    if (usuarioLogado) {
-      const savedCardSettings = localStorage.getItem(`firmo_card_${usuarioLogado.id}`);
-      if (savedCardSettings) {
-        const parsedSettings = JSON.parse(savedCardSettings);
-        setDiaVencimento(parsedSettings.diaVencimento || '00');
-        setDiaFechamento(parsedSettings.diaFechamento || '00');
-        setCorCartao(parsedSettings.corCartao || 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
-        setApelidoCartao(parsedSettings.apelidoCartao || 'Cartão Principal');
-        setFinalCartao(parsedSettings.finalCartao || '0000');
-        setNomeCartao(parsedSettings.nomeCartao || (usuarioLogado?.nome || 'SEU NOME').toUpperCase());
-        setBandeiraCartao(parsedSettings.bandeiraCartao || 'Mastercard');
-      } else {
-        setNomeCartao((usuarioLogado?.nome || 'SEU NOME').toUpperCase());
+  const [meusCartoes, setMeusCartoes] = useState(() => {
+    const saved = localStorage.getItem(`firmo_cartoes_${usuarioLogado?.id}`);
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 1,
+        apelidoCartao: 'Magazine Luiza',
+        finalCartao: '5515',
+        bandeiraCartao: 'Mastercard',
+        corCartao: 'linear-gradient(135deg, #004b87 0%, #002953 100%)',
+        diaFechamento: '02',
+        diaVencimento: '09',
+        nomeCartao: (usuarioLogado?.nome || 'SEU NOME').toUpperCase()
+      },
+      {
+        id: 2,
+        apelidoCartao: 'Nubank',
+        finalCartao: '3911',
+        bandeiraCartao: 'Mastercard',
+        corCartao: 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)',
+        diaFechamento: '16',
+        diaVencimento: '23',
+        nomeCartao: (usuarioLogado?.nome || 'SEU NOME').toUpperCase()
       }
-    }
-  }, [usuarioLogado]);
+    ];
+  });
+  
+  const [cartaoAtivoIndex, setCartaoAtivoIndex] = useState(0);
+  const cartaoAtivo = meusCartoes[cartaoAtivoIndex] || meusCartoes[0];
 
   const [tempDiaVencimento, setTempDiaVencimento] = useState('');
   const [tempDiaFechamento, setTempDiaFechamento] = useState('');
@@ -85,63 +87,95 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [tempNome, setTempNome] = useState('');
   const [tempBandeira, setTempBandeira] = useState('');
 
+  // CONTROLE DO FLIP PERFEITO: Preserva o card ativo exato e alinha o scroll sem voltar para o zero
+  const handleToggleFlip = (novoEstado) => {
+    setIsCardFlipped(novoEstado);
+    if (carrosselRef.current) {
+      setTimeout(() => {
+        const ativoEl = document.getElementById(`cartao-idx-${cartaoAtivoIndex}`);
+        if (ativoEl) {
+          carrosselRef.current.scrollTo({
+            left: ativoEl.offsetLeft - (carrosselRef.current.offsetWidth - ativoEl.offsetWidth) / 2,
+            behavior: 'instant'
+          });
+        }
+      }, 10);
+    }
+  };
+
+  useEffect(() => {
+    setTempDiaVencimento(cartaoAtivo.diaVencimento);
+    setTempDiaFechamento(cartaoAtivo.diaFechamento);
+    setTempCor(cartaoAtivo.corCartao);
+    setTempApelido(cartaoAtivo.apelidoCartao);
+    setTempFinal(cartaoAtivo.finalCartao);
+    setTempNome(cartaoAtivo.nomeCartao);
+    setTempBandeira(cartaoAtivo.bandeiraCartao);
+  }, [cartaoAtivo]);
+
   const handleSalvarConfigCartao = () => {
-    const vVenc = String(tempDiaVencimento || '00').padStart(2, '0');
-    const vFech = String(tempDiaFechamento || '00').padStart(2, '0');
-    const vNome = (tempNome || 'SEU NOME').toUpperCase();
+    const novosCartoes = [...meusCartoes];
+    novosCartoes[cartaoAtivoIndex] = {
+      ...novosCartoes[cartaoAtivoIndex],
+      diaVencimento: String(tempDiaVencimento || '00').padStart(2, '0'),
+      diaFechamento: String(tempDiaFechamento || '00').padStart(2, '0'),
+      corCartao: tempCor,
+      apelidoCartao: tempApelido || 'Cartão Principal',
+      finalCartao: tempFinal || '0000',
+      nomeCartao: (tempNome || 'SEU NOME').toUpperCase(),
+      bandeiraCartao: tempBandeira || 'Mastercard'
+    };
     
-    setDiaVencimento(vVenc);
-    setDiaFechamento(vFech);
-    setCorCartao(tempCor);
-    setApelidoCartao(tempApelido || 'Cartão Principal');
-    setFinalCartao(tempFinal || '0000');
-    setNomeCartao(vNome);
-    setBandeiraCartao(tempBandeira || 'Mastercard');
-    
+    setMeusCartoes(novosCartoes);
     if (usuarioLogado) {
-      localStorage.setItem(`firmo_card_${usuarioLogado.id}`, JSON.stringify({
-        diaVencimento: vVenc,
-        diaFechamento: vFech,
-        corCartao: tempCor,
-        apelidoCartao: tempApelido || 'Cartão Principal',
-        finalCartao: tempFinal || '0000',
-        nomeCartao: vNome,
-        bandeiraCartao: tempBandeira || 'Mastercard'
-      }));
+      localStorage.setItem(`firmo_cartoes_${usuarioLogado.id}`, JSON.stringify(novosCartoes));
     }
     setShowCardSettings(false);
   };
 
-  // ==========================================
-  // ESTADOS DE MICROINTERAÇÃO E DINAMICIDADE
-  // ==========================================
+  const handleScrollCartoes = (e) => {
+    if (!isCardFlipped) return; 
+    
+    const container = e.target;
+    const center = container.scrollLeft + container.offsetWidth / 2;
+    let closestIndex = 0;
+    let minDistance = Infinity;
+    
+    Array.from(container.children).forEach((child, index) => {
+      const childCenter = child.offsetLeft + child.offsetWidth / 2;
+      const distance = Math.abs(childCenter - center);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (closestIndex !== cartaoAtivoIndex && closestIndex < meusCartoes.length) {
+      setCartaoAtivoIndex(closestIndex);
+    }
+  };
+
   const [hoveredCategory, setHoveredCategory] = useState(null); 
   const [selectedCategory, setSelectedCategory] = useState(null); 
   const [animatingStatusId, setAnimatingStatusId] = useState(null); 
-  
   const [swipeStart, setSwipeStart] = useState(null);
   const [swipeEnd, setSwipeEnd] = useState(null);
   const minSwipeDistance = 50;
-
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
 
-  // ==========================================
-  // INTELIGÊNCIA E GERAÇÃO DA LISTA DE MESES
-  // ==========================================
-  const getMesFatura = (dataStr) => {
+  const getMesFatura = (dataStr, fechamentoCartao) => {
     const partes = (dataStr || '').split('/');
     if (partes.length !== 3) return null;
     let dia = parseInt(partes[0], 10);
     let mes = parseInt(partes[1], 10);
     let ano = parseInt(partes[2], 10);
-    const fechamento = parseInt(diaFechamento, 10);
+    const fechamento = parseInt(fechamentoCartao || cartaoAtivo.diaFechamento, 10);
 
     if (fechamento === 0) return { num: String(mes).padStart(2, '0'), ano: String(ano) };
 
     let mesFechamento = mes;
     let anoFechamento = ano;
 
-    // Se a compra foi feita no dia do fechamento ou depois, entra no fechamento do próximo mês
     if (dia >= fechamento) {
       mesFechamento += 1;
       if (mesFechamento > 12) {
@@ -150,12 +184,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
       }
     }
 
-    // A MÁGICA: Definir o Mês de Competência (A qual aba do App essa fatura pertence)
     let mesCompetencia = mesFechamento;
     let anoCompetencia = anoFechamento;
 
-    // Se o cartão fecha no comecinho do mês (antes do dia 15), 
-    // a fatura pertence ao mês ANTERIOR (ex: fecha 02/09, pertence à aba de Agosto).
     if (fechamento < 15) {
       mesCompetencia -= 1;
       if (mesCompetencia < 1) {
@@ -177,7 +208,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
       transacoes.forEach(t => {
         if (t.data) {
           if (t.pagamento === 'Crédito') {
-            const fatura = getMesFatura(t.data);
+            const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
             if (fatura && !isNaN(fatura.num) && !isNaN(fatura.ano)) {
               const dataFatura = new Date(fatura.ano, parseInt(fatura.num, 10) - 1, 1);
               if (dataFatura > dataFim) dataFim = new Date(dataFatura);
@@ -206,7 +237,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
 
     return lista;
-  }, [transacoes, diaFechamento]);
+  }, [transacoes, cartaoAtivo.diaFechamento]);
 
   const [mesFiltro, setMesFiltro] = useState(() => {
     const hoje = new Date();
@@ -222,7 +253,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     setTermoBusca('');
     setSelectedCategory(null);
     setHoveredCategory(null);
-    setIsCardFlipped(false);
+    handleToggleFlip(false);
     setAbaGrafico(0);
     setShowBottomSheet(false);
     setShowProfile(false);
@@ -239,7 +270,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
     setIsChartAnimating(true);
     setTimeout(() => setIsChartAnimating(false), 800);
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -249,7 +279,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     setIsChartAnimating(true);
     const timer = setTimeout(() => setIsChartAnimating(false), 800); 
     return () => clearTimeout(timer);
-  }, [mesFiltro, abaGrafico, isCardFlipped]);
+  }, [mesFiltro, abaGrafico, isCardFlipped, cartaoAtivoIndex]);
 
   useEffect(() => {
     if (showMonthSelector) {
@@ -303,11 +333,10 @@ function Dashboard ({ temaAtual, toggleTema }) {
     carregarTransacoes();
   }, [isLoggedIn, usuarioLogado]);
 
-  // Lógica de Separação (Contábil) - Extrato X Fatura X Gráficos
   const transacoesDaAbaAtiva = transacoes.filter(t => {
     if (isCardFlipped) {
       if (t.pagamento === 'Crédito') {
-        const fatura = getMesFatura(t.data);
+        const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
         return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
       }
       return false;
@@ -322,7 +351,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const transacoesParaExibir = transacoesDaAbaAtiva.filter(t => {
     const termo = termoBusca ? termoBusca.toLowerCase() : '';
-    
     const matchBusca = termo ? (
       (t.titulo || '').toLowerCase().includes(termo) ||
       (t.categoria || '').toLowerCase().includes(termo) ||
@@ -366,7 +394,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const transacoesAgrupadas = agruparTransacoesPorData(transacoesParaExibir);
 
-  // Cálculos Financeiros
   const transacoesParaSaldo = transacoes.filter(t => isPastOrToday(t.data) || t.pago === true);
   const totalReceitasGeral = transacoesParaSaldo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
   const totalDespesasGeral = transacoesParaSaldo.filter(t => t.tipo === 'despesa' && t.pagamento !== 'Crédito').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
@@ -382,67 +409,60 @@ function Dashboard ({ temaAtual, toggleTema }) {
     return partes.length === 3 && partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano && t.tipo === 'despesa' && t.pagamento !== 'Crédito';
   }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
-  const totalFaturaMes = transacoes.filter(t => {
-    if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
-      const fatura = getMesFatura(t.data);
-      return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
+  const calcularDadosFatura = (cartao) => {
+    const dFechamento = Number(cartao.diaFechamento);
+    const dVenc = Number(cartao.diaVencimento);
+
+    let mesFech = Number(mesFiltro.num);
+    let anoFech = Number(mesFiltro.ano);
+
+    if (dFechamento > 0 && dFechamento < 15) {
+      mesFech += 1;
+      if (mesFech > 12) {
+        mesFech = 1;
+        anoFech += 1;
+      }
     }
-    return false;
-  }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
-  // ==========================================
-  // LÓGICA ATUALIZADA DE STATUS E VENCIMENTO (COMPETÊNCIA)
-  // ==========================================
-  const dFechamento = Number(diaFechamento);
-  const dVenc = Number(diaVencimento);
-
-  // Reconstrói o mês real de fechamento para cálculos, baseando-se na aba ativa
-  let mesFech = Number(mesFiltro.num);
-  let anoFech = Number(mesFiltro.ano);
-
-  if (dFechamento > 0 && dFechamento < 15) {
-    mesFech += 1;
-    if (mesFech > 12) {
-      mesFech = 1;
-      anoFech += 1;
+    let mesVenc = mesFech;
+    let anoVenc = anoFech;
+    
+    if (dVenc < dFechamento) {
+      mesVenc += 1;
+      if (mesVenc > 12) {
+        mesVenc = 1;
+        anoVenc += 1;
+      }
     }
-  }
 
-  // O mês em que a fatura vai vencer de fato:
-  let mesVenc = mesFech;
-  let anoVenc = anoFech;
-  
-  if (dVenc < dFechamento) {
-    mesVenc += 1;
-    if (mesVenc > 12) {
-      mesVenc = 1;
-      anoVenc += 1;
-    }
-  }
+    const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
 
-  const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
-
-  const calcularStatusFatura = () => {
     const hoje = new Date();
     const mesAtual = hoje.getMonth() + 1;
     const anoAtual = hoje.getFullYear();
     const diaAtual = hoje.getDate();
 
-    // 1. Já passou da data de vencimento? (Considerada Paga)
+    let status;
     if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual > dVenc)) {
-      return { texto: 'Paga', cor: 'text-emerald' };
+      status = { texto: 'Paga', cor: 'text-emerald' };
     } 
-    // 2. Já passou do dia de fechamento real? (Fechada, aguardando pagamento)
-    else if (anoAtual > anoFech || (anoAtual === anoFech && mesAtual > mesFech) || (anoAtual === anoFech && mesAtual === mesFech && diaAtual >= dFechamento)) {
-      return { texto: 'Fechada', cor: 'text-danger' };
+    else if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual >= dFechamento)) {
+      status = { texto: 'Fechada', cor: 'text-danger' };
     } 
-    // 3. Ainda não fechou (Aberta)
     else {
-      return { texto: 'Aberta', cor: 'text-warning' }; 
+      status = { texto: 'Aberta', cor: 'text-warning' }; 
     }
+
+    const total = transacoes.filter(t => {
+      if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
+        const fatura = getMesFatura(t.data, cartao.diaFechamento);
+        return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
+      }
+      return false;
+    }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+
+    return { total, status, mesVencimentoFatura };
   };
-  const statusFatura = calcularStatusFatura();
-  // ==========================================
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -470,7 +490,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
       const total = transacoes
         .filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa')
         .filter(t => {
-           const fatura = getMesFatura(t.data);
+           const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
            return fatura && fatura.num === mes.num && fatura.ano === mes.ano;
         })
         .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
@@ -501,7 +521,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }, {});
     
   const totalDespesasAtivas = transacoesParaGrafico.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
-
   const despesasArray = Object.entries(despesasGrafico).sort((a, b) => b[1] - a[1]);
   const pagamentosArray = Object.entries(pagamentosGrafico).sort((a, b) => b[1] - a[1]);
 
@@ -572,9 +591,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     const novoStatus = !transacaoSelecionada.pago;
     const partes = (transacaoSelecionada.data || '').split('/');
     const horaAtual = transacaoSelecionada.hora || '12:00';
-    
     const dataSegura = partes.length === 3 ? `${partes[2]}-${partes[1]}-${partes[0]}T${horaAtual}:00` : new Date().toISOString();
-
     const contaId = mapaContasAPI[transacaoSelecionada.pagamento] || 2;
 
     const payload = {
@@ -640,17 +657,15 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const dashboardTickerText = (
   <>
-    <span>📦 COMPREI NO IMPULSO 🤡 Mas calma que o frete foi grátis!</span>
-    <span>🎯 META FINANCEIRA 🏃‍♂️ Tentar não gastar dinheiro até o final do dia (nível: impossível).</span>
+    <span>⚠️ ALERTA DE GASTO 🛍️ Se você não comprar nada, o desconto é de 100%!</span>
+    <span>⚠️ ALERTA DE GASTO 🛍️ Se você não comprar nada, o desconto é de 100%!</span>
   </>
 );
 
-  const isDark = temaAtual === 'dark';
-
   return (
-    <div className="app-container pt-4 px-3" style={{ minHeight: '100vh', backgroundColor: isDark ? '#121214' : '#f0f2f5', transition: 'background-color 0.3s ease' }}>
+    <div className="app-container pt-4 px-3" style={{ minHeight: '100vh', backgroundColor: isDark ? '#121214' : '#f0f2f5', transition: 'background-color 0.3s ease', overflowX: 'hidden' }}>
       <style>{`
-        .flip-container { perspective: 1000px; margin-bottom: 0.5rem; cursor: pointer; }
+        .flip-container { perspective: 1000px; cursor: pointer; }
         .flip-card-inner { position: relative; width: 100%; min-height: 210px; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
         .flip-card-front, .flip-card-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; }
         .flip-card-front { transform: rotateY(0deg); }
@@ -670,58 +685,166 @@ function Dashboard ({ temaAtual, toggleTema }) {
         .svg-chart-circle { transition: stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1), stroke-width 0.3s ease, opacity 0.3s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center; }
         .svg-chart-circle-hovered { transform: scale(1.03); stroke-width: 6; opacity: 1 !important; z-index: 10; }
         .svg-chart-circle-dimmed { opacity: 0.15; transform: scale(0.98); }
-        
-        /* 
-          TRAVA DE ROLAGEM HORIZONTAL
-          Impede que a tela suba/desça sem querer ao passar o gráfico para o lado 
-        */
-        .swipeable-area {
-          touch-action: pan-y;
-        }
-        
-        /* Letreiro bem fino, compacto e ajustado entre os cards */
+        .swipeable-area { touch-action: pan-y; }
         .dashboard-ticker {
           width: 100%;
           overflow: hidden;
-          
-          /* AQUI: Fundo verde super transparente no Dark, e fundo Dourado super transparente no Light */
           background: ${isDark ? 'rgba(16, 185, 129, 0.03)' : 'rgba(217, 119, 6, 0.05)'};
-          
-          /* AQUI: Borda pontilhada verde no Dark, e Dourada no Light */
           border-top: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
           border-bottom: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
-          
           padding: 4px 0;
-          margin: 0.4rem 0 0.6rem 0;
+          margin: 0 0 0.6rem 0;
           display: flex;
           white-space: nowrap;
         }
         .dashboard-ticker-content {
           display: inline-block;
           animation: ticker-scroll 20s linear infinite;
-          
-          /* AQUI: Amarelo no modo escuro, e um Verde Escuro (ou Laranja) no modo claro */
           color: ${isDark ? '#fae902be' : '#d97706'}; 
-          
           font-family: monospace, sans-serif;
           font-size: 0.68rem;
           letter-spacing: 1px;
           text-transform: uppercase;
           opacity: 0.9;
         }
-        .dashboard-ticker-content span {
-          margin: 0 14px;
+        .dashboard-ticker-content span { margin: 0 14px; }
+        @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* MAGICA DO CARROSSEL DE CARTÕES */
+        .carrossel-cartoes {
+          display: flex;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          gap: 16px;
+          padding-bottom: 10px;
+          margin: 0 -1rem 0.5rem -1rem;
+          padding-left: 1rem;
+          padding-right: 1rem;
+          scroll-behavior: smooth;
         }
-        @keyframes ticker-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+        .carrossel-cartoes::-webkit-scrollbar { display: none; }
+        
+        /* MODO SALDO LIVRE: Trava a rolagem e força o card ativo a ocupar exatamente 100% centralizado, sem deslocamento */
+        .carrossel-cartoes.modo-saldo-livre {
+          overflow-x: hidden;
+          scroll-snap-type: none;
+          padding-left: 0;
+          padding-right: 0;
+          margin-left: 0;
+          margin-right: 0;
+        }
+        .carrossel-cartoes.modo-saldo-livre .carrossel-item {
+          flex: 0 0 100% !important;
+          display: none;
+        }
+        .carrossel-cartoes.modo-saldo-livre .carrossel-item.ativo {
+          display: block !important;
+        }
+
+        .carrossel-item {
+          flex: 0 0 92%;
+          scroll-snap-align: center;
+          transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s ease;
+        }
+        
+        .carrossel-item.inativo {
+          opacity: 0.5;
+          transform: scale(0.95);
+        }
+        .carrossel-item.ativo {
+          opacity: 1;
+          transform: scale(1);
+        }
+
+        .flip-card-front > div {
+          height: 100%;
         }
       `}</style>
 
       <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} temaAtual={temaAtual} />
-      <FlipCard isCardFlipped={isCardFlipped} setIsCardFlipped={setIsCardFlipped} showBalance={showBalance} saldoAtual={saldoAtual} receitasDoMes={receitasDoMes} despesasDoMes={despesasDoMes} mesFiltro={mesFiltro} corCartao={corCartao} apelidoCartao={apelidoCartao} diaVencimento={diaVencimento} diaFechamento={diaFechamento} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} totalFaturaMes={totalFaturaMes} statusFatura={statusFatura} mesVencimentoFatura={mesVencimentoFatura} setShowCardSettings={setShowCardSettings} setTempDiaVencimento={setTempDiaVencimento} setTempDiaFechamento={setTempDiaFechamento} setTempCor={setTempCor} setTempApelido={setTempApelido} setTempFinal={setTempFinal} setTempNome={setTempNome} setTempBandeira={setTempBandeira} temaAtual={temaAtual} />
       
-      {/* LETREIRO INTERMEDIÁRIO MAIS FINO E COM O NOVO TEXTO */}
+      {/* CARROSSEL INTELIGENTE QUE PRESERVA O CARTÃO ATIVO EXATO */}
+      <div 
+        className={`carrossel-cartoes ${!isCardFlipped ? 'modo-saldo-livre' : 'modo-cartoes'}`} 
+        onScroll={isCardFlipped ? handleScrollCartoes : undefined}
+        ref={carrosselRef}
+      >
+        {meusCartoes.map((cartao, index) => {
+          const { total, status, mesVencimentoFatura } = calcularDadosFatura(cartao);
+          const isAtivo = index === cartaoAtivoIndex;
+          
+          return (
+            <div 
+              className={`carrossel-item ${isAtivo ? 'ativo' : 'inativo'}`} 
+              key={cartao.id}
+              id={`cartao-idx-${index}`}
+              onClickCapture={(e) => {
+                if (!isAtivo && isCardFlipped) {
+                  e.stopPropagation();
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                  setCartaoAtivoIndex(index);
+                }
+              }}
+            >
+              <FlipCard 
+                isCardFlipped={isCardFlipped} 
+                setIsCardFlipped={handleToggleFlip} 
+                showBalance={showBalance} 
+                saldoAtual={saldoAtual} 
+                receitasDoMes={receitasDoMes} 
+                despesasDoMes={despesasDoMes} 
+                mesFiltro={mesFiltro} 
+                corCartao={cartao.corCartao} 
+                apelidoCartao={cartao.apelidoCartao} 
+                diaVencimento={cartao.diaVencimento} 
+                diaFechamento={cartao.diaFechamento} 
+                finalCartao={cartao.finalCartao} 
+                nomeCartao={cartao.nomeCartao} 
+                bandeiraCartao={cartao.bandeiraCartao} 
+                totalFaturaMes={total} 
+                statusFatura={status} 
+                mesVencimentoFatura={mesVencimentoFatura} 
+                setShowCardSettings={setShowCardSettings} 
+                setTempDiaVencimento={setTempDiaVencimento} 
+                setTempDiaFechamento={setTempDiaFechamento} 
+                setTempCor={setTempCor} 
+                setTempApelido={setTempApelido} 
+                setTempFinal={setTempFinal} 
+                setTempNome={setTempNome} 
+                setTempBandeira={setTempBandeira} 
+                temaAtual={temaAtual} 
+              />
+            </div>
+          );
+        })}
+
+        {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL */}
+        {isCardFlipped && (
+          <div className="carrossel-item item-adicionar d-flex align-items-center">
+            <div 
+              className="w-100 d-flex flex-column align-items-center justify-content-center"
+              style={{ 
+                minHeight: '210px', 
+                borderRadius: '1rem', 
+                border: `2px dashed ${isDark ? '#495057' : '#ced4da'}`, 
+                cursor: 'pointer', 
+                color: isDark ? '#adb5bd' : '#6c757d',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
+              }}
+              onClick={() => alert("Abrir formulário de cadastro de novo cartão!")}
+            >
+              <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: '45px', height: '45px', backgroundColor: isDark ? '#2b2b31' : '#e9ecef' }}>
+                 <span style={{ fontSize: '26px', lineHeight: '0', marginBottom: '4px' }}>+</span>
+              </div>
+              <span className="fw-bold small text-center">Adicionar cartão</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* LETREIRO */}
       <div className="dashboard-ticker">
         <div className="dashboard-ticker-content">
           {dashboardTickerText}
@@ -733,11 +856,11 @@ function Dashboard ({ temaAtual, toggleTema }) {
       <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
       <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} temaAtual={temaAtual} />
       <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
-      <CardSettings showCardSettings={showCardSettings} setShowCardSettings={setShowCardSettings} diaVencimento={diaVencimento} diaFechamento={diaFechamento} corCartao={corCartao} apelidoCartao={apelidoCartao} finalCartao={finalCartao} nomeCartao={nomeCartao} bandeiraCartao={bandeiraCartao} tempDiaVencimento={tempDiaVencimento} setTempDiaVencimento={setTempDiaVencimento} tempDiaFechamento={tempDiaFechamento} setTempDiaFechamento={setTempDiaFechamento} tempCor={tempCor} setTempCor={setTempCor} tempApelido={tempApelido} setTempApelido={setTempApelido} tempFinal={tempFinal} setTempFinal={setTempFinal} tempNome={tempNome} setTempNome={setTempNome} tempBandeira={tempBandeira} setTempBandeira={setTempBandeira} handleSalvarConfigCartao={handleSalvarConfigCartao} temaAtual={temaAtual} />
+      <CardSettings showCardSettings={showCardSettings} setShowCardSettings={setShowCardSettings} diaVencimento={cartaoAtivo.diaVencimento} diaFechamento={cartaoAtivo.diaFechamento} corCartao={cartaoAtivo.corCartao} apelidoCartao={cartaoAtivo.apelidoCartao} finalCartao={cartaoAtivo.finalCartao} nomeCartao={cartaoAtivo.nomeCartao} bandeiraCartao={cartaoAtivo.bandeiraCartao} tempDiaVencimento={tempDiaVencimento} setTempDiaVencimento={setTempDiaVencimento} tempDiaFechamento={tempDiaFechamento} setTempDiaFechamento={setTempDiaFechamento} tempCor={tempCor} setTempCor={setTempCor} tempApelido={tempApelido} setTempApelido={setTempApelido} tempFinal={tempFinal} setTempFinal={setTempFinal} tempNome={tempNome} setTempNome={setTempNome} tempBandeira={tempBandeira} setTempBandeira={setTempBandeira} handleSalvarConfigCartao={handleSalvarConfigCartao} temaAtual={temaAtual} />
       <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} temaAtual={temaAtual} />
       <TransactionForm showBottomSheet={showBottomSheet} setShowBottomSheet={setShowBottomSheet} usuarioLogado={usuarioLogado} carregarTransacoes={carregarTransacoes} transacaoParaEditar={transacaoParaEditar} setTransacaoParaEditar={setTransacaoParaEditar} temaAtual={temaAtual} />
       <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} />
-  </div>
+    </div>
   );
 }
 
