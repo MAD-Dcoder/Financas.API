@@ -136,14 +136,35 @@ function Dashboard ({ temaAtual, toggleTema }) {
     let ano = parseInt(partes[2], 10);
     const fechamento = parseInt(diaFechamento, 10);
 
-    if (fechamento > 0 && dia >= fechamento) {
-      mes += 1;
-      if (mes > 12) {
-        mes = 1;
-        ano += 1;
+    if (fechamento === 0) return { num: String(mes).padStart(2, '0'), ano: String(ano) };
+
+    let mesFechamento = mes;
+    let anoFechamento = ano;
+
+    // Se a compra foi feita no dia do fechamento ou depois, entra no fechamento do próximo mês
+    if (dia >= fechamento) {
+      mesFechamento += 1;
+      if (mesFechamento > 12) {
+        mesFechamento = 1;
+        anoFechamento += 1;
       }
     }
-    return { num: String(mes).padStart(2, '0'), ano: String(ano) };
+
+    // A MÁGICA: Definir o Mês de Competência (A qual aba do App essa fatura pertence)
+    let mesCompetencia = mesFechamento;
+    let anoCompetencia = anoFechamento;
+
+    // Se o cartão fecha no comecinho do mês (antes do dia 15), 
+    // a fatura pertence ao mês ANTERIOR (ex: fecha 02/09, pertence à aba de Agosto).
+    if (fechamento < 15) {
+      mesCompetencia -= 1;
+      if (mesCompetencia < 1) {
+        mesCompetencia = 12;
+        anoCompetencia -= 1;
+      }
+    }
+
+    return { num: String(mesCompetencia).padStart(2, '0'), ano: String(anoCompetencia) };
   };
 
   const listaMeses = useMemo(() => {
@@ -369,7 +390,37 @@ function Dashboard ({ temaAtual, toggleTema }) {
     return false;
   }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
 
-  const mesVencimentoFatura = String((Number(mesFiltro.num) % 12) + 1).padStart(2, '0');
+  // ==========================================
+  // LÓGICA ATUALIZADA DE STATUS E VENCIMENTO (COMPETÊNCIA)
+  // ==========================================
+  const dFechamento = Number(diaFechamento);
+  const dVenc = Number(diaVencimento);
+
+  // Reconstrói o mês real de fechamento para cálculos, baseando-se na aba ativa
+  let mesFech = Number(mesFiltro.num);
+  let anoFech = Number(mesFiltro.ano);
+
+  if (dFechamento > 0 && dFechamento < 15) {
+    mesFech += 1;
+    if (mesFech > 12) {
+      mesFech = 1;
+      anoFech += 1;
+    }
+  }
+
+  // O mês em que a fatura vai vencer de fato:
+  let mesVenc = mesFech;
+  let anoVenc = anoFech;
+  
+  if (dVenc < dFechamento) {
+    mesVenc += 1;
+    if (mesVenc > 12) {
+      mesVenc = 1;
+      anoVenc += 1;
+    }
+  }
+
+  const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
 
   const calcularStatusFatura = () => {
     const hoje = new Date();
@@ -377,27 +428,21 @@ function Dashboard ({ temaAtual, toggleTema }) {
     const anoAtual = hoje.getFullYear();
     const diaAtual = hoje.getDate();
 
-    const fMes = Number(mesFiltro.num);
-    const fAno = Number(mesFiltro.ano);
-
-    let mesVenc = fMes + 1;
-    let anoVenc = fAno;
-    if (mesVenc > 12) {
-      mesVenc = 1;
-      anoVenc++;
-    }
-
-    if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual > Number(diaVencimento))) {
+    // 1. Já passou da data de vencimento? (Considerada Paga)
+    if (anoAtual > anoVenc || (anoAtual === anoVenc && mesAtual > mesVenc) || (anoAtual === anoVenc && mesAtual === mesVenc && diaAtual > dVenc)) {
       return { texto: 'Paga', cor: 'text-emerald' };
     } 
-    else if (anoAtual > fAno || (anoAtual === fAno && mesAtual > fMes)) {
+    // 2. Já passou do dia de fechamento real? (Fechada, aguardando pagamento)
+    else if (anoAtual > anoFech || (anoAtual === anoFech && mesAtual > mesFech) || (anoAtual === anoFech && mesAtual === mesFech && diaAtual >= dFechamento)) {
       return { texto: 'Fechada', cor: 'text-danger' };
     } 
+    // 3. Ainda não fechou (Aberta)
     else {
       return { texto: 'Aberta', cor: 'text-warning' }; 
     }
   };
   const statusFatura = calcularStatusFatura();
+  // ==========================================
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
