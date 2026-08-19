@@ -21,7 +21,9 @@ import {
   mapaCategoriasAPIReverse, 
   mapaContasAPIReverse, 
   coresCategorias, 
-  coresPagamento 
+  coresPagamento,
+  mapaCoresCartao
+  
 } from '../utils/constants';
 import { isPastOrToday } from '../utils/dateUtils';
 
@@ -174,8 +176,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
       }
 
       await carregarCartoes();
+      // AQUI: apenas fecha, sem dar alert
       setShowCardSettings(false);
-      alert("Cartão salvo com sucesso!");
   
     } catch (error) {
       console.error("Erro ao salvar o cartão no banco:", error);
@@ -831,7 +833,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 receitasDoMes={receitasDoMes} 
                 despesasDoMes={despesasDoMes} 
                 mesFiltro={mesFiltro} 
-                corCartao={cartao.corCartao} 
+                corCartao={mapaCoresCartao[cartao.corCartao] || cartao.corCartao} 
                 apelidoCartao={cartao.apelidoCartao} 
                 diaVencimento={cartao.diaVencimento} 
                 diaFechamento={cartao.diaFechamento} 
@@ -884,7 +886,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
                     limiteTotal: 0,
                     diaVencimento: 9,
                     diaFechamento: 2,
-                    corFundo: 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)',
+                    corFundo: 'roxo',
                     corTexto: '#FFFFFF'
                   };
 
@@ -902,7 +904,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
                   setTempBandeira('Mastercard');
                   setTempDiaVencimento('09');
                   setTempDiaFechamento('02');
-                  setTempCor('linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
+                  setTempCor('roxo');
 
                   if (indexCriado !== -1) {
                     setCartaoAtivoIndex(indexCriado);
@@ -952,7 +954,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
         setShowCardSettings={setShowCardSettings} 
         diaVencimento={cartaoAtivo.diaVencimento} 
         diaFechamento={cartaoAtivo.diaFechamento} 
-        corCartao={cartaoAtivo.corCartao} 
+        corCartao={mapaCoresCartao[cartaoAtivo.corCartao] || cartaoAtivo.corCartao} 
         apelidoCartao={cartaoAtivo.apelidoCartao} 
         finalCartao={cartaoAtivo.finalCartao} 
         bandeiraCartao={cartaoAtivo.bandeiraCartao} 

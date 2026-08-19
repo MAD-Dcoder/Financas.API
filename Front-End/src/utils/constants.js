@@ -35,3 +35,16 @@ export const coresPagamento = {
   'Dinheiro': '#eab308',
   'Boleto': '#f97316'
 };
+
+// Dicionário de cores para os cartões
+export const mapaCoresCartao = {
+  'roxo': 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)',
+  'laranja': 'linear-gradient(135deg, #ff8000 0%, #ff8000 100%)',
+  'carbon': 'linear-gradient(135deg, #000000 0%, #252525 100%)',
+  'vermelho': 'linear-gradient(135deg, #302929 0%, #7e0000 100%)',
+  'amarelo': 'linear-gradient(135deg, #fffb00fa 0%, #474334 100%)',
+  'azul': 'linear-gradient(135deg, #0d8df7 0%, #7bb3e0 100%)',
+  'ouro': 'linear-gradient(135deg, #C5A059 0%, #4e380f 100%)',
+  'prata': 'linear-gradient(135deg, #D3D3D3 0%, #535856 100%)',
+  'padrao': 'linear-gradient(135deg, #6467b8 0%, #0004f0d5 100%)'
+};

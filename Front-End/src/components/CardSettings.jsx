@@ -16,12 +16,12 @@ function CardSettings({
   onAtualizarCartaoTemp
 }) {
   
-  // Liberado se for um cartão novo com o apelido padrão, bloqueado se já tiver sido configurado
   const isLocked = !!cartaoId && apelidoCartao !== "Novo Cartão"; 
   const isDark = temaAtual === 'dark';
 
   const [mostrarConfirmacaoExclusao, setMostrarConfirmacaoExclusao] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); 
 
   const handleEfetuarExclusaoCartao = async () => {
     if (!cartaoId) return;
@@ -42,6 +42,17 @@ function CardSettings({
       alert("Erro ao tentar excluir o cartão.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const onSalvar = async () => {
+    setIsSaving(true);
+    try {
+      await handleSalvarConfigCartao();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -82,12 +93,13 @@ function CardSettings({
               className="btn p-0 border-0 bg-transparent shadow-none d-flex align-items-center"
               onClick={() => setMostrarConfirmacaoExclusao(true)}
               title="Excluir Cartão"
+              disabled={isSaving || isDeleting}
               style={{ fontSize: '1.25rem', lineHeight: '1', color: isDark ? '#adb5bd' : '#6c757d' }}
             >
               <FiTrash2 />
             </button>
           )}
-          <Offcanvas.Header closeButton closeVariant={isDark ? 'white' : undefined} className="p-0 position-static m-0" />
+          <Offcanvas.Header closeButton closeVariant={isDark ? 'white' : undefined} className="p-0 position-static m-0" disabled={isSaving || isDeleting} />
         </div>
       </Offcanvas.Header>
 
@@ -103,8 +115,8 @@ function CardSettings({
                 value={tempApelido}
                 onChange={(e) => {
                   setTempApelido(e.target.value);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('apelidoCartao', e.target.value);
                 }}
+                disabled={isSaving || isDeleting}
               />
             </div>
             <div className="col-4">
@@ -117,8 +129,8 @@ function CardSettings({
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
                   setTempFinal(val);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('finalCartao', val);
                 }}
+                disabled={isSaving || isDeleting}
               />
             </div>
           </div>
@@ -133,8 +145,8 @@ function CardSettings({
                 value={tempLimite}
                 onChange={(e) => {
                   setTempLimite(e.target.value);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('limiteTotal', e.target.value);
                 }}
+                disabled={isSaving || isDeleting}
               />
             </div>
             <div className="col-5">
@@ -144,8 +156,8 @@ function CardSettings({
                 value={tempBandeira}
                 onChange={(e) => {
                   setTempBandeira(e.target.value);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('bandeiraCartao', e.target.value);
                 }}
+                disabled={isSaving || isDeleting}
               >
                 <option value="Mastercard">Mastercard</option>
                 <option value="Visa">Visa</option>
@@ -167,8 +179,8 @@ function CardSettings({
                   let val = e.target.value.replace(/\D/g, '');
                   if (val !== '' && parseInt(val, 10) > 31) val = '31';
                   setTempDiaVencimento(val);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('diaVencimento', val);
                 }}
+                disabled={isSaving || isDeleting}
               />
             </div>
             
@@ -184,8 +196,8 @@ function CardSettings({
                   let val = e.target.value.replace(/\D/g, '');
                   if (val !== '' && parseInt(val, 10) > 31) val = '31';
                   setTempDiaFechamento(val);
-                  if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('diaFechamento', val);
                 }}
+                disabled={isSaving || isDeleting}
               />
             </div>
           </div>
@@ -197,16 +209,18 @@ function CardSettings({
               value={tempCor}
               onChange={(e) => {
                 setTempCor(e.target.value);
-                if (typeof onAtualizarCartaoTemp === 'function') onAtualizarCartaoTemp('corCartao', e.target.value);
               }}
+              disabled={isSaving || isDeleting}
             >
-              <option value="linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)">Nubank (Roxo)</option>
-              <option value="linear-gradient(135deg, #FF7A00 0%, #FF500F 100%)">Inter (Laranja)</option>
-              <option value="linear-gradient(135deg, #242424 0%, #000000 100%)">C6 Bank (Carbon)</option>
-              <option value="linear-gradient(135deg, #CC0000 0%, #990000 100%)">Santander (Vermelho)</option>
-              <option value="linear-gradient(135deg, #F9D342 0%, #F2C94C 100%)">Banco do Brasil (Amarelo)</option>
-              <option value="linear-gradient(135deg, #005CA9 0%, #00457E 100%)">Caixa (Azul)</option>
-              <option value="linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)">Padrão (Azul Escuro)</option>
+              <option value="roxo">Roxo</option>
+              <option value="laranja">Laranja</option>
+              <option value="carbon">Preto Carbon</option>
+              <option value="vermelho">Vermelho</option>
+              <option value="amarelo">Amarelo</option>
+              <option value="azul">Azul</option>
+              <option value="ouro">Dourado / Ouro</option>
+              <option value="prata">Prata</option>
+              <option value="padrao">Azul Escuro (Padrão)</option>
             </select>
           </div>
 
@@ -222,9 +236,9 @@ function CardSettings({
             
             <button 
               className="btn w-100 py-3 rounded-4 fw-bold text-white border-0 mb-2 shadow-sm"
-              style={{ backgroundColor: '#ef4444' }}
+              style={{ backgroundColor: '#ef4444', opacity: isDeleting ? 0.7 : 1 }}
               onClick={handleEfetuarExclusaoCartao}
-              disabled={isDeleting}
+              disabled={isDeleting || isSaving}
             >
               <FiTrash2 className="me-2 mb-1" />
               {isDeleting ? 'Excluindo...' : 'Sim, excluir cartão'}
@@ -234,7 +248,7 @@ function CardSettings({
               className="btn w-100 py-2 rounded-4 fw-bold border-0 bg-transparent"
               style={{ color: isDark ? '#adb5bd' : '#6c757d' }}
               onClick={() => setMostrarConfirmacaoExclusao(false)}
-              disabled={isDeleting}
+              disabled={isDeleting || isSaving}
             >
               Cancelar
             </button>
@@ -242,10 +256,22 @@ function CardSettings({
         ) : (
           <button 
             className="btn w-100 py-3 rounded-4 fw-bold shadow text-white border-0"
-            style={{ backgroundColor: '#10b981' }}
-            onClick={handleSalvarConfigCartao}
+            style={{ 
+              backgroundColor: isSaving ? (isDark ? '#495057' : '#ced4da') : '#10b981',
+              color: isSaving ? (isDark ? '#adb5bd' : '#6c757d') : '#fff',
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease-in-out'
+            }}
+            onClick={onSalvar}
+            disabled={isSaving || isDeleting}
           >
-            Salvar e Cadastrar
+            {isSaving ? (
+              <span className="d-flex align-items-center justify-content-center">
+                Salvando <span className="typing-indicator ms-2"><span></span><span></span><span></span></span>
+              </span>
+            ) : (
+              'Salvar e Cadastrar'
+            )}
           </button>
         )}
       </Offcanvas.Body>

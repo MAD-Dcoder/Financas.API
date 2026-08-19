@@ -14,6 +14,11 @@ function FlipCard({
 }) {
   const isDark = temaAtual === 'dark';
 
+  // AQUI É O SEGREDO DA FAIXA RAINBOW:
+  // Ela só aparece se a cor do cartão incluir o Dourado (#C5A059) ou o Prata (#D3D3D3).
+  // Se futuramente você criar uma terceira cor pro Magalu, é só colocar o hexadecimal dela aqui!
+  const isMagalu = corCartao && (corCartao.includes('#C5A059') || corCartao.includes('#D3D3D3'));
+
   const renderLogoBandeira = () => {
     if (bandeiraCartao === 'Visa') {
       return <div className="text-white fw-bold fst-italic" style={{ fontSize: '24px', letterSpacing: '-1px', textShadow: '1px 1px 2px rgba(0,0,0,0.5)', marginRight: '5px' }}>VISA</div>;
@@ -106,51 +111,68 @@ function FlipCard({
             border: '1px solid rgba(255,255,255,0.1)',
             display: 'flex', 
             flexDirection: 'column', 
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            position: 'relative', 
+            overflow: 'hidden'    
           }}
         >
-            <div className="d-flex justify-content-between align-items-start">
-              <span className="text-white fw-bold opacity-75" style={{ fontSize: '1rem', textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>{apelidoCartao}</span>
-              <button 
-                className="btn btn-link p-0 text-white shadow-none border-0" 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setTempDiaVencimento(diaVencimento);
-                  setTempDiaFechamento(diaFechamento);
-                  setTempCor(corCartao);
-                  setTempApelido(apelidoCartao);
-                  setTempFinal(finalCartao);
-                  // setTempNome(nomeCartao); <-- REMOVIDO!
-                  setTempBandeira(bandeiraCartao);
-                  setShowCardSettings(true); 
-                }}
-              >
-                <FiMoreVertical size={22} />
-              </button>
-            </div>
+            {/* FAIXA RAINBOW CONDICIONAL (BASEADA EXCLUSIVAMENTE NA COR) */}
+            {isMagalu && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: '6px',
+                background: 'linear-gradient(180deg, #00A3E0 0%, #009944 25%, #FFDF00 50%, #FF8200 75%, #E4002B 100%)',
+                zIndex: 0
+              }} />
+            )}
 
-            <div className="text-center my-2">
-              <small className="text-light opacity-75 d-block mb-1" style={{ fontSize: '0.8rem' }}>Fatura de {mesFiltro.nome}</small>
-              <h2 className="mb-1 fw-bold text-white" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.4)' }}>
-                {showBalance ? formatarMoeda(totalFaturaMes) : 'R$ •••••••'}
-              </h2>
-              <div className="d-flex justify-content-center align-items-center gap-2 mt-1" style={{ fontSize: '0.75rem' }}>
-                <span className="text-light opacity-75">Vence: {diaVencimento === '00' ? '00/00' : `${diaVencimento}/${mesVencimentoFatura}`}</span>
-                <span className={`badge bg-dark bg-opacity-25 border border-light border-opacity-25 shadow-sm ${statusFatura.cor}`}>
-                  {statusFatura.texto}
-                </span>
+            {/* Conteúdo do Cartão envolto num Container Relativo para ficar sobre a faixa */}
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+              <div className="d-flex justify-content-between align-items-start">
+                <span className="text-white fw-bold opacity-75" style={{ fontSize: '1rem', textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>{apelidoCartao}</span>
+                <button 
+                  className="btn btn-link p-0 text-white shadow-none border-0" 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setTempDiaVencimento(diaVencimento);
+                    setTempDiaFechamento(diaFechamento);
+                    setTempCor(corCartao);
+                    setTempApelido(apelidoCartao);
+                    setTempFinal(finalCartao);
+                    setTempBandeira(bandeiraCartao);
+                    setShowCardSettings(true); 
+                  }}
+                >
+                  <FiMoreVertical size={22} />
+                </button>
               </div>
-            </div>
 
-            <div className="mt-auto">
-              <h5 className="text-white mb-2 fw-bold opacity-75" style={{ letterSpacing: '2px', fontSize: '1.1rem', textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
-                **** **** **** {finalCartao}
-              </h5>
-              <div className="d-flex justify-content-between align-items-end">
-                <small className="text-light opacity-75 text-uppercase fw-bold m-0 p-0" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
-                  {nomeCartao}
-                </small>
-                {renderLogoBandeira()}
+              <div className="text-center my-2">
+                <small className="text-light opacity-75 d-block mb-1" style={{ fontSize: '0.8rem' }}>Fatura de {mesFiltro.nome}</small>
+                <h2 className="mb-1 fw-bold text-white" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.4)' }}>
+                  {showBalance ? formatarMoeda(totalFaturaMes) : 'R$ •••••••'}
+                </h2>
+                <div className="d-flex justify-content-center align-items-center gap-2 mt-1" style={{ fontSize: '0.75rem' }}>
+                  <span className="text-light opacity-75">Vence: {diaVencimento === '00' ? '00/00' : `${diaVencimento}/${mesVencimentoFatura}`}</span>
+                  <span className={`badge bg-dark bg-opacity-25 border border-light border-opacity-25 shadow-sm ${statusFatura.cor}`}>
+                    {statusFatura.texto}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-auto">
+                <h5 className="text-white mb-2 fw-bold opacity-75" style={{ letterSpacing: '2px', fontSize: '1.1rem', textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
+                  **** **** **** {finalCartao}
+                </h5>
+                <div className="d-flex justify-content-between align-items-end">
+                  <small className="text-light opacity-75 text-uppercase fw-bold m-0 p-0" style={{ fontSize: '0.8rem', letterSpacing: '1px' }}>
+                    {nomeCartao}
+                  </small>
+                  {renderLogoBandeira()}
+                </div>
               </div>
             </div>
         </div>
