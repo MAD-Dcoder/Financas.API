@@ -46,6 +46,12 @@ function CardSettings({
   };
 
   const onSalvar = async () => {
+    // Validação extra: não deixar salvar se não escolher a bandeira
+    if (tempBandeira === 'Selecionar') {
+      alert("Por favor, selecione uma Bandeira para o cartão.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       await handleSalvarConfigCartao();
@@ -159,6 +165,8 @@ function CardSettings({
                 }}
                 disabled={isSaving || isDeleting}
               >
+                {/* Opção Selecionar inserida aqui e desabilitada para forçar o usuário a escolher outra */}
+                <option value="Selecionar" disabled hidden>Selecionar</option>
                 <option value="Mastercard">Mastercard</option>
                 <option value="Visa">Visa</option>
                 <option value="Elo">Elo</option>
@@ -171,7 +179,7 @@ function CardSettings({
               <label className="form-label small mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.75)' : '#6c757d' }}>Dia Vencimento</label>
               <input 
                 type="number"
-                min="1"
+                min="0" // Alterado de 1 para 0 para aceitar o "00"
                 max="31"
                 className={`form-control shadow-none text-center fw-bold ${isDark ? 'bg-dark border-secondary text-white' : 'bg-light border text-dark'}`}
                 value={tempDiaVencimento}
@@ -188,7 +196,7 @@ function CardSettings({
               <label className="form-label small mb-1" style={{ color: isDark ? 'rgba(255,255,255,0.75)' : '#6c757d' }}>Dia Fechamento</label>
               <input 
                 type="number"
-                min="1"
+                min="0" // Alterado de 1 para 0 para aceitar o "00"
                 max="31"
                 className={`form-control shadow-none text-center text-warning fw-bold ${isDark ? 'bg-dark border-secondary text-white' : 'bg-light border text-dark'}`}
                 value={tempDiaFechamento}

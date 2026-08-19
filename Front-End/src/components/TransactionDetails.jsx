@@ -13,9 +13,17 @@ function TransactionDetails({
   showBalance, obterIconeCategoria,
   animatingStatusId, handleToggleStatusPagamento,
   handleAbrirEdicao, handleEfetuarExclusao, isDeleting,
-  temaAtual
+  temaAtual, meusCartoes 
 }) {
   const isDark = temaAtual === 'dark';
+
+  let nomeCartaoUsado = null;
+  if (transacaoSelecionada?.pagamento === 'Crédito' && transacaoSelecionada?.cartaoId && meusCartoes) {
+    const cartaoEncontrado = meusCartoes.find(c => c.id === transacaoSelecionada.cartaoId);
+    if (cartaoEncontrado) {
+      nomeCartaoUsado = cartaoEncontrado.apelidoCartao || 'Cartão Desconhecido';
+    }
+  }
 
   return (
     <Offcanvas 
@@ -24,11 +32,11 @@ function TransactionDetails({
       placement="bottom" 
       style={{ 
         height: 'auto', 
+        maxHeight: '85vh', // Limite de altura adicionado
         borderTopLeftRadius: '24px', 
         borderTopRightRadius: '24px', 
         backgroundColor: isDark ? '#1e1e24' : '#ffffff', 
-        color: isDark ? '#fff' : '#212529', 
-        paddingBottom: '20px' 
+        color: isDark ? '#fff' : '#212529'
       }}
     >
       <Offcanvas.Header className="pb-0 border-0 mt-2 d-flex align-items-center justify-content-center position-relative">
@@ -58,7 +66,7 @@ function TransactionDetails({
       </Offcanvas.Header>
       
       {transacaoSelecionada && (
-        <Offcanvas.Body>
+        <Offcanvas.Body className="overflow-y-auto" style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
           <div className={`text-center ${menuAcaoDetalhes ? 'mb-2' : 'mb-4'}`}>
             <div className={`p-3 rounded-circle d-inline-block mb-2 ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark border'}`}>
               {obterIconeCategoria(transacaoSelecionada.categoria)}
@@ -80,16 +88,37 @@ function TransactionDetails({
                 <span 
                   className="badge d-flex align-items-center fw-bold"
                   style={{ 
-                    backgroundColor: isDark ? '#1e3a8a' : '#dbeafe', 
-                    color: isDark ? '#60a5fa' : '#1d4ed8', 
+                    backgroundColor: isDark ? '#27272a' : '#f8f9fa', 
+                    color: isDark ? '#a1a1aa' : '#6c757d', 
                     border: '1px solid',
-                    borderColor: isDark ? '#3b82f6' : '#93c5fd',
+                    borderColor: isDark ? '#3f3f46' : '#dee2e6',
                     padding: '6px 10px',
                     borderRadius: '20px',
                     letterSpacing: '0.3px'
                   }}
                 >
                   Fixo / Parcelado
+                </span>
+              </div>
+            )}
+
+            {nomeCartaoUsado && (
+              <div className={`d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-secondary border-opacity-10'}`}>
+                <span className={isDark ? "text-light opacity-75" : "text-secondary"}><FiCreditCard className="me-2"/> Cartão Utilizado</span>
+                <span 
+                  className="badge d-flex align-items-center fw-bold text-uppercase"
+                  style={{ 
+                    backgroundColor: isDark ? '#27272a' : '#f8f9fa', 
+                    color: isDark ? '#a1a1aa' : '#6c757d', 
+                    border: '1px solid',
+                    borderColor: isDark ? '#3f3f46' : '#dee2e6',
+                    padding: '6px 10px',
+                    borderRadius: '20px',
+                    letterSpacing: '0.3px',
+                    fontSize: '11px'
+                  }}
+                >
+                  {nomeCartaoUsado}
                 </span>
               </div>
             )}
@@ -156,7 +185,6 @@ function TransactionDetails({
             </button>
           )}
 
-          {/* STEP 2: AVISO DE EXCLUSÃO */}
           {menuAcaoDetalhes === 2 && (
             <div className={`p-3 rounded-4 border border-danger border-opacity-50 text-center mt-2 ${isDark ? 'bg-dark' : 'bg-white shadow-sm'}`}>
               <div className="mb-3">

@@ -14,9 +14,6 @@ function FlipCard({
 }) {
   const isDark = temaAtual === 'dark';
 
-  // AQUI É O SEGREDO DA FAIXA RAINBOW:
-  // Ela só aparece se a cor do cartão incluir o Dourado (#C5A059) ou o Prata (#D3D3D3).
-  // Se futuramente você criar uma terceira cor pro Magalu, é só colocar o hexadecimal dela aqui!
   const isMagalu = corCartao && (corCartao.includes('#C5A059') || corCartao.includes('#D3D3D3'));
 
   const renderLogoBandeira = () => {
@@ -116,7 +113,7 @@ function FlipCard({
             overflow: 'hidden'    
           }}
         >
-            {/* FAIXA RAINBOW CONDICIONAL (BASEADA EXCLUSIVAMENTE NA COR) */}
+            {/* FAIXA RAINBOW CONDICIONAL */}
             {isMagalu && (
               <div style={{
                 position: 'absolute',
@@ -129,25 +126,43 @@ function FlipCard({
               }} />
             )}
 
-            {/* Conteúdo do Cartão envolto num Container Relativo para ficar sobre a faixa */}
+            {/* BOTÃO ABSOLUTO COM TRANSLATE Z (CORREÇÃO DE CLIQUE 3D) */}
+            <button 
+              type="button"
+              className="btn btn-link text-white shadow-none border-0 d-flex align-items-center justify-content-center" 
+              style={{ 
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                width: '45px',
+                height: '45px',
+                zIndex: 99999,
+                cursor: 'pointer',
+                transform: 'translateZ(50px)', // <--- A MÁGICA DO 3D AQUI
+                padding: 0,
+                margin: 0
+              }}
+              onPointerDown={(e) => e.stopPropagation()} // Trava o evento antes mesmo do clique
+              onClick={(e) => { 
+                e.preventDefault();         
+                e.stopPropagation();        
+                setTempDiaVencimento(diaVencimento);
+                setTempDiaFechamento(diaFechamento);
+                setTempCor(corCartao);
+                setTempApelido(apelidoCartao);
+                setTempFinal(finalCartao);
+                setTempBandeira(bandeiraCartao);
+                setShowCardSettings(true); 
+              }}
+            >
+              <FiMoreVertical size={26} />
+            </button>
+
             <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
               <div className="d-flex justify-content-between align-items-start">
                 <span className="text-white fw-bold opacity-75" style={{ fontSize: '1rem', textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>{apelidoCartao}</span>
-                <button 
-                  className="btn btn-link p-0 text-white shadow-none border-0" 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setTempDiaVencimento(diaVencimento);
-                    setTempDiaFechamento(diaFechamento);
-                    setTempCor(corCartao);
-                    setTempApelido(apelidoCartao);
-                    setTempFinal(finalCartao);
-                    setTempBandeira(bandeiraCartao);
-                    setShowCardSettings(true); 
-                  }}
-                >
-                  <FiMoreVertical size={22} />
-                </button>
+                {/* Espaçador invisível para garantir que o texto não ocupe a área do botão */}
+                <div style={{ width: '35px', height: '35px' }}></div>
               </div>
 
               <div className="text-center my-2">

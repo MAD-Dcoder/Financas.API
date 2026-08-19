@@ -367,7 +367,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
           valor: Number(t.valor) || 0,
           tipo: t.tipo || 'despesa',
           recorrente: t.ehRecorrente || false,
-          pago: t.pago !== undefined ? t.pago : true 
+          pago: t.pago !== undefined ? t.pago : true,
+          cartaoId: t.cartaoId
         };
       });
 
@@ -388,6 +389,10 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const transacoesDaAbaAtiva = transacoes.filter(t => {
     if (isCardFlipped) {
       if (t.pagamento === 'Crédito') {
+        if (t.cartaoId && t.cartaoId !== cartaoAtivo.id) {
+          return false;
+        }
+
         const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
         return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
       }
@@ -493,6 +498,11 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
     const total = transacoes.filter(t => {
       if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
+        // Bloqueia transações de outros cartões na soma da fatura
+        if (t.cartaoId && t.cartaoId !== cartao.id) {
+          return false;
+        }
+
         const fatura = getMesFatura(t.data, cartao.diaFechamento);
         return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
       }
@@ -528,6 +538,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
       const total = transacoes
         .filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa')
         .filter(t => {
+           // Ignora transações de outros cartões no histórico
+           if (t.cartaoId && t.cartaoId !== cartaoAtivo.id) return false;
+           
            const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
            return fatura && fatura.num === mes.num && fatura.ano === mes.ano;
         })
@@ -882,10 +895,10 @@ function Dashboard ({ temaAtual, toggleTema }) {
                     usuarioId: usuarioLogado.id,
                     nome: 'Novo Cartão',
                     ultimosDigitos: '0000',
-                    bandeira: 'Mastercard',
+                    bandeira: 'Selecionar',
                     limiteTotal: 0,
-                    diaVencimento: 9,
-                    diaFechamento: 2,
+                    diaVencimento: 0,
+                    diaFechamento: 0,
                     corFundo: 'roxo',
                     corTexto: '#FFFFFF'
                   };
@@ -901,9 +914,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
                   setTempApelido('Novo Cartão');
                   setTempFinal('0000');
                   setTempLimite('');
-                  setTempBandeira('Mastercard');
-                  setTempDiaVencimento('09');
-                  setTempDiaFechamento('02');
+                  setTempBandeira('Selecionar');
+                  setTempDiaVencimento('00');
+                  setTempDiaFechamento('00');
                   setTempCor('roxo');
 
                   if (indexCriado !== -1) {
@@ -990,7 +1003,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
         meusCartoes={meusCartoes} 
         temaAtual={temaAtual} 
       />
-      <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} />
+      <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} meusCartoes={meusCartoes} />
     </div>
   );
 }
