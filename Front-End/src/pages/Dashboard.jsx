@@ -957,7 +957,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
               width: 26px;
               height: 26px;
               border: 3px solid ${isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.2)'};
-              border-top-color: #8b5cf6;
+              border-top-color: #10b981;
               border-radius: 50%;
               animation: spin-inter 0.85s linear infinite;
             }
