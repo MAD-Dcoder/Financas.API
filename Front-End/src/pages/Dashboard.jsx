@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
+import PullToRefresh from 'react-simple-pull-to-refresh';
 import { AuthContext } from '../contexts/AuthContext';
 import OffcanvasMenu from '../components/OffcanvasMenu';
 import CardSettings from '../components/CardSettings';
@@ -50,6 +51,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [termoBusca, setTermoBusca] = useState('');
   const [transacoes, setTransacoes] = useState([]);
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
+  
+  // ESTADO DO PULL TO REFRESH E WIREFRAME
+  const [isRefreshingUI, setIsRefreshingUI] = useState(false);
 
   const [mesFiltro, setMesFiltro] = useState(() => {
     const hoje = new Date();
@@ -96,7 +100,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [tempLimite, setTempLimite] = useState('');
 
   // ==========================================
-  // FUNÇÕES CORE MÁGICA 1 E 2 (SUBIDAS PARA EVITAR ERRO DE INICIALIZAÇÃO)
+  // FUNÇÕES CORE MÁGICA 1 E 2
   // ==========================================
   const getFaturaVencimento = (dataStr, fechamentoCartao, vencimentoCartao) => {
     const partes = (dataStr || '').split('/');
@@ -725,7 +729,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
           return tDataObj >= dataSelecionadaObj;
         });
         
-        // Loop sequencial para respeitar o limite de pool de conexões do Banco de Dados
         for (const t of transacoesParaExcluir) {
           await api.delete(`${TRANSACOES_API_URL}/${t.id}`);
         }
@@ -751,299 +754,391 @@ function Dashboard ({ temaAtual, toggleTema }) {
     <span>⚠️ ALERTA DE GASTO 🛍️ Se você não comprar nada, o desconto é de 100%!</span>
     <span>⚠️ ALERTA DE GASTO 🛍️ Se você não comprar nada, o desconto é de 100%!</span>
   </>
-);
+  );
+
+  // ==========================================
+  // FUNÇÃO DO PULL TO REFRESH E VIBRAÇÃO
+  // ==========================================
+  const handleRefresh = async () => {
+    if (navigator.vibrate) {
+      navigator.vibrate(50); 
+    }
+    
+    setIsRefreshingUI(true);
+
+    try {
+      await Promise.all([
+        carregarCartoes(),
+        carregarTransacoes()
+      ]);
+    } catch (error) {
+      console.error("Erro ao atualizar os dados no pull-to-refresh:", error);
+    } finally {
+      setIsRefreshingUI(false);
+      
+      // Mágica para animar o gráfico novamente após a atualização!
+      setIsChartAnimating(true);
+      setTimeout(() => setIsChartAnimating(false), 800);
+    }
+  };
 
   return (
-    <div className="app-container pt-4 px-3" style={{ minHeight: '100vh', backgroundColor: isDark ? '#121214' : '#f0f2f5', transition: 'background-color 0.3s ease', overflowX: 'hidden' }}>
-      <style>{`
-        .flip-container { perspective: 1000px; cursor: pointer; }
-        .flip-card-inner { position: relative; width: 100%; min-height: 210px; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
-        .flip-card-front, .flip-card-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; }
-        .flip-card-front { transform: rotateY(0deg); }
-        .flip-card-back { transform: rotateY(180deg); }
-        .custom-range::-webkit-slider-thumb { background: #8b5cf6; }
-        .input-valor-despesa::placeholder { color: rgba(255,255,255,0.4) !important; }
-        .input-valor-receita::placeholder { color: rgba(16, 185, 129, 0.4) !important; }
-        .typing-indicator { display: inline-flex; align-items: center; justify-content: center; gap: 3px; margin-left: 2px; }
-        .typing-indicator span { width: 5px; height: 5px; background-color: currentColor; border-radius: 50%; animation: wave-dots 1.2s infinite ease-in-out; }
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0s; }
-        @keyframes wave-dots { 0%, 80%, 100% { transform: translateY(0) scale(0.8); opacity: 0.6; } 40% { transform: translateY(-3px) scale(1.2); opacity: 1; } }
-        .btn-status-anim { animation: pop-status 0.3s ease; }
-        @keyframes pop-status { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        .transaction-list-item { transition: all 0.3s ease; }
-        .svg-chart-circle { transition: stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1), stroke-width 0.3s ease, opacity 0.3s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center; }
-        .svg-chart-circle-hovered { transform: scale(1.03); stroke-width: 6; opacity: 1 !important; z-index: 10; }
-        .svg-chart-circle-dimmed { opacity: 0.15; transform: scale(0.98); }
-        .swipeable-area { touch-action: pan-y; }
-        .dashboard-ticker {
-          width: 100%;
-          overflow: hidden;
-          background: ${isDark ? 'rgba(16, 185, 129, 0.03)' : 'rgba(217, 119, 6, 0.05)'};
-          border-top: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
-          border-bottom: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
-          padding: 4px 0;
-          margin: 0 0 0.6rem 0;
-          display: flex;
-          white-space: nowrap;
-        }
-        .dashboard-ticker-content {
-          display: inline-block;
-          animation: ticker-scroll 20s linear infinite;
-          color: ${isDark ? '#fae902be' : '#d97706'}; 
-          font-family: monospace, sans-serif;
-          font-size: 0.68rem;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          opacity: 0.9;
-        }
-        .dashboard-ticker-content span { margin: 0 14px; }
-        @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-        /* MAGICA DO CARROSSEL DE CARTÕES */
-        .carrossel-cartoes {
-          display: flex;
-          overflow-x: auto;
-          scroll-snap-type: x mandatory;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          gap: 16px;
-          padding-bottom: 10px;
-          margin: 0 -1rem 0.5rem -1rem;
-          padding-left: 1rem;
-          padding-right: 1rem;
-          scroll-behavior: smooth;
-        }
-        .carrossel-cartoes::-webkit-scrollbar { display: none; }
-        
-        .carrossel-cartoes.modo-saldo-livre {
-          overflow-x: hidden;
-          scroll-snap-type: none;
-          padding-left: 0;
-          padding-right: 0;
-          margin-left: 0;
-          margin-right: 0;
-        }
-        .carrossel-cartoes.modo-saldo-livre .carrossel-item {
-          flex: 0 0 100% !important;
-          display: none;
-        }
-        .carrossel-cartoes.modo-saldo-livre .carrossel-item.ativo {
-          display: block !important;
-        }
-
-        .carrossel-item {
-          flex: 0 0 92%;
-          scroll-snap-align: center;
-          transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s ease;
-        }
-        
-        .carrossel-item.inativo {
-          opacity: 0.5;
-          transform: scale(0.95);
-        }
-        .carrossel-item.ativo {
-          opacity: 1;
-          transform: scale(1);
-        }
-
-        .flip-card-front > div {
-          height: 100%;
-        }
-      `}</style>
-
-      <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} temaAtual={temaAtual} />
-      
-      {/* CARROSSEL INTELIGENTE QUE PRESERVA O CARTÃO ATIVO EXATO */}
-      <div 
-        className={`carrossel-cartoes ${!isCardFlipped ? 'modo-saldo-livre' : 'modo-cartoes'}`} 
-        onScroll={isCardFlipped ? handleScrollCartoes : undefined}
-        ref={carrosselRef}
-      >
-        {meusCartoes.map((cartao, index) => {
-          const { total, status, mesVencimentoFatura, nomeMesVencimentoFatura } = calcularDadosFatura(cartao);
-          const isAtivo = index === cartaoAtivoIndex;
-          
-          return (
-            <div 
-              className={`carrossel-item ${isAtivo ? 'ativo' : 'inativo'}`} 
-              key={cartao.id || index}
-              id={`cartao-idx-${index}`}
-              onClickCapture={(e) => {
-                if (!isAtivo && isCardFlipped) {
-                  e.stopPropagation();
-                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                  setCartaoAtivoIndex(index);
-                }
-              }}
-            >
-              <FlipCard 
-                isCardFlipped={isCardFlipped} 
-                setIsCardFlipped={handleToggleFlip} 
-                showBalance={showBalance} 
-                saldoAtual={saldoAtual} 
-                receitasDoMes={receitasDoMes} 
-                despesasDoMes={despesasDoMes} 
-                mesFiltro={mesFiltro} 
-                corCartao={mapaCoresCartao[cartao.corCartao] || cartao.corCartao} 
-                apelidoCartao={cartao.apelidoCartao} 
-                diaVencimento={cartao.diaVencimento} 
-                diaFechamento={cartao.diaFechamento} 
-                finalCartao={cartao.finalCartao} 
-                nomeCartao={(usuarioLogado?.nome || 'USUÁRIO').toUpperCase()} 
-                bandeiraCartao={cartao.bandeiraCartao} 
-                totalFaturaMes={total} 
-                statusFatura={status} 
-                mesVencimentoFatura={mesVencimentoFatura}
-                nomeMesVencimentoFatura={nomeMesVencimentoFatura}
-                setShowCardSettings={setShowCardSettings} 
-                setTempDiaVencimento={setTempDiaVencimento} 
-                setTempDiaFechamento={setTempDiaFechamento} 
-                setTempCor={setTempCor} 
-                setTempApelido={setTempApelido} 
-                setTempFinal={setTempFinal} 
-                setTempBandeira={setTempBandeira} 
-                setTempNome={() => {}}
-                temaAtual={temaAtual} 
-              />
-            </div>
-          );
-        })}
-
-        {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL (MÁXIMO 3 CARTÕES NO TOTAL) */}
-        {isCardFlipped && (
-          <div className="carrossel-item item-adicionar d-flex align-items-center">
-            <div 
-              className="w-100 d-flex flex-column align-items-center justify-content-center"
-              style={{ 
-                minHeight: '210px', 
-                borderRadius: '1rem', 
-                border: `2px dashed ${isDark ? '#495057' : '#ced4da'}`, 
-                cursor: 'pointer', 
-                color: isDark ? '#adb5bd' : '#6c757d',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
-              }}
-              onClick={async () => {
-                if (meusCartoes.length >= 3) {
-                  alert("Você atingiu o limite máximo de 3 cartões cadastrados.");
-                  return;
-                }
-
-                try {
-                  const rascunhoCartao = {
-                    id: 0,
-                    usuarioId: usuarioLogado.id,
-                    nome: 'Novo Cartão',
-                    ultimosDigitos: '0000',
-                    bandeira: 'Selecionar',
-                    limiteTotal: 0,
-                    diaVencimento: 0,
-                    diaFechamento: 0,
-                    corFundo: 'roxo',
-                    corTexto: '#FFFFFF'
-                  };
-
-                  const response = await api.post('/Cartoes', rascunhoCartao);
-                  const cartaoCriado = response.data;
-
-                  await carregarCartoes();
-                  
-                  const novaListaResp = await api.get(`/Cartoes/usuario/${usuarioLogado.id}`);
-                  const indexCriado = novaListaResp.data.findIndex(c => c.id === cartaoCriado.id);
-
-                  setTempApelido('Novo Cartão');
-                  setTempFinal('0000');
-                  setTempLimite('');
-                  setTempBandeira('Selecionar');
-                  setTempDiaVencimento('00');
-                  setTempDiaFechamento('00');
-                  setTempCor('roxo');
-
-                  if (indexCriado !== -1) {
-                    setCartaoAtivoIndex(indexCriado);
-                    setTimeout(() => {
-                      const el = document.getElementById(`cartao-idx-${indexCriado}`);
-                      if (el && carrosselRef.current) {
-                        carrosselRef.current.scrollTo({
-                          left: el.offsetLeft - (carrosselRef.current.offsetWidth - el.offsetWidth) / 2,
-                          behavior: 'smooth'
-                        });
-                      }
-                    }, 50);
-                  }
-                  setShowCardSettings(true);
-
-                } catch (error) {
-                  console.error("Erro ao criar rascunho de cartão:", error);
-                  alert("Erro ao iniciar cadastro de novo cartão.");
-                }
-              }}
-            >
-              <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: '45px', height: '45px', backgroundColor: isDark ? '#2b2b31' : '#e9ecef' }}>
-                 <span style={{ fontSize: '26px', lineHeight: '0', marginBottom: '4px' }}>+</span>
-              </div>
-              <span className="fw-bold small text-center">Adicionar cartão</span>
-            </div>
+    <div style={{ backgroundColor: isDark ? '#121214' : '#f0f2f5', minHeight: '100vh', transition: 'background-color 0.3s ease' }}>
+      <PullToRefresh 
+        onRefresh={handleRefresh}
+        pullDownThreshold={60} 
+        maxPullDownDistance={95} 
+        pullingContent={
+          <div style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: isDark ? '#adb5bd' : '#6c757d', fontSize: '13px', opacity: 0.7 }}>
+            <div className="spinner-inter" style={{ animation: 'none', borderColor: 'transparent', borderTopColor: '#8b5cf6', marginBottom: '4px' }}></div>
+            <span>Puxe para atualizar...</span>
           </div>
-        )}
-      </div>
+        }
+        refreshingContent={
+          <div style={{ height: '60px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: isDark ? '#adb5bd' : '#6c757d', fontSize: '13px' }}>
+            <div className="spinner-inter" style={{ marginBottom: '4px' }}></div>
+            <span>Atualizando dados...</span>
+          </div>
+        }
+      >
+        <div className="app-container pt-4 px-3" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
+          <style>{`
+            .flip-container { perspective: 1000px; cursor: pointer; }
+            .flip-card-inner { position: relative; width: 100%; min-height: 210px; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
+            .flip-card-front, .flip-card-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; }
+            .flip-card-front { transform: rotateY(0deg); }
+            .flip-card-back { transform: rotateY(180deg); }
+            .custom-range::-webkit-slider-thumb { background: #8b5cf6; }
+            .input-valor-despesa::placeholder { color: rgba(255,255,255,0.4) !important; }
+            .input-valor-receita::placeholder { color: rgba(16, 185, 129, 0.4) !important; }
+            .typing-indicator { display: inline-flex; align-items: center; justify-content: center; gap: 3px; margin-left: 2px; }
+            .typing-indicator span { width: 5px; height: 5px; background-color: currentColor; border-radius: 50%; animation: wave-dots 1.2s infinite ease-in-out; }
+            .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+            .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+            .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+            @keyframes wave-dots { 0%, 80%, 100% { transform: translateY(0) scale(0.8); opacity: 0.6; } 40% { transform: translateY(-3px) scale(1.2); opacity: 1; } }
+            .btn-status-anim { animation: pop-status 0.3s ease; }
+            @keyframes pop-status { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+            .transaction-list-item { transition: all 0.3s ease; }
+            .svg-chart-circle { transition: stroke-dashoffset 1s cubic-bezier(0.25, 1, 0.5, 1), stroke-width 0.3s ease, opacity 0.3s ease, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center; }
+            .svg-chart-circle-hovered { transform: scale(1.03); stroke-width: 6; opacity: 1 !important; z-index: 10; }
+            .svg-chart-circle-dimmed { opacity: 0.15; transform: scale(0.98); }
+            .swipeable-area { touch-action: pan-y; }
+            
+            .dashboard-ticker {
+              width: 100%;
+              overflow: hidden;
+              background: ${isDark ? 'rgba(16, 185, 129, 0.03)' : 'rgba(217, 119, 6, 0.05)'};
+              border-top: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
+              border-bottom: 1px dashed ${isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.25)'};
+              padding: 4px 0;
+              margin: 0 0 0.6rem 0;
+              display: flex;
+              white-space: nowrap;
+            }
+            .dashboard-ticker-content {
+              display: inline-block;
+              animation: ticker-scroll 20s linear infinite;
+              color: ${isDark ? '#fae902be' : '#d97706'}; 
+              font-family: monospace, sans-serif;
+              font-size: 0.68rem;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+              opacity: 0.9;
+            }
+            .dashboard-ticker-content span { margin: 0 14px; }
+            @keyframes ticker-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-      {/* LETREIRO */}
-      <div className="dashboard-ticker">
-        <div className="dashboard-ticker-content">
-          {dashboardTickerText}
-          {dashboardTickerText}
+            /* MAGICA DO CARROSSEL DE CARTÕES */
+            .carrossel-cartoes {
+              display: flex;
+              overflow-x: auto;
+              scroll-snap-type: x mandatory;
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+              gap: 16px;
+              padding-bottom: 10px;
+              margin: 0 -1rem 0.5rem -1rem;
+              padding-left: 1rem;
+              padding-right: 1rem;
+              scroll-behavior: smooth;
+            }
+            .carrossel-cartoes::-webkit-scrollbar { display: none; }
+            
+            .carrossel-cartoes.modo-saldo-livre {
+              overflow-x: hidden;
+              scroll-snap-type: none;
+              padding-left: 0;
+              padding-right: 0;
+              margin-left: 0;
+              margin-right: 0;
+            }
+            .carrossel-cartoes.modo-saldo-livre .carrossel-item {
+              flex: 0 0 100% !important;
+              display: none;
+            }
+            .carrossel-cartoes.modo-saldo-livre .carrossel-item.ativo {
+              display: block !important;
+            }
+
+            .carrossel-item {
+              flex: 0 0 92%;
+              scroll-snap-align: center;
+              transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.4s ease;
+            }
+            
+            .carrossel-item.inativo {
+              opacity: 0.5;
+              transform: scale(0.95);
+            }
+            .carrossel-item.ativo {
+              opacity: 1;
+              transform: scale(1);
+            }
+
+            .flip-card-front > div {
+              height: 100%;
+            }
+
+            /* MÁGICA DO SKELETON LOADING (WIREFRAME) */
+            .skeleton-pulse {
+              animation: skeleton-loading 1.2s infinite alternate;
+            }
+            @keyframes skeleton-loading {
+              0% { background-color: ${isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.05)'}; }
+              100% { background-color: ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.15)'}; }
+            }
+            .skeleton-box {
+              border-radius: 12px;
+              width: 100%;
+              margin-bottom: 16px;
+            }
+
+            /* SPINNER TIPO BANCO INTER */
+            .spinner-inter {
+              width: 26px;
+              height: 26px;
+              border: 3px solid ${isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.2)'};
+              border-top-color: #10b981;
+              border-radius: 50%;
+              animation: spin-inter 0.85s linear infinite;
+            }
+            @keyframes spin-inter {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+
+          <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} temaAtual={temaAtual} />
+          
+          {/* LÓGICA CONDICIONAL: SE ESTIVER CARREGANDO, MOSTRA O WIREFRAME */}
+          {isRefreshingUI ? (
+            <div className="skeleton-container w-100" style={{ paddingBottom: '80px' }}>
+              <div className="skeleton-pulse skeleton-box" style={{ height: '210px', borderRadius: '1rem', marginTop: '0.5rem' }}></div>
+              <div className="skeleton-pulse skeleton-box" style={{ height: '24px', borderRadius: '4px', marginTop: '0.5rem', marginBottom: '1rem' }}></div>
+              <div className="skeleton-pulse skeleton-box" style={{ height: '180px', borderRadius: '1rem' }}></div>
+              <div className="mt-4">
+                <div className="skeleton-pulse skeleton-box" style={{ height: '65px', borderRadius: '12px' }}></div>
+                <div className="skeleton-pulse skeleton-box" style={{ height: '65px', borderRadius: '12px' }}></div>
+                <div className="skeleton-pulse skeleton-box" style={{ height: '65px', borderRadius: '12px' }}></div>
+                <div className="skeleton-pulse skeleton-box" style={{ height: '65px', borderRadius: '12px' }}></div>
+              </div>
+            </div>
+          ) : (
+            /* CONTEÚDO REAL DO APP (SÓ É EXIBIDO QUANDO NÃO ESTÁ CARREGANDO) */
+            <>
+              <div 
+                className={`carrossel-cartoes ${!isCardFlipped ? 'modo-saldo-livre' : 'modo-cartoes'}`} 
+                onScroll={isCardFlipped ? handleScrollCartoes : undefined}
+                ref={carrosselRef}
+              >
+                {meusCartoes.map((cartao, index) => {
+                  const { total, status, mesVencimentoFatura, nomeMesVencimentoFatura } = calcularDadosFatura(cartao);
+                  const isAtivo = index === cartaoAtivoIndex;
+                  
+                  return (
+                    <div 
+                      className={`carrossel-item ${isAtivo ? 'ativo' : 'inativo'}`} 
+                      key={cartao.id || index}
+                      id={`cartao-idx-${index}`}
+                      onClickCapture={(e) => {
+                        if (!isAtivo && isCardFlipped) {
+                          e.stopPropagation();
+                          e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                          setCartaoAtivoIndex(index);
+                        }
+                      }}
+                    >
+                      <FlipCard 
+                        isCardFlipped={isCardFlipped} 
+                        setIsCardFlipped={handleToggleFlip} 
+                        showBalance={showBalance} 
+                        saldoAtual={saldoAtual} 
+                        receitasDoMes={receitasDoMes} 
+                        despesasDoMes={despesasDoMes} 
+                        mesFiltro={mesFiltro} 
+                        corCartao={mapaCoresCartao[cartao.corCartao] || cartao.corCartao} 
+                        apelidoCartao={cartao.apelidoCartao} 
+                        diaVencimento={cartao.diaVencimento} 
+                        diaFechamento={cartao.diaFechamento} 
+                        finalCartao={cartao.finalCartao} 
+                        nomeCartao={(usuarioLogado?.nome || 'USUÁRIO').toUpperCase()} 
+                        bandeiraCartao={cartao.bandeiraCartao} 
+                        totalFaturaMes={total} 
+                        statusFatura={status} 
+                        mesVencimentoFatura={mesVencimentoFatura}
+                        nomeMesVencimentoFatura={nomeMesVencimentoFatura}
+                        setShowCardSettings={setShowCardSettings} 
+                        setTempDiaVencimento={setTempDiaVencimento} 
+                        setTempDiaFechamento={setTempDiaFechamento} 
+                        setTempCor={setTempCor} 
+                        setTempApelido={setTempApelido} 
+                        setTempFinal={setTempFinal} 
+                        setTempBandeira={setTempBandeira} 
+                        setTempNome={() => {}}
+                        temaAtual={temaAtual} 
+                      />
+                    </div>
+                  );
+                })}
+
+                {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL */}
+                {isCardFlipped && (
+                  <div className="carrossel-item item-adicionar d-flex align-items-center">
+                    <div 
+                      className="w-100 d-flex flex-column align-items-center justify-content-center"
+                      style={{ 
+                        minHeight: '210px', 
+                        borderRadius: '1rem', 
+                        border: `2px dashed ${isDark ? '#495057' : '#ced4da'}`, 
+                        cursor: 'pointer', 
+                        color: isDark ? '#adb5bd' : '#6c757d',
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'
+                      }}
+                      onClick={async () => {
+                        if (meusCartoes.length >= 3) {
+                          alert("Você atingiu o limite máximo de 3 cartões cadastrados.");
+                          return;
+                        }
+
+                        try {
+                          const rascunhoCartao = {
+                            id: 0,
+                            usuarioId: usuarioLogado.id,
+                            nome: 'Novo Cartão',
+                            ultimosDigitos: '0000',
+                            bandeira: 'Selecionar',
+                            limiteTotal: 0,
+                            diaVencimento: 0,
+                            diaFechamento: 0,
+                            corFundo: 'roxo',
+                            corTexto: '#FFFFFF'
+                          };
+
+                          const response = await api.post('/Cartoes', rascunhoCartao);
+                          const cartaoCriado = response.data;
+
+                          await carregarCartoes();
+                          
+                          const novaListaResp = await api.get(`/Cartoes/usuario/${usuarioLogado.id}`);
+                          const indexCriado = novaListaResp.data.findIndex(c => c.id === cartaoCriado.id);
+
+                          setTempApelido('Novo Cartão');
+                          setTempFinal('0000');
+                          setTempLimite('');
+                          setTempBandeira('Selecionar');
+                          setTempDiaVencimento('00');
+                          setTempDiaFechamento('00');
+                          setTempCor('roxo');
+
+                          if (indexCriado !== -1) {
+                            setCartaoAtivoIndex(indexCriado);
+                            setTimeout(() => {
+                              const el = document.getElementById(`cartao-idx-${indexCriado}`);
+                              if (el && carrosselRef.current) {
+                                carrosselRef.current.scrollTo({
+                                  left: el.offsetLeft - (carrosselRef.current.offsetWidth - el.offsetWidth) / 2,
+                                  behavior: 'smooth'
+                                });
+                              }
+                            }, 50);
+                          }
+                          setShowCardSettings(true);
+
+                        } catch (error) {
+                          console.error("Erro ao criar rascunho de cartão:", error);
+                          alert("Erro ao iniciar cadastro de novo cartão.");
+                        }
+                      }}
+                    >
+                      <div className="rounded-circle d-flex align-items-center justify-content-center mb-2" style={{ width: '45px', height: '45px', backgroundColor: isDark ? '#2b2b31' : '#e9ecef' }}>
+                         <span style={{ fontSize: '26px', lineHeight: '0', marginBottom: '4px' }}>+</span>
+                      </div>
+                      <span className="fw-bold small text-center">Adicionar cartão</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* LETREIRO */}
+              <div className="dashboard-ticker">
+                <div className="dashboard-ticker-content">
+                  {dashboardTickerText}
+                  {dashboardTickerText}
+                </div>
+              </div>
+
+              <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} temaAtual={temaAtual}/>
+              <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
+            </>
+          )}
+
+          <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} temaAtual={temaAtual} />
+          <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
+          
+          <CardSettings 
+            showCardSettings={showCardSettings} 
+            setShowCardSettings={setShowCardSettings} 
+            diaVencimento={cartaoAtivo.diaVencimento} 
+            diaFechamento={cartaoAtivo.diaFechamento} 
+            corCartao={mapaCoresCartao[cartaoAtivo.corCartao] || cartaoAtivo.corCartao} 
+            apelidoCartao={cartaoAtivo.apelidoCartao} 
+            finalCartao={cartaoAtivo.finalCartao} 
+            bandeiraCartao={cartaoAtivo.bandeiraCartao} 
+            tempDiaVencimento={tempDiaVencimento} 
+            setTempDiaVencimento={setTempDiaVencimento} 
+            tempDiaFechamento={tempDiaFechamento} 
+            setTempDiaFechamento={setTempDiaFechamento} 
+            tempCor={tempCor} 
+            setTempCor={setTempCor} 
+            tempApelido={tempApelido} 
+            setTempApelido={setTempApelido} 
+            tempFinal={tempFinal} 
+            setTempFinal={setTempFinal} 
+            tempBandeira={tempBandeira} 
+            setTempBandeira={setTempBandeira} 
+            tempLimite={tempLimite}         
+            setTempLimite={setTempLimite}   
+            handleSalvarConfigCartao={handleSalvarConfigCartao} 
+            cartaoId={cartaoAtivo.id}
+            onDeletarCartao={() => carregarCartoes()}
+            temaAtual={temaAtual}
+            onAtualizarCartaoTemp={handleAtualizarCartaoTemp}
+          />
+          
+          <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} temaAtual={temaAtual} />
+          <TransactionForm 
+            showBottomSheet={showBottomSheet} 
+            setShowBottomSheet={setShowBottomSheet} 
+            usuarioLogado={usuarioLogado} 
+            carregarTransacoes={carregarTransacoes} 
+            transacaoParaEditar={transacaoParaEditar} 
+            setTransacaoParaEditar={setTransacaoParaEditar} 
+            meusCartoes={meusCartoes} 
+            temaAtual={temaAtual} 
+          />
+          <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} meusCartoes={meusCartoes} />
         </div>
-      </div>
-
-      <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} temaAtual={temaAtual}/>
-      <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
-      <BottomNav handleGoHome={handleGoHome} setShowBottomSheet={setShowBottomSheet} setIsCardFlipped={setIsCardFlipped} temaAtual={temaAtual} />
-      <OffcanvasMenu showProfile={showProfile} setShowProfile={setShowProfile} usuarioLogado={usuarioLogado} handleLogout={() => { setShowProfile(false); handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
-      
-      <CardSettings 
-        showCardSettings={showCardSettings} 
-        setShowCardSettings={setShowCardSettings} 
-        diaVencimento={cartaoAtivo.diaVencimento} 
-        diaFechamento={cartaoAtivo.diaFechamento} 
-        corCartao={mapaCoresCartao[cartaoAtivo.corCartao] || cartaoAtivo.corCartao} 
-        apelidoCartao={cartaoAtivo.apelidoCartao} 
-        finalCartao={cartaoAtivo.finalCartao} 
-        bandeiraCartao={cartaoAtivo.bandeiraCartao} 
-        tempDiaVencimento={tempDiaVencimento} 
-        setTempDiaVencimento={setTempDiaVencimento} 
-        tempDiaFechamento={tempDiaFechamento} 
-        setTempDiaFechamento={setTempDiaFechamento} 
-        tempCor={tempCor} 
-        setTempCor={setTempCor} 
-        tempApelido={tempApelido} 
-        setTempApelido={setTempApelido} 
-        tempFinal={tempFinal} 
-        setTempFinal={setTempFinal} 
-        tempBandeira={tempBandeira} 
-        setTempBandeira={setTempBandeira} 
-        tempLimite={tempLimite}         
-        setTempLimite={setTempLimite}   
-        handleSalvarConfigCartao={handleSalvarConfigCartao} 
-        cartaoId={cartaoAtivo.id}
-        onDeletarCartao={() => carregarCartoes()}
-        temaAtual={temaAtual}
-        onAtualizarCartaoTemp={handleAtualizarCartaoTemp}
-      />
-      
-      <MonthSelector showMonthSelector={showMonthSelector} setShowMonthSelector={setShowMonthSelector} listaMeses={listaMeses} mesFiltro={mesFiltro} setMesFiltro={setMesFiltro} setTermoBusca={setTermoBusca} setSelectedCategory={setSelectedCategory} temaAtual={temaAtual} />
-      <TransactionForm 
-        showBottomSheet={showBottomSheet} 
-        setShowBottomSheet={setShowBottomSheet} 
-        usuarioLogado={usuarioLogado} 
-        carregarTransacoes={carregarTransacoes} 
-        transacaoParaEditar={transacaoParaEditar} 
-        setTransacaoParaEditar={setTransacaoParaEditar} 
-        meusCartoes={meusCartoes} 
-        temaAtual={temaAtual} 
-      />
-      <TransactionDetails transacaoSelecionada={transacaoSelecionada} setTransacaoSelecionada={setTransacaoSelecionada} menuAcaoDetalhes={menuAcaoDetalhes} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} animatingStatusId={animatingStatusId} handleToggleStatusPagamento={handleToggleStatusPagamento} handleAbrirEdicao={handleAbrirEdicao} handleEfetuarExclusao={handleEfetuarExclusao} isDeleting={isDeleting} temaAtual={temaAtual} meusCartoes={meusCartoes} />
+      </PullToRefresh>
     </div>
   );
 }
