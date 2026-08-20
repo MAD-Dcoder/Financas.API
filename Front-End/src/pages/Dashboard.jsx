@@ -23,7 +23,6 @@ import {
   coresCategorias, 
   coresPagamento,
   mapaCoresCartao
-  
 } from '../utils/constants';
 import { isPastOrToday } from '../utils/dateUtils';
 
@@ -34,6 +33,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const carrosselRef = useRef(null);
 
+  // ==========================================
+  // ESTADOS GERAIS E INTERFACE
+  // ==========================================
   const [showBalance, setShowBalance] = useState(true);
   const [showProfile, setShowProfile] = useState(false);  
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -47,9 +49,27 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [showCardSettings, setShowCardSettings] = useState(false);
   const [termoBusca, setTermoBusca] = useState('');
   const [transacoes, setTransacoes] = useState([]);
+  const [isChartAnimating, setIsChartAnimating] = useState(true); 
+
+  const [mesFiltro, setMesFiltro] = useState(() => {
+    const hoje = new Date();
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return {
+      num: String(hoje.getMonth() + 1).padStart(2, '0'),
+      ano: String(hoje.getFullYear()),
+      nome: nomesMeses[hoje.getMonth()]
+    };
+  });
+
+  const [hoveredCategory, setHoveredCategory] = useState(null); 
+  const [selectedCategory, setSelectedCategory] = useState(null); 
+  const [animatingStatusId, setAnimatingStatusId] = useState(null); 
+  const [swipeStart, setSwipeStart] = useState(null);
+  const [swipeEnd, setSwipeEnd] = useState(null);
+  const minSwipeDistance = 50;
 
   // ==========================================
-  // ESTADOS MÚLTIPLOS CARTÕES (BUSCANDO DA API)
+  // ESTADOS DOS CARTÕES
   // ==========================================
   const [meusCartoes, setMeusCartoes] = useState([
     {
@@ -75,7 +95,230 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [tempBandeira, setTempBandeira] = useState('');
   const [tempLimite, setTempLimite] = useState('');
 
-  // Função para atualizar em tempo real o cartão visualmente no carrossel
+  // ==========================================
+  // FUNÇÕES CORE MÁGICA 1 E 2 (SUBIDAS PARA EVITAR ERRO DE INICIALIZAÇÃO)
+  // ==========================================
+  const getFaturaVencimento = (dataStr, fechamentoCartao, vencimentoCartao) => {
+    const partes = (dataStr || '').split('/');
+    if (partes.length !== 3) return null;
+    const diaTransacao = parseInt(partes[0], 10);
+    let mesTransacao = parseInt(partes[1], 10);
+    let anoTransacao = parseInt(partes[2], 10);
+    
+    const diaFechamento = parseInt(fechamentoCartao, 10) || 0;
+    const diaVencimento = parseInt(vencimentoCartao, 10) || 0;
+
+    if (diaFechamento === 0 || diaVencimento === 0) {
+      return { num: String(mesTransacao).padStart(2, '0'), ano: String(anoTransacao) };
+    }
+
+    let mesFechamento = mesTransacao;
+    let anoFechamento = anoTransacao;
+
+    if (diaTransacao >= diaFechamento) {
+      mesFechamento += 1;
+      if (mesFechamento > 12) {
+        mesFechamento = 1;
+        anoFechamento += 1;
+      }
+    }
+
+    let mesVencimento = mesFechamento;
+    let anoVencimento = anoFechamento;
+
+    if (diaVencimento < diaFechamento) {
+      mesVencimento += 1;
+      if (mesVencimento > 12) {
+        mesVencimento = 1;
+        anoVencimento += 1;
+      }
+    }
+
+    return { num: String(mesVencimento).padStart(2, '0'), ano: String(anoVencimento) };
+  };
+
+  const calcularDadosFatura = (cartao) => {
+    const diaFechamento = parseInt(cartao.diaFechamento, 10) || 0;
+    const diaVencimento = parseInt(cartao.diaVencimento, 10) || 0;
+
+    let mesExibicaoNum = parseInt(mesFiltro.num, 10);
+    let anoExibicaoNum = parseInt(mesFiltro.ano, 10);
+    
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); 
+
+    const dataVencimentoFatura = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
+    const isMesAtualFiltro = mesExibicaoNum === (hoje.getMonth() + 1) && anoExibicaoNum === hoje.getFullYear();
+
+    if (isMesAtualFiltro && hoje > dataVencimentoFatura) {
+      mesExibicaoNum += 1;
+      if (mesExibicaoNum > 12) {
+        mesExibicaoNum = 1;
+        anoExibicaoNum += 1;
+      }
+    }
+
+    let mesFechamentoReal = mesExibicaoNum;
+    let anoFechamentoReal = anoExibicaoNum;
+
+    if (diaVencimento < diaFechamento) {
+      mesFechamentoReal -= 1;
+      if (mesFechamentoReal < 1) {
+        mesFechamentoReal = 12;
+        anoFechamentoReal -= 1;
+      }
+    }
+
+    const dataFechamentoFatura = new Date(anoFechamentoReal, mesFechamentoReal - 1, diaFechamento);
+    const dataVencimentoReal = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
+
+    let statusTexto = 'Aberta';
+    let statusCor = 'text-success'; 
+
+    if (hoje > dataVencimentoReal) {
+      statusTexto = 'Vencida';
+      statusCor = 'text-danger';
+    } else if (hoje >= dataFechamentoFatura) {
+      statusTexto = 'Fechada';
+      statusCor = 'text-danger'; 
+    }
+
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const nomeMesVencimentoFatura = nomesMeses[mesExibicaoNum - 1];
+    const mesVencimentoFaturaStr = String(mesExibicaoNum).padStart(2, '0');
+    const anoVencimentoFaturaStr = String(anoExibicaoNum);
+
+    const total = transacoes.filter(t => {
+      if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
+        if (t.cartaoId && t.cartaoId !== cartao.id) return false;
+        
+        const fatura = getFaturaVencimento(t.data, cartao.diaFechamento, cartao.diaVencimento);
+        return fatura && fatura.num === mesVencimentoFaturaStr && fatura.ano === anoVencimentoFaturaStr;
+      }
+      return false;
+    }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+
+    return { 
+      total, 
+      status: { texto: statusTexto, cor: statusCor }, 
+      mesVencimentoFatura: mesVencimentoFaturaStr, 
+      anoVencimentoFatura: anoVencimentoFaturaStr,
+      nomeMesVencimentoFatura 
+    };
+  };
+
+  // ==========================================
+  // LISTAS, FILTROS E AGRUPAMENTOS
+  // ==========================================
+  const listaMeses = useMemo(() => {
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const dataInicio = new Date(2026, 6, 1); 
+    const dataAtual = new Date();
+    let dataFim = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 3, 1);
+
+    if (transacoes && transacoes.length > 0) {
+      transacoes.forEach(t => {
+        if (t.data) {
+          if (t.pagamento === 'Crédito') {
+            const fatura = getFaturaVencimento(t.data, cartaoAtivo.diaFechamento, cartaoAtivo.diaVencimento);
+            if (fatura && !isNaN(fatura.num) && !isNaN(fatura.ano)) {
+              const dataFatura = new Date(fatura.ano, parseInt(fatura.num, 10) - 1, 1);
+              if (dataFatura > dataFim) dataFim = new Date(dataFatura);
+            }
+          } else {
+            const partes = t.data.split('/');
+            if (partes.length === 3) {
+              const dataTransacao = new Date(partes[2], partes[1] - 1, 1);
+              if (dataTransacao > dataFim) dataFim = new Date(dataTransacao);
+            }
+          }
+        }
+      });
+    }
+
+    const lista = [];
+    let current = new Date(dataFim);
+
+    while (current >= dataInicio) {
+      lista.push({
+        nome: nomesMeses[current.getMonth()],
+        num: String(current.getMonth() + 1).padStart(2, '0'),
+        ano: String(current.getFullYear())
+      });
+      current.setMonth(current.getMonth() - 1);
+    }
+
+    return lista;
+  }, [transacoes, cartaoAtivo.diaFechamento, cartaoAtivo.diaVencimento]);
+
+  const transacoesDaAbaAtiva = transacoes.filter(t => {
+    if (isCardFlipped) {
+      if (t.pagamento === 'Crédito') {
+        if (t.cartaoId && t.cartaoId !== cartaoAtivo.id) {
+          return false;
+        }
+        const fatura = getFaturaVencimento(t.data, cartaoAtivo.diaFechamento, cartaoAtivo.diaVencimento);
+        const dadosFaturaExibida = calcularDadosFatura(cartaoAtivo);
+        return fatura && fatura.num === dadosFaturaExibida.mesVencimentoFatura && fatura.ano === dadosFaturaExibida.anoVencimentoFatura;
+      }
+      return false;
+    } else {
+      const partes = (t.data || '').split('/');
+      if (partes.length === 3) {
+        return partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano;
+      }
+      return true;
+    }
+  });
+
+  const transacoesParaExibir = transacoesDaAbaAtiva.filter(t => {
+    const termo = termoBusca ? termoBusca.toLowerCase() : '';
+    const matchBusca = termo ? (
+      (t.titulo || '').toLowerCase().includes(termo) ||
+      (t.categoria || '').toLowerCase().includes(termo) ||
+      (t.pagamento || '').toLowerCase().includes(termo) ||
+      (t.data || '').includes(termo) ||
+      (t.hora && (t.hora || '').includes(termo)) ||
+      (t.observacao && (t.observacao || '').toLowerCase().includes(termo)) ||
+      (t.valor && t.valor.toString().includes(termo))
+    ) : true;
+
+    const matchFiltroPizza = selectedCategory ? (
+      (abaGrafico === 0 && t.categoria === selectedCategory) ||
+      (abaGrafico === 1 && !isCardFlipped && t.pagamento === selectedCategory)
+    ) : true;
+
+    return matchBusca && matchFiltroPizza;
+  });
+
+  const agruparTransacoesPorData = (lista) => {
+    const grupos = {};
+    lista.forEach(t => {
+      if (!grupos[t.data]) {
+        grupos[t.data] = [];
+      }
+      grupos[t.data].push(t);
+    });
+
+    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+      const [diaA, mesA, anoA] = a.split('/');
+      const [diaB, mesB, anoB] = b.split('/');
+      const dataA = new Date(anoA, mesA - 1, diaA);
+      const dataB = new Date(anoB, mesB - 1, diaB);
+      return dataB - dataA;
+    });
+
+    return chavesOrdenadas.map(chave => ({
+      dataString: chave,
+      transacoes: grupos[chave].sort((a, b) => b.id - a.id) 
+    }));
+  };
+
+  const transacoesAgrupadas = agruparTransacoesPorData(transacoesParaExibir);
+
+  // ==========================================
+  // FUNÇÕES DE AÇÃO E API
+  // ==========================================
   const handleAtualizarCartaoTemp = (campo, valor) => {
     const novosCartoes = [...meusCartoes];
     if (novosCartoes[cartaoAtivoIndex]) {
@@ -87,7 +330,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
   };
 
-  // Carregar cartões do usuário direto da API
   const carregarCartoes = async () => {
     if (!isLoggedIn || !usuarioLogado?.id) return;
     try {
@@ -114,7 +356,48 @@ function Dashboard ({ temaAtual, toggleTema }) {
     carregarCartoes();
   }, [isLoggedIn, usuarioLogado]);
 
-  // CONTROLE DO FLIP PERFEITO
+  const carregarTransacoes = async () => {
+    if (!isLoggedIn || !usuarioLogado) return;
+    try {
+      const response = await api.get(`${TRANSACOES_API_URL}/usuario/${usuarioLogado.id}`);
+      
+      const transacoesDoBanco = response.data.map(t => {
+        const dataStr = t.dataTransacao || new Date().toISOString();
+        const dataQuebrada = dataStr.split('T');
+        const dataBruta = dataQuebrada[0].split('-'); 
+        const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
+        const horaCerta = dataQuebrada[1] ? dataQuebrada[1].substring(0, 5) : '00:00';
+        
+        return {
+          id: t.id,
+          titulo: t.descricao || 'Lançamento sem título',
+          categoria: mapaCategoriasAPIReverse[t.categoriaId] || 'Outros',
+          pagamento: mapaContasAPIReverse[t.contaOrigemId] || mapaContasAPIReverse[t.contaDestinoId] || 'Pix',
+          observacao: t.observacao || '',
+          data: dataCerta,
+          hora: horaCerta,
+          valor: Number(t.valor) || 0,
+          tipo: t.tipo || 'despesa',
+          recorrente: t.ehRecorrente || false,
+          pago: t.pago !== undefined ? t.pago : true,
+          cartaoId: t.cartaoId
+        };
+      });
+
+      setTransacoes(transacoesDoBanco);
+    } catch (error) {
+      if(error.response && error.response.status === 401) {
+         handleLogout();
+         alert("Sua sessão expirou, faça login novamente.");
+      }
+      console.error("Erro ao buscar transações da API:", error);
+    }
+  };
+
+  useEffect(() => {
+    carregarTransacoes();
+  }, [isLoggedIn, usuarioLogado]);
+
   const handleToggleFlip = (novoEstado) => {
     setIsCardFlipped(novoEstado);
     if (carrosselRef.current) {
@@ -176,7 +459,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       }
 
       await carregarCartoes();
-      // AQUI: apenas fecha, sem dar alert
       setShowCardSettings(false);
   
     } catch (error) {
@@ -206,100 +488,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       setCartaoAtivoIndex(closestIndex);
     }
   };
-
-  const [hoveredCategory, setHoveredCategory] = useState(null); 
-  const [selectedCategory, setSelectedCategory] = useState(null); 
-  const [animatingStatusId, setAnimatingStatusId] = useState(null); 
-  const [swipeStart, setSwipeStart] = useState(null);
-  const [swipeEnd, setSwipeEnd] = useState(null);
-  const minSwipeDistance = 50;
-  const [isChartAnimating, setIsChartAnimating] = useState(true); 
-
-  const getMesFatura = (dataStr, fechamentoCartao) => {
-    const partes = (dataStr || '').split('/');
-    if (partes.length !== 3) return null;
-    let dia = parseInt(partes[0], 10);
-    let mes = parseInt(partes[1], 10);
-    let ano = parseInt(partes[2], 10);
-    const fechamento = parseInt(fechamentoCartao || cartaoAtivo.diaFechamento, 10);
-
-    if (fechamento === 0) return { num: String(mes).padStart(2, '0'), ano: String(ano) };
-
-    let mesFechamento = mes;
-    let anoFechamento = ano;
-
-    if (dia >= fechamento) {
-      mesFechamento += 1;
-      if (mesFechamento > 12) {
-        mesFechamento = 1;
-        anoFechamento += 1;
-      }
-    }
-
-    let mesCompetencia = mesFechamento;
-    let anoCompetencia = anoFechamento;
-
-    if (fechamento < 15) {
-      mesCompetencia -= 1;
-      if (mesCompetencia < 1) {
-        mesCompetencia = 12;
-        anoCompetencia -= 1;
-      }
-    }
-
-    return { num: String(mesCompetencia).padStart(2, '0'), ano: String(anoCompetencia) };
-  };
-
-  const listaMeses = useMemo(() => {
-    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    const dataInicio = new Date(2026, 6, 1); 
-    const dataAtual = new Date();
-    let dataFim = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 3, 1);
-
-    if (transacoes && transacoes.length > 0) {
-      transacoes.forEach(t => {
-        if (t.data) {
-          if (t.pagamento === 'Crédito') {
-            const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
-            if (fatura && !isNaN(fatura.num) && !isNaN(fatura.ano)) {
-              const dataFatura = new Date(fatura.ano, parseInt(fatura.num, 10) - 1, 1);
-              if (dataFatura > dataFim) dataFim = new Date(dataFatura);
-            }
-          } else {
-            const partes = t.data.split('/');
-            if (partes.length === 3) {
-              const dataTransacao = new Date(partes[2], partes[1] - 1, 1);
-              if (dataTransacao > dataFim) dataFim = new Date(dataTransacao);
-            }
-          }
-        }
-      });
-    }
-
-    const lista = [];
-    let current = new Date(dataFim);
-
-    while (current >= dataInicio) {
-      lista.push({
-        nome: nomesMeses[current.getMonth()],
-        num: String(current.getMonth() + 1).padStart(2, '0'),
-        ano: String(current.getFullYear())
-      });
-      current.setMonth(current.getMonth() - 1);
-    }
-
-    return lista;
-  }, [transacoes, cartaoAtivo.diaFechamento]);
-
-  const [mesFiltro, setMesFiltro] = useState(() => {
-    const hoje = new Date();
-    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    return {
-      num: String(hoje.getMonth() + 1).padStart(2, '0'),
-      ano: String(hoje.getFullYear()),
-      nome: nomesMeses[hoje.getMonth()]
-    };
-  });
 
   const handleGoHome = () => {
     setTermoBusca('');
@@ -344,113 +532,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
   }, [showMonthSelector]);
 
-  const carregarTransacoes = async () => {
-    if (!isLoggedIn || !usuarioLogado) return;
-    try {
-      const response = await api.get(`${TRANSACOES_API_URL}/usuario/${usuarioLogado.id}`);
-      
-      const transacoesDoBanco = response.data.map(t => {
-        const dataStr = t.dataTransacao || new Date().toISOString();
-        const dataQuebrada = dataStr.split('T');
-        const dataBruta = dataQuebrada[0].split('-'); 
-        const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
-        const horaCerta = dataQuebrada[1] ? dataQuebrada[1].substring(0, 5) : '00:00';
-        
-        return {
-          id: t.id,
-          titulo: t.descricao || 'Lançamento sem título',
-          categoria: mapaCategoriasAPIReverse[t.categoriaId] || 'Outros',
-          pagamento: mapaContasAPIReverse[t.contaOrigemId] || mapaContasAPIReverse[t.contaDestinoId] || 'Pix',
-          observacao: t.observacao || '',
-          data: dataCerta,
-          hora: horaCerta,
-          valor: Number(t.valor) || 0,
-          tipo: t.tipo || 'despesa',
-          recorrente: t.ehRecorrente || false,
-          pago: t.pago !== undefined ? t.pago : true,
-          cartaoId: t.cartaoId
-        };
-      });
-
-      setTransacoes(transacoesDoBanco);
-    } catch (error) {
-      if(error.response && error.response.status === 401) {
-         handleLogout();
-         alert("Sua sessão expirou, faça login novamente.");
-      }
-      console.error("Erro ao buscar transações da API:", error);
-    }
-  };
-
-  useEffect(() => {
-    carregarTransacoes();
-  }, [isLoggedIn, usuarioLogado]);
-
-  const transacoesDaAbaAtiva = transacoes.filter(t => {
-    if (isCardFlipped) {
-      if (t.pagamento === 'Crédito') {
-        if (t.cartaoId && t.cartaoId !== cartaoAtivo.id) {
-          return false;
-        }
-
-        const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
-        return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
-      }
-      return false;
-    } else {
-      const partes = (t.data || '').split('/');
-      if (partes.length === 3) {
-        return partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano;
-      }
-      return true;
-    }
-  });
-
-  const transacoesParaExibir = transacoesDaAbaAtiva.filter(t => {
-    const termo = termoBusca ? termoBusca.toLowerCase() : '';
-    const matchBusca = termo ? (
-      (t.titulo || '').toLowerCase().includes(termo) ||
-      (t.categoria || '').toLowerCase().includes(termo) ||
-      (t.pagamento || '').toLowerCase().includes(termo) ||
-      (t.data || '').includes(termo) ||
-      (t.hora && (t.hora || '').includes(termo)) ||
-      (t.observacao && (t.observacao || '').toLowerCase().includes(termo)) ||
-      (t.valor && t.valor.toString().includes(termo))
-    ) : true;
-
-    const matchFiltroPizza = selectedCategory ? (
-      (abaGrafico === 0 && t.categoria === selectedCategory) ||
-      (abaGrafico === 1 && !isCardFlipped && t.pagamento === selectedCategory)
-    ) : true;
-
-    return matchBusca && matchFiltroPizza;
-  });
-
-  const agruparTransacoesPorData = (lista) => {
-    const grupos = {};
-    lista.forEach(t => {
-      if (!grupos[t.data]) {
-        grupos[t.data] = [];
-      }
-      grupos[t.data].push(t);
-    });
-
-    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
-      const [diaA, mesA, anoA] = a.split('/');
-      const [diaB, mesB, anoB] = b.split('/');
-      const dataA = new Date(anoA, mesA - 1, diaA);
-      const dataB = new Date(anoB, mesB - 1, diaB);
-      return dataB - dataA;
-    });
-
-    return chavesOrdenadas.map(chave => ({
-      dataString: chave,
-      transacoes: grupos[chave].sort((a, b) => b.id - a.id) 
-    }));
-  };
-
-  const transacoesAgrupadas = agruparTransacoesPorData(transacoesParaExibir);
-
+  // ==========================================
+  // CÁLCULOS E GRÁFICOS
+  // ==========================================
   const transacoesParaSaldo = transacoes.filter(t => isPastOrToday(t.data) || t.pago === true);
   const totalReceitasGeral = transacoesParaSaldo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
   const totalDespesasGeral = transacoesParaSaldo.filter(t => t.tipo === 'despesa' && t.pagamento !== 'Crédito').reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
@@ -465,52 +549,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     const partes = (t.data || '').split('/');
     return partes.length === 3 && partes[1] === mesFiltro.num && partes[2] === mesFiltro.ano && t.tipo === 'despesa' && t.pagamento !== 'Crédito';
   }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
-
-  const calcularDadosFatura = (cartao) => {
-    const dFechamento = Number(cartao.diaFechamento);
-    const dVenc = Number(cartao.diaVencimento);
-
-    let mesFech = Number(mesFiltro.num);
-    let anoFech = Number(mesFiltro.ano);
-
-    if (dFechamento > 0 && dFechamento < 15) {
-      mesFech += 1;
-      if (mesFech > 12) {
-        mesFech = 1;
-        anoFech += 1;
-      }
-    }
-
-    let mesVenc = mesFech;
-    let anoVenc = anoFech;
-    
-    if (dVenc < dFechamento) {
-      mesVenc += 1;
-      if (mesVenc > 12) {
-        mesVenc = 1;
-        anoVenc += 1;
-      }
-    }
-
-    const mesVencimentoFatura = String(mesVenc).padStart(2, '0');
-
-    const status = { texto: 'Aberta', cor: 'text-warning' }; 
-
-    const total = transacoes.filter(t => {
-      if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
-        // Bloqueia transações de outros cartões na soma da fatura
-        if (t.cartaoId && t.cartaoId !== cartao.id) {
-          return false;
-        }
-
-        const fatura = getMesFatura(t.data, cartao.diaFechamento);
-        return fatura && fatura.num === mesFiltro.num && fatura.ano === mesFiltro.ano;
-      }
-      return false;
-    }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
-
-    return { total, status, mesVencimentoFatura };
-  };
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -538,10 +576,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
       const total = transacoes
         .filter(t => t.pagamento === 'Crédito' && t.tipo === 'despesa')
         .filter(t => {
-           // Ignora transações de outros cartões no histórico
            if (t.cartaoId && t.cartaoId !== cartaoAtivo.id) return false;
            
-           const fatura = getMesFatura(t.data, cartaoAtivo.diaFechamento);
+           const fatura = getFaturaVencimento(t.data, cartaoAtivo.diaFechamento, cartaoAtivo.diaVencimento);
            return fatura && fatura.num === mes.num && fatura.ano === mes.ano;
         })
         .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
@@ -688,7 +725,10 @@ function Dashboard ({ temaAtual, toggleTema }) {
           return tDataObj >= dataSelecionadaObj;
         });
         
-        await Promise.all(transacoesParaExcluir.map(t => api.delete(`${TRANSACOES_API_URL}/${t.id}`)));
+        // Loop sequencial para respeitar o limite de pool de conexões do Banco de Dados
+        for (const t of transacoesParaExcluir) {
+          await api.delete(`${TRANSACOES_API_URL}/${t.id}`);
+        }
 
         await carregarTransacoes();
       } else {
@@ -822,7 +862,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
         ref={carrosselRef}
       >
         {meusCartoes.map((cartao, index) => {
-          const { total, status, mesVencimentoFatura } = calcularDadosFatura(cartao);
+          const { total, status, mesVencimentoFatura, nomeMesVencimentoFatura } = calcularDadosFatura(cartao);
           const isAtivo = index === cartaoAtivoIndex;
           
           return (
@@ -855,7 +895,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 bandeiraCartao={cartao.bandeiraCartao} 
                 totalFaturaMes={total} 
                 statusFatura={status} 
-                mesVencimentoFatura={mesVencimentoFatura} 
+                mesVencimentoFatura={mesVencimentoFatura}
+                nomeMesVencimentoFatura={nomeMesVencimentoFatura}
                 setShowCardSettings={setShowCardSettings} 
                 setTempDiaVencimento={setTempDiaVencimento} 
                 setTempDiaFechamento={setTempDiaFechamento} 
@@ -921,7 +962,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
                   if (indexCriado !== -1) {
                     setCartaoAtivoIndex(indexCriado);
-                    // Rola o carrossel imediatamente para o cartão recém-criado ficar visível na frente
                     setTimeout(() => {
                       const el = document.getElementById(`cartao-idx-${indexCriado}`);
                       if (el && carrosselRef.current) {

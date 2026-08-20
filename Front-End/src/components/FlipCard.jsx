@@ -9,6 +9,7 @@ function FlipCard({
   mesFiltro,
   corCartao, apelidoCartao, diaVencimento, diaFechamento, finalCartao, nomeCartao, bandeiraCartao,
   totalFaturaMes, statusFatura, mesVencimentoFatura,
+  nomeMesVencimentoFatura, 
   setShowCardSettings, setTempDiaVencimento, setTempDiaFechamento, setTempCor, setTempApelido, setTempFinal, setTempBandeira,
   temaAtual
 }) {
@@ -138,11 +139,11 @@ function FlipCard({
                 height: '45px',
                 zIndex: 99999,
                 cursor: 'pointer',
-                transform: 'translateZ(50px)', // <--- A MÁGICA DO 3D AQUI
+                transform: 'translateZ(50px)',
                 padding: 0,
                 margin: 0
               }}
-              onPointerDown={(e) => e.stopPropagation()} // Trava o evento antes mesmo do clique
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { 
                 e.preventDefault();         
                 e.stopPropagation();        
@@ -166,7 +167,11 @@ function FlipCard({
               </div>
 
               <div className="text-center my-2">
-                <small className="text-light opacity-75 d-block mb-1" style={{ fontSize: '0.8rem' }}>Fatura de {mesFiltro.nome}</small>
+                {/* --- AQUI ESTÁ A ATUALIZAÇÃO --- */}
+                <small className="text-light opacity-75 d-block mb-1" style={{ fontSize: '0.8rem' }}>
+                  Fatura de {nomeMesVencimentoFatura || mesFiltro.nome}
+                </small>
+                {/* ------------------------------- */}
                 <h2 className="mb-1 fw-bold text-white" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.4)' }}>
                   {showBalance ? formatarMoeda(totalFaturaMes) : 'R$ •••••••'}
                 </h2>
