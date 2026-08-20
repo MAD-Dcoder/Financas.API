@@ -52,7 +52,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [transacoes, setTransacoes] = useState([]);
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
   
-  // ESTADO DO PULL TO REFRESH E WIREFRAME
+  // ESTADO DO PULL TO REFRESH
   const [isRefreshingUI, setIsRefreshingUI] = useState(false);
 
   const [mesFiltro, setMesFiltro] = useState(() => {
@@ -71,6 +71,9 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [swipeStart, setSwipeStart] = useState(null);
   const [swipeEnd, setSwipeEnd] = useState(null);
   const minSwipeDistance = 50;
+
+  // REF GLOBAL PARA CÁLCULO DE VETOR DOMINANTE (X vs Y)
+  const swipeCoords = useRef({ x: 0, y: 0 });
 
   // ==========================================
   // ESTADOS DOS CARTÕES
@@ -471,6 +474,29 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
   };
 
+  // ==========================================
+  // CONTROLE DE VETOR: SWIPE HORIZONTAL NO CARROSSEL
+  // ==========================================
+  const handleHorizontalSwipeStart = (e) => {
+    swipeCoords.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    };
+  };
+
+  const handleHorizontalSwipeMove = (e) => {
+    if (!swipeCoords.current.x || !swipeCoords.current.y) return;
+    
+    const diffX = Math.abs(e.touches[0].clientX - swipeCoords.current.x);
+    const diffY = Math.abs(e.touches[0].clientY - swipeCoords.current.y);
+
+    // Se o vetor dominante for horizontal (X > Y), nós cancelamos
+    // a propagação para evitar que o PullToRefresh puxe a tela junto.
+    if (diffX > diffY) {
+      e.stopPropagation();
+    }
+  };
+
   const handleScrollCartoes = (e) => {
     if (!isCardFlipped) return; 
     
@@ -641,15 +667,29 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const svgSegments = getSVGSegments();
 
+  // CONTROLE DE VETOR DOMINANTE TAMBÉM NO GRÁFICO (PARA NÃO CONFLITAR)
   const handleTouchStart = (e) => {
     if (!e.targetTouches || e.targetTouches.length === 0) return;
     setSwipeEnd(null);
     setSwipeStart(e.targetTouches[0].clientX);
+    
+    swipeCoords.current = {
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    };
   }
 
   const handleTouchMove = (e) => {
     if (!e.targetTouches || e.targetTouches.length === 0) return;
     setSwipeEnd(e.targetTouches[0].clientX);
+
+    const diffX = Math.abs(e.targetTouches[0].clientX - swipeCoords.current.x);
+    const diffY = Math.abs(e.targetTouches[0].clientY - swipeCoords.current.y);
+
+    // Se estiver deslizando a Aba do Gráfico horizontalmente, para o PullToRefresh
+    if (diffX > diffY) {
+      e.stopPropagation(); 
+    }
   }
 
   const handleTouchEnd = () => {
@@ -775,8 +815,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       console.error("Erro ao atualizar os dados no pull-to-refresh:", error);
     } finally {
       setIsRefreshingUI(false);
-      
-      // Mágica para animar o gráfico novamente após a atualização!
       setIsChartAnimating(true);
       setTimeout(() => setIsChartAnimating(false), 800);
     }
@@ -919,7 +957,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
               width: 26px;
               height: 26px;
               border: 3px solid ${isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.2)'};
-              border-top-color: #10b981;
+              border-top-color: #8b5cf6;
               border-radius: 50%;
               animation: spin-inter 0.85s linear infinite;
             }
@@ -949,6 +987,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
               <div 
                 className={`carrossel-cartoes ${!isCardFlipped ? 'modo-saldo-livre' : 'modo-cartoes'}`} 
                 onScroll={isCardFlipped ? handleScrollCartoes : undefined}
+                onTouchStart={handleHorizontalSwipeStart}
+                onTouchMove={handleHorizontalSwipeMove}
                 ref={carrosselRef}
               >
                 {meusCartoes.map((cartao, index) => {
