@@ -97,12 +97,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-else
-{
-    // NOVO: O redirecionamento HTTPS agora só ocorre em Produção.
-    // Isso evita que o celular seja forçado a usar HTTPS e caia no erro de certificado local.
-    app.UseHttpsRedirection();
-}
+
+// Adicionado o UseRouting explicitamente antes do CORS
+app.UseRouting();
 
 // Aplica o CORS (Deve vir antes do UseAuthentication)
 app.UseCors("PermitirFrontEnd");
