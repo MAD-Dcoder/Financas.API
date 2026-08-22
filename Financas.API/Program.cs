@@ -14,7 +14,6 @@ var options = new WebApplicationOptions
     Args = args,
     WebRootPath = "wwwroot"
 };
-
 var builder = WebApplication.CreateBuilder(options);
 
 // Desativa o recarregamento automático para evitar erro de limite de inotify no Linux do Render
@@ -51,13 +50,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // ==========================================
-// CONFIGURAÇÃO DO CORS (ATUALIZADA)
+// CONFIGURAÇÃO DO CORS
 // ==========================================
 builder.Services.AddCors(corsOptions =>
 {
     corsOptions.AddPolicy("PermitirFrontEnd", policy =>
     {
-        // AllowAnyOrigin resolve definitivamente o bloqueio da Vercel
+        // AllowAnyOrigin resolve definitivamente o bloqueio da Vercel e da rede local
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
               .AllowAnyHeader();
@@ -74,7 +73,8 @@ builder.Services.AddAuthentication(x =>
 {
     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(x =>
+})
+.AddJwtBearer(x =>
 {
     x.RequireHttpsMetadata = false;
     x.SaveToken = true;
@@ -97,8 +97,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    // NOVO: O redirecionamento HTTPS agora só ocorre em Produção.
+    // Isso evita que o celular seja forçado a usar HTTPS e caia no erro de certificado local.
+    app.UseHttpsRedirection();
+}
 
 // Aplica o CORS (Deve vir antes do UseAuthentication)
 app.UseCors("PermitirFrontEnd");
@@ -107,5 +111,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ==========================================
+// ENDPOINT DE HEALTH CHECK PARA O RENDER
+// ==========================================
+// Sem essa rota, o Render bate na porta da API, recebe 404 e assume que o app está quebrado.
+app.MapGet("/", () => Results.Ok("API do Firmo está online e pronta para requisições!"));
 
 app.Run();
