@@ -32,7 +32,7 @@ function TransactionDetails({
       placement="bottom" 
       style={{ 
         height: 'auto', 
-        maxHeight: '85vh', // Limite de altura adicionado
+        maxHeight: '85vh',
         borderTopLeftRadius: '24px', 
         borderTopRightRadius: '24px', 
         backgroundColor: isDark ? '#1e1e24' : '#ffffff', 
@@ -68,9 +68,12 @@ function TransactionDetails({
       {transacaoSelecionada && (
         <Offcanvas.Body className="overflow-y-auto" style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}>
           <div className={`text-center ${menuAcaoDetalhes ? 'mb-2' : 'mb-4'}`}>
-            <div className={`p-3 rounded-circle d-inline-block mb-2 ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark border'}`}>
-              {obterIconeCategoria(transacaoSelecionada.categoria)}
-            </div>
+            <div 
+  className={`rounded-circle d-flex align-items-center justify-content-center mx-auto mb-2 ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark border'}`}
+  style={{ width: '56px', height: '56px' }}
+>
+  {obterIconeCategoria(transacaoSelecionada.categoria)}
+</div>
             <h4 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{transacaoSelecionada.titulo}</h4>
             <h2 className={transacaoSelecionada.tipo === 'despesa' ? (isDark ? 'text-white' : 'text-dark') : 'text-emerald'}>
               {showBalance 

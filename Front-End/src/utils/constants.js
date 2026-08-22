@@ -48,3 +48,8 @@ export const mapaCoresCartao = {
   'prata': 'linear-gradient(135deg, #D3D3D3 0%, #535856 100%)',
   'padrao': 'linear-gradient(135deg, #6467b8 0%, #0004f0d5 100%)'
 };
+
+export const PALETA_CORES = [
+  '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', 
+  '#ec4899', '#06b6d4', '#f97316', '#a3e635', '#6366f1'
+];

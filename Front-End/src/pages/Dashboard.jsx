@@ -12,6 +12,7 @@ import FlipCard from '../components/FlipCard';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import api from '../api/axios';
+import categoriasService from '../api/categoriasService'; // NOVO IMPORT
 import { 
   FiCoffee, FiTool, FiTruck, FiBookOpen, FiSmile, FiHome as FiHomeIcon, 
   FiDollarSign, FiGift, FiTag
@@ -23,7 +24,8 @@ import {
   mapaContasAPIReverse, 
   coresCategorias, 
   coresPagamento,
-  mapaCoresCartao
+  mapaCoresCartao,
+  PALETA_CORES
 } from '../utils/constants';
 import { isPastOrToday } from '../utils/dateUtils';
 
@@ -51,6 +53,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [termoBusca, setTermoBusca] = useState('');
   const [transacoes, setTransacoes] = useState([]);
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
+  const [coresDinamicas, setCoresDinamicas] = useState({ ...coresCategorias }); // ESTADO DAS CORES
   
   // ESTADO DO PULL TO REFRESH
   const [isRefreshingUI, setIsRefreshingUI] = useState(false);
@@ -72,7 +75,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const [swipeEnd, setSwipeEnd] = useState(null);
   const minSwipeDistance = 50;
 
-  // REF GLOBAL PARA CÁLCULO DE VETOR DOMINANTE (X vs Y)
   const swipeCoords = useRef({ x: 0, y: 0 });
 
   // ==========================================
@@ -366,6 +368,23 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const carregarTransacoes = async () => {
     if (!isLoggedIn || !usuarioLogado) return;
     try {
+      // 1. Busca as categorias atualizadas do usuário
+      const catResponse = await categoriasService.getCategorias(usuarioLogado.id);
+      
+      // Criamos um mapa para busca rápida: ID -> { nome, corHex }
+      const mapaCategoriasAtivas = {};
+      const mapaCoresDinamicas = { ...coresCategorias };
+      
+     catResponse.forEach((c, index) => {
+      mapaCategoriasAtivas[c.id] = { nome: c.nome, cor: c.corHex };
+      
+      // Força o uso sequencial da paleta para garantir cores únicas
+      const corDaPaleta = PALETA_CORES[index % PALETA_CORES.length];
+      mapaCoresDinamicas[c.nome] = corDaPaleta;
+    });
+    setCoresDinamicas(mapaCoresDinamicas);
+
+      // 2. Busca as transações
       const response = await api.get(`${TRANSACOES_API_URL}/usuario/${usuarioLogado.id}`);
       
       const transacoesDoBanco = response.data.map(t => {
@@ -375,10 +394,20 @@ function Dashboard ({ temaAtual, toggleTema }) {
         const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
         const horaCerta = dataQuebrada[1] ? dataQuebrada[1].substring(0, 5) : '00:00';
         
+        // Lógica de resolução de categoria:
+        // Prioridade 1: ID está no mapa dinâmico do usuário?
+        // Prioridade 2: ID é uma das categorias padrão do sistema (constants.js)?
+        // Prioridade 3: Fallback para "Outros"
+        const categoriaInfo = mapaCategoriasAtivas[t.categoriaId];
+        const nomeCategoria = categoriaInfo 
+            ? categoriaInfo.nome 
+            : (mapaCategoriasAPIReverse[t.categoriaId] || 'Outros');
+        
         return {
           id: t.id,
           titulo: t.descricao || 'Lançamento sem título',
-          categoria: mapaCategoriasAPIReverse[t.categoriaId] || 'Outros',
+          categoria: nomeCategoria, 
+          categoriaId: t.categoriaId,
           pagamento: mapaContasAPIReverse[t.contaOrigemId] || mapaContasAPIReverse[t.contaDestinoId] || 'Pix',
           observacao: t.observacao || '',
           data: dataCerta,
@@ -394,8 +423,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
       setTransacoes(transacoesDoBanco);
     } catch (error) {
       if(error.response && error.response.status === 401) {
-         handleLogout();
-         alert("Sua sessão expirou, faça login novamente.");
+          handleLogout();
+          alert("Sua sessão expirou, faça login novamente.");
       }
       console.error("Erro ao buscar transações da API:", error);
     }
@@ -490,8 +519,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     const diffX = Math.abs(e.touches[0].clientX - swipeCoords.current.x);
     const diffY = Math.abs(e.touches[0].clientY - swipeCoords.current.y);
 
-    // Se o vetor dominante for horizontal (X > Y), nós cancelamos
-    // a propagação para evitar que o PullToRefresh puxe a tela junto.
     if (diffX > diffY) {
       e.stopPropagation();
     }
@@ -592,7 +619,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
       case 'Salário':
       case 'Rendimento': return <FiDollarSign size={18} />;
       case 'Vale (VR + VT)': return <FiGift size={18} />;
-      default: return <FiTag size={18} />;
+      default: return <FiTag size={18} />; // As novas categorias caem aqui com a Etiqueta
     }
   };
 
@@ -645,7 +672,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const getSVGSegments = () => {
     if (totalDespesasAtivas === 0) return [];
     const dadosArray = abaGrafico === 0 ? despesasArray : pagamentosArray;
-    const coresMapa = abaGrafico === 0 ? coresCategorias : coresPagamento;
+    const coresMapa = abaGrafico === 0 ? coresDinamicas : coresPagamento; // Puxa do estado de cores atualizado
     
     let cumulativePercent = 0;
     return dadosArray.map(([key, value]) => {
@@ -667,7 +694,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   const svgSegments = getSVGSegments();
 
-  // CONTROLE DE VETOR DOMINANTE TAMBÉM NO GRÁFICO (PARA NÃO CONFLITAR)
   const handleTouchStart = (e) => {
     if (!e.targetTouches || e.targetTouches.length === 0) return;
     setSwipeEnd(null);
@@ -686,7 +712,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     const diffX = Math.abs(e.targetTouches[0].clientX - swipeCoords.current.x);
     const diffY = Math.abs(e.targetTouches[0].clientY - swipeCoords.current.y);
 
-    // Se estiver deslizando a Aba do Gráfico horizontalmente, para o PullToRefresh
     if (diffX > diffY) {
       e.stopPropagation(); 
     }
@@ -716,6 +741,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     setShowBottomSheet(true);      
   };
 
+  // ==== AQUI ESTÁ A SEGUNDA CORREÇÃO IMPORTANTE ====
   const handleToggleStatusPagamento = async () => {
     setAnimatingStatusId(transacaoSelecionada.id);
     setTimeout(() => setAnimatingStatusId(null), 300);
@@ -731,7 +757,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
       usuarioId: usuarioLogado.id,
       contaOrigemId: transacaoSelecionada.tipo === 'despesa' ? contaId : null,
       contaDestinoId: transacaoSelecionada.tipo === 'receita' ? contaId : null,
-      categoriaId: mapaCategoriasAPI[transacaoSelecionada.categoria] || 10,
+      categoriaId: transacaoSelecionada.categoriaId || 10, // USA O ID ORIGINAL SALVO!
       descricao: transacaoSelecionada.titulo,
       valor: transacaoSelecionada.valor,
       tipo: transacaoSelecionada.tipo,
@@ -796,9 +822,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
   </>
   );
 
-  // ==========================================
-  // FUNÇÃO DO PULL TO REFRESH E VIBRAÇÃO
-  // ==========================================
   const handleRefresh = async () => {
     if (navigator.vibrate) {
       navigator.vibrate(50); 
@@ -968,7 +991,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
           <Header usuarioLogado={usuarioLogado} showBalance={showBalance} setShowBalance={setShowBalance} setShowProfile={setShowProfile} temaAtual={temaAtual} />
           
-          {/* LÓGICA CONDICIONAL: SE ESTIVER CARREGANDO, MOSTRA O WIREFRAME */}
           {isRefreshingUI ? (
             <div className="skeleton-container w-100" style={{ paddingBottom: '80px' }}>
               <div className="skeleton-pulse skeleton-box" style={{ height: '210px', borderRadius: '1rem', marginTop: '0.5rem' }}></div>
@@ -982,7 +1004,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
               </div>
             </div>
           ) : (
-            /* CONTEÚDO REAL DO APP (SÓ É EXIBIDO QUANDO NÃO ESTÁ CARREGANDO) */
             <>
               <div 
                 className={`carrossel-cartoes ${!isCardFlipped ? 'modo-saldo-livre' : 'modo-cartoes'}`} 
@@ -1041,7 +1062,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
                   );
                 })}
 
-                {/* CARD DE ADICIONAR NOVO CARTÃO NO FINAL DO CARROSSEL */}
                 {isCardFlipped && (
                   <div className="carrossel-item item-adicionar d-flex align-items-center">
                     <div 
@@ -1119,7 +1139,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 )}
               </div>
 
-              {/* LETREIRO */}
               <div className="dashboard-ticker">
                 <div className="dashboard-ticker-content">
                   {dashboardTickerText}
@@ -1127,7 +1146,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 </div>
               </div>
 
-              <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} temaAtual={temaAtual}/>
+              <DonutChart isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} handleTouchStart={handleTouchStart} handleTouchMove={handleTouchMove} handleTouchEnd={handleTouchEnd} totalDespesasAtivas={totalDespesasAtivas} svgSegments={svgSegments} hoveredCategory={hoveredCategory} setHoveredCategory={setHoveredCategory} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} isChartAnimating={isChartAnimating} showBalance={showBalance} despesasGrafico={despesasGrafico} pagamentosGrafico={pagamentosGrafico} despesasArray={despesasArray} pagamentosArray={pagamentosArray} historicoData={historicoData} maxFaturaHist={maxFaturaHist} listaMeses={listaMeses} setMesFiltro={setMesFiltro} temaAtual={temaAtual} cores={coresDinamicas}/>
               <TransactionList termoBusca={termoBusca} setTermoBusca={setTermoBusca} selectedCategory={selectedCategory} isCardFlipped={isCardFlipped} abaGrafico={abaGrafico} mesFiltro={mesFiltro} setShowMonthSelector={setShowMonthSelector} transacoesAgrupadas={transacoesAgrupadas} setTransacaoSelecionada={setTransacaoSelecionada} setMenuAcaoDetalhes={setMenuAcaoDetalhes} showBalance={showBalance} obterIconeCategoria={obterIconeCategoria} temaAtual={temaAtual} />
             </>
           )}

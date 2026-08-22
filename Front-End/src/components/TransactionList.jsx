@@ -15,7 +15,6 @@ function TransactionList({
 
   return (
     <>
-      {/* BARRA DE PESQUISA GERAL */}
       <div className={`d-flex align-items-center rounded-pill px-3 py-2 mb-4 border shadow-sm ${isDark ? 'bg-dark bg-opacity-50 border-secondary border-opacity-25' : 'bg-white border-light'}`}>
         <FiSearch className={`me-2 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`} size={18} />
         <input 
@@ -28,7 +27,6 @@ function TransactionList({
         />
       </div>
 
-      {/* LISTA DE TRANSAÇÕES AGRUPADAS POR DATA E BOTÃO DE MÊS */}
       <section className="mb-4 pb-5">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h6 className={`mb-0 fw-bold text-truncate me-2 ${isDark ? 'text-white' : 'text-dark'}`}>

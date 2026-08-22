@@ -3,14 +3,15 @@ import { Offcanvas } from 'react-bootstrap';
 import { FiAlertCircle } from 'react-icons/fi';
 import { isDataInputFuture } from '../utils/dateUtils';
 import { formatarMoeda } from '../utils/formatters';
-import { mapaContasAPI, mapaCategoriasAPI } from '../utils/constants';
+import { mapaContasAPI } from '../utils/constants';
+import categoriasService from '../api/categoriasService'; // NOVO: Serviço de categorias
 import api from '../api/axios';
 
 function TransactionForm({
   showBottomSheet, setShowBottomSheet,
   usuarioLogado, carregarTransacoes,
   transacaoParaEditar, setTransacaoParaEditar,
-  meusCartoes = [], // Recebe a lista de cartões salvos do usuário
+  meusCartoes = [],
   temaAtual
 }) {
   const isDark = temaAtual === 'dark';
@@ -19,9 +20,9 @@ function TransactionForm({
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
   const [valorInput, setValorInput] = useState('');
   const [tituloInput, setTituloInput] = useState('');
-  const [categoriaInput, setCategoriaInput] = useState('');
+  const [categoriaInput, setCategoriaInput] = useState(''); // Agora armazena o ID da categoria
   const [pagamentoInput, setPagamentoInput] = useState('');
-  const [cartaoIdInput, setCartaoIdInput] = useState(''); // Estado para o ID do cartão selecionado
+  const [cartaoIdInput, setCartaoIdInput] = useState('');
   const [dataInput, setDataInput] = useState(new Date().toISOString().substring(0,10));
   const [observacaoInput, setObservacaoInput] = useState('');
   const [ehRecorrente, setEhRecorrente] = useState(false);
@@ -32,14 +33,33 @@ function TransactionForm({
   const [qtdParcelas, setQtdParcelas] = useState(2);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // NOVO: Estado para armazenar as categorias vindas da API
+  const [listaCategorias, setListaCategorias] = useState([]);
 
   const editandoId = transacaoParaEditar ? transacaoParaEditar.id : null;
+
+  // NOVO: Busca as categorias dinâmicas sempre que abrir o modal
+  useEffect(() => {
+    if (showBottomSheet && usuarioLogado?.id) {
+      carregarCategorias();
+    }
+  }, [showBottomSheet, usuarioLogado]);
+
+  const carregarCategorias = async () => {
+    try {
+      const data = await categoriasService.getCategorias(usuarioLogado.id);
+      setListaCategorias(data);
+    } catch (error) {
+      console.error("Erro ao carregar categorias dinâmicas", error);
+    }
+  };
 
   useEffect(() => {
     if (transacaoParaEditar) {
       setValorInput((Number(transacaoParaEditar.valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setTituloInput(transacaoParaEditar.titulo || '');
-      setCategoriaInput(transacaoParaEditar.categoria || '');
+      setCategoriaInput(transacaoParaEditar.categoriaId || ''); // Pega o ID na edição
       setPagamentoInput(transacaoParaEditar.pagamento || '');
       setCartaoIdInput(transacaoParaEditar.cartaoId || '');
       const partes = (transacaoParaEditar.data || '').split('/');
@@ -114,8 +134,8 @@ function TransactionForm({
       usuarioId: usuarioLogado.id, 
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
-      categoriaId: mapaCategoriasAPI[categoriaInput],
-      cartaoId: pagamentoInput === 'Crédito' ? Number(cartaoIdInput) : null, // Envia o ID do cartão selecionado
+      categoriaId: Number(categoriaInput), // Agora enviamos diretamente o ID armazenado no state
+      cartaoId: pagamentoInput === 'Crédito' ? Number(cartaoIdInput) : null,
       valor: valorFinalTransacao,
       tipo: tipoTransacao,
       pago: pagoInput,
@@ -263,6 +283,7 @@ function TransactionForm({
                 </span>
               </div>
             </div>
+            
             <div className="col-6">
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Categoria</label>
               <select 
@@ -271,24 +292,15 @@ function TransactionForm({
                 onChange={(e) => setCategoriaInput(e.target.value)}
               >
                 <option value="" disabled>Selecione...</option>
-                {tipoTransacao === 'receita' ? (
-                  <>
-                    <option value="Salário">Salário</option>
-                    <option value="Vale (VR + VT)">Vale (VR + VT)</option>
-                    <option value="Rendimento">Rendimento</option>
-                    <option value="Outros">Outros</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="Alimentação">Alimentação</option>
-                    <option value="Moto">Moto</option>
-                    <option value="Carro">Carro</option>
-                    <option value="Educação">Educação</option>
-                    <option value="Lazer">Lazer</option>
-                    <option value="Moradia">Moradia</option>
-                    <option value="Outros">Outros</option>
-                  </>
-                )}
+                {/* RENDERIZAÇÃO DINÂMICA DAS CATEGORIAS DA API */}
+                {listaCategorias
+                  .filter(cat => cat.tipo === tipoTransacao) // Filtra pelo tipo selecionado no topo
+                  .map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </option>
+                  ))
+                }
               </select>
             </div>
           </div>
@@ -320,7 +332,7 @@ function TransactionForm({
             </div>
           </div>
 
-          {/* SELETOR DE CARTÃO DINÂMICO (APARECE SÓ SE FOR CRÉDITO) */}
+          {/* SELETOR DE CARTÃO DINÂMICO */}
           {pagamentoInput === 'Crédito' && (
             <div>
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Escolher Cartão</label>

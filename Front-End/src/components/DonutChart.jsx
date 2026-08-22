@@ -13,7 +13,8 @@ function DonutChart({
   despesasGrafico, pagamentosGrafico,
   despesasArray, pagamentosArray,
   historicoData, maxFaturaHist,
-  listaMeses, setMesFiltro, temaAtual
+  listaMeses, setMesFiltro, temaAtual,
+  cores // Recebe as cores dinâmicas do Dashboard
 }) {
   const isDark = temaAtual === 'dark';
 
@@ -35,7 +36,6 @@ function DonutChart({
         </div>
         
         <div className="d-flex align-items-center gap-3">
-          {/* PONTINHOS DO SWIPE INDICATOR */}
           <div className={`d-flex align-items-center gap-1 px-2 py-1 rounded-pill ${isDark ? 'bg-dark bg-opacity-50' : 'bg-light'}`}>
             <span 
               style={{ 
@@ -59,7 +59,6 @@ function DonutChart({
         </div>
       </div>
 
-      {/* CONTAINER DO SWIPE ISOLADO COM A TRAVA CSS */}
       <div 
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -70,7 +69,6 @@ function DonutChart({
         {abaGrafico === 0 && (
           <div className="d-flex align-items-center justify-content-between mt-3 px-1">
             
-            {/* O DONUT CHART (SVG) PIZZA NA ESQUERDA */}
             <div 
               style={{ 
                 width: '150px', 
@@ -117,7 +115,6 @@ function DonutChart({
                     })}
                   </svg>
                   
-                  {/* CENTRO DINÂMICO DA PIZZA */}
                   <div className="position-absolute top-50 start-50 translate-middle text-center w-100 pe-none d-flex flex-column align-items-center justify-content-center" style={{ padding: '0 20px' }}>
                     {hoveredCategory || selectedCategory ? (
                       <>
@@ -137,14 +134,18 @@ function DonutChart({
               )}
             </div>
 
-            {/* LEGENDA (INTERATIVA E ORDENADA) NA DIREITA */}
+            {/* LEGENDA CORRESPONDENTE COM FALLBACK BLINDADO */}
             <div className="d-flex flex-column gap-1 text-end" style={{ fontSize: '13px', width: '135px' }}>
               {totalDespesasAtivas === 0 ? (
                 <span className={`text-center w-100 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`}>Sem despesas</span>
               ) : (
                 (abaGrafico === 0 ? despesasArray : pagamentosArray).map(([cat, valor]) => {
                   const porcentagem = ((Number(valor) || 0) / totalDespesasAtivas * 100).toFixed(0);
-                  const corCat = (abaGrafico === 0 ? coresCategorias : coresPagamento)[cat] || '#6b7280';
+                  
+                  const corCat = abaGrafico === 0 
+                    ? (cores && cores[cat] ? cores[cat] : (coresCategorias[cat] || '#6b7280'))
+                    : (coresPagamento[cat] || '#6b7280');
+
                   const isDimmed = (hoveredCategory || selectedCategory) && (hoveredCategory !== cat && selectedCategory !== cat);
 
                   return (
@@ -280,7 +281,6 @@ function DonutChart({
               )}
             </div>
 
-            {/* LEGENDA ORDENADA */}
             <div className="d-flex flex-column gap-1 text-end" style={{ fontSize: '13px', width: '135px' }}>
               {totalDespesasAtivas === 0 ? (
                 <span className={`text-center w-100 ${isDark ? 'text-light opacity-50' : 'text-secondary opacity-75'}`}>Sem despesas</span>

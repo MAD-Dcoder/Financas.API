@@ -1,12 +1,13 @@
 import axios from 'axios';
 
-// Detecta se está rodando localmente ou em produção
-const isLocal = window.location.hostname === 'localhost';
+const hostname = window.location.hostname;
+
+const isLocal = hostname === 'localhost' || hostname.startsWith('192.168.');
 
 const api = axios.create({
-  baseURL: isLocal 
-    ? 'https://localhost:7231/api'                // Porta do seu Visual Studio local
-    : 'https://financas-api-v5lj.onrender.com/api' // URL do Render na nuvem
+  baseURL: isLocal
+    ? `http://${hostname}:5146/api`                   // Mudou para HTTP e porta 5146
+    : 'https://financas-api-v51j.onrender.com/api'    // Produção continua normal
 });
 
 export default api;
