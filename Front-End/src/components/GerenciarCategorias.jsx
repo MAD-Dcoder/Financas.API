@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../contexts/AuthContext';
 import { FiArrowLeft, FiTrash2, FiPlus, FiEdit2, FiCheck, FiX, FiMenu } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import categoriasService from '../api/categoriasService';
-import { PALETA_CORES } from '../utils/constants'; // Importação da paleta inteligente
+import { PALETA_CORES } from '../utils/constants';
 
-function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
+function GerenciarCategorias({ temaAtual }) {
   const isDark = temaAtual === 'dark';
+  const navigate = useNavigate();
+  const { usuarioLogado } = useContext(AuthContext); // Puxando o usuário do contexto direto
+
   const [categorias, setCategorias] = useState([]);
   const [novaCategoria, setNovaCategoria] = useState('');
   const [tipoNovaCategoria, setTipoNovaCategoria] = useState('despesa');
@@ -15,10 +20,10 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (show && usuarioLogado?.id) {
+    if (usuarioLogado?.id) {
       carregarCategorias();
     }
-  }, [show, usuarioLogado]);
+  }, [usuarioLogado]);
 
   const carregarCategorias = async () => {
     try {
@@ -34,7 +39,6 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
     if (!novaCategoria.trim() || isSubmitting) return;
     setIsSubmitting(true);
     
-    // Escolhe uma cor da paleta de forma sequencial com base no tamanho da lista
     const corEscolhida = PALETA_CORES[categorias.length % PALETA_CORES.length];
 
     try {
@@ -42,7 +46,7 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
         nome: novaCategoria, 
         tipo: tipoNovaCategoria,
         usuarioId: usuarioLogado.id,
-        corHex: corEscolhida, // Aplica a cor inteligente
+        corHex: corEscolhida, 
         ordem: categorias.length + 1
       });
       setNovaCategoria('');
@@ -76,9 +80,6 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
     carregarCategorias();
   };
 
-  // ==========================================
-  // LÓGICA DE DRAG AND DROP FLUIDO
-  // ==========================================
   const handleOnDragEnd = async (result) => {
     if (!result.destination) return;
     if (result.source.index === result.destination.index) return;
@@ -100,25 +101,25 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
     await Promise.all(promises);
   };
 
-  if (!show) return null;
-
-  const bgClass = isDark ? 'bg-dark text-white' : 'bg-white text-dark';
+  // Cores dinâmicas
+  const bgClass = isDark ? '#121214' : '#f0f2f5'; // Usando o mesmo fundo premium das outras telas
+  const textClass = isDark ? 'text-white' : 'text-dark';
   const borderClass = isDark ? 'border-secondary border-opacity-25' : 'border-light-subtle';
   const inputClass = isDark ? "bg-transparent text-white border-secondary shadow-none" : "bg-transparent text-dark border-light-subtle shadow-none";
 
   return (
-    <div 
-      className={bgClass} 
-      style={{ position: 'fixed', inset: 0, zIndex: 1060, overflowY: 'auto', transition: 'all 0.3s ease-in-out' }}
-    >
+    <div style={{ backgroundColor: bgClass, minHeight: '100vh', transition: 'all 0.3s ease-in-out' }}>
+      
+      {/* HEADER TIPO APP */}
       <div className={`d-flex align-items-center p-4 border-bottom ${borderClass}`}>
-        <button onClick={onHide} className={`btn btn-link p-0 text-decoration-none shadow-none ${isDark ? 'text-white' : 'text-dark'}`}>
+        {/* Substituímos a ação do botão para voltar a URL anterior */}
+        <button onClick={() => navigate(-1)} className={`btn btn-link p-0 text-decoration-none shadow-none ${textClass}`}>
           <FiArrowLeft size={24} />
         </button>
-        <h5 className="mb-0 ms-3 fw-bold">Gerenciar Categorias</h5>
+        <h5 className={`mb-0 ms-3 fw-bold ${textClass}`}>Gerenciar Categorias</h5>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 container">
         <p className={`small mb-4 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>
           Adicione, edite ou altere a prioridade de exibição das suas categorias.
         </p>
@@ -131,8 +132,8 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
             style={{ width: '120px' }}
             disabled={isSubmitting}
           >
-            <option value="despesa">Despesa</option>
-            <option value="receita">Receita</option>
+            <option value="despesa" className={isDark ? "bg-dark" : ""}>Despesa</option>
+            <option value="receita" className={isDark ? "bg-dark" : ""}>Receita</option>
           </select>
           <input 
             type="text" 
@@ -149,13 +150,12 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <div className="spinner-border spinner-border-sm" role="status"><span className="visually-hidden">Carregando...</span></div>
+              <div className="spinner-border spinner-border-sm" role="status"><span className="visually-hidden">...</span></div>
             ) : (<FiPlus />)}
           </button>
         </form>
 
         <div className={`card border ${borderClass} bg-transparent`}>
-          
           <DragDropContext onDragEnd={handleOnDragEnd}>
             <Droppable droppableId="categorias-lista">
               {(provided) => (
@@ -173,11 +173,10 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
                           className={`list-group-item d-flex justify-content-between align-items-center py-3 border-bottom ${borderClass} ${snapshot.isDragging ? 'shadow-lg rounded' : ''}`}
                           style={{ 
                             ...provided.draggableProps.style,
-                            backgroundColor: isDark ? (snapshot.isDragging ? '#2d2d36' : 'transparent') : (snapshot.isDragging ? '#f8f9fa' : 'transparent')
+                            backgroundColor: isDark ? (snapshot.isDragging ? '#2d2d36' : 'transparent') : (snapshot.isDragging ? '#ffffff' : 'transparent')
                           }}
                         >
                           <div className="d-flex align-items-center gap-3 w-100">
-                            
                             <div {...provided.dragHandleProps} className="p-1" style={{ cursor: 'grab' }}>
                               <FiMenu className={`${isDark ? 'text-secondary' : 'text-muted'} opacity-50`} size={20} />
                             </div>
@@ -192,9 +191,8 @@ function GerenciarCategorias({ show, onHide, usuarioLogado, temaAtual }) {
                               />
                             ) : (
                               <div className="d-flex align-items-center gap-2">
-                                {/* Bolinha colorida puxando diretamente a cor cadastrada no banco */}
                                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: cat.corHex || '#6b7280' }} />
-                                <span className={isDark ? 'text-light' : 'text-dark'}>{cat.nome}</span>
+                                <span className={textClass}>{cat.nome}</span>
                               </div>
                             )}
                           </div>
