@@ -9,7 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System;
-using Microsoft.Extensions.Configuration; // <-- Biblioteca do cofre
+using Microsoft.Extensions.Configuration;
 
 namespace Financas.API.Controllers
 {
@@ -18,9 +18,9 @@ namespace Financas.API.Controllers
     public class UsuariosController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IConfiguration _configuration; // <-- Variável do cofre
+        private readonly IConfiguration _configuration;
 
-        public UsuariosController(AppDbContext context, IConfiguration configuration) // <-- Injeção de Dependência do cofre
+        public UsuariosController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
             _configuration = configuration;
@@ -39,22 +39,15 @@ namespace Financas.API.Controllers
         [HttpPost]
         public async Task<ActionResult> PostUsuario(Usuario usuario)
         {
-            // Pega a senha limpa que veio do React (ex: "123456") e transforma num Hash irreversível
             string hashSenha = BCrypt.Net.BCrypt.HashPassword(usuario.SenhaHash);
-
-            // Substitui a senha limpa pelo Hash antes de mandar pro banco
             usuario.SenhaHash = hashSenha;
 
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            // Ocultar a senha no retorno por segurança
             usuario.SenhaHash = "";
-
-            // Gera o Token JWT da pulseira VIP
             var token = GerarTokenJwt(usuario);
 
-            // Devolve exatamente o pacote que o React espera
             return Ok(new { token = token, usuario = usuario });
         }
 
@@ -74,37 +67,28 @@ namespace Financas.API.Controllers
 
             bool senhaValida = false;
 
-            // 1. Verifica se a senha no banco JÁ É criptografada (Hashes BCrypt começam com $2)
             if (usuario.SenhaHash.StartsWith("$2"))
             {
                 senhaValida = BCrypt.Net.BCrypt.Verify(loginInfo.SenhaHash, usuario.SenhaHash);
             }
             else
             {
-                // 2. FALLBACK (Para contas antigas como o seu ID 1)
                 if (usuario.SenhaHash == loginInfo.SenhaHash)
                 {
                     senhaValida = true;
-
-                    // MÁGICA: Já que ele logou com sucesso, atualizamos a senha dele no banco para Criptografada!
                     usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(loginInfo.SenhaHash);
                     await _context.SaveChangesAsync();
                 }
             }
 
-            // Se errou a senha em qualquer um dos cenários, bloqueia
             if (!senhaValida)
             {
                 return Unauthorized(new { message = "E-mail ou senha inválidos." });
             }
 
-            // Limpa o hash para não trafegar na rede
             usuario.SenhaHash = "";
-
-            // Gera o Token JWT da pulseira VIP
             var token = GerarTokenJwt(usuario);
 
-            // Devolve exatamente o pacote que o React espera
             return Ok(new { token = token, usuario = usuario });
         }
 
@@ -114,8 +98,6 @@ namespace Financas.API.Controllers
         private string GerarTokenJwt(Usuario usuario)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-
-            // Lendo a chave diretamente do appsettings.json!
             var jwtKey = _configuration["Jwt:Key"];
             var key = Encoding.ASCII.GetBytes(jwtKey);
 
@@ -126,12 +108,69 @@ namespace Financas.API.Controllers
                     new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                     new Claim(ClaimTypes.Email, usuario.Email)
                 }),
-                Expires = DateTime.UtcNow.AddHours(8), // Token vale por 8 horas
+                Expires = DateTime.UtcNow.AddHours(8),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        // ==========================================
+        // 4. ROTA DE ATUALIZAÇÃO DE PERFIL (FIRMO 1.0.1v)
+        // ==========================================
+        [HttpPut("{id}")]
+        public async Task<IActionResult> AtualizarPerfil(int id, [FromBody] AtualizarPerfilDto dto)
+        {
+            // Busca o usuário no banco
+            var usuario = await _context.Usuarios.FindAsync(id);
+
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuário não encontrado." });
+            }
+
+            // Mapeia os dados recebidos para o usuário (respeitando os nomes do seu BD)
+            usuario.DataNascimento = dto.DataNascimento;
+            usuario.ConfiguracaoMoradia = dto.ConfiguracaoMoradia;
+            usuario.Profissao = dto.Profissao;
+            usuario.ObjetivoFinanceiro = dto.ObjetivoFinanceiro;
+            usuario.PossuiVeiculo = dto.PossuiVeiculo;
+            usuario.MomentoVida = dto.MomentoVida;
+            usuario.MaiorPecado = dto.MaiorPecado;
+            usuario.UsoCartao = dto.UsoCartao;
+            usuario.NivelConhecimento = dto.NivelConhecimento;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+
+                // Limpa a senha antes de devolver os dados atualizados para o Front-End
+                usuario.SenhaHash = "";
+                return Ok(usuario);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao atualizar o perfil.", erro = ex.Message });
+            }
+        }
+    }
+
+    // ==========================================
+    // DTO: MODELO DE DADOS ESPERADO NO PUT
+    // ==========================================
+    public class AtualizarPerfilDto
+    {
+        public DateTime? DataNascimento { get; set; }
+        public string ConfiguracaoMoradia { get; set; }
+        public string Profissao { get; set; }
+        public string MomentoVida { get; set; }
+        public string ObjetivoFinanceiro { get; set; }
+
+        public string PossuiVeiculo { get; set; }
+
+        public string MaiorPecado { get; set; }
+        public string UsoCartao { get; set; }
+        public string NivelConhecimento { get; set; }
     }
 }

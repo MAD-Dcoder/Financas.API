@@ -2,9 +2,11 @@
 using Financas.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // <-- IMPORT ADICIONADO AQUI
 
 namespace Financas.API.Controllers;
 
+[Authorize] // <-- CADEADO ADICIONADO AQUI: Protege o acesso às contas
 [ApiController]
 [Route("api/[controller]")]
 public class ContasController : ControllerBase

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Financas.API.Data;
 using Financas.API.Models;
+using Microsoft.AspNetCore.Authorization; // <-- IMPORT ADICIONADO AQUI
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace Financas.API.Controllers
 {
+    [Authorize] // <-- CADEADO ADICIONADO AQUI: Protege todas as rotas deste controller
     [Route("api/[controller]")]
     [ApiController]
     public class CartoesController : ControllerBase

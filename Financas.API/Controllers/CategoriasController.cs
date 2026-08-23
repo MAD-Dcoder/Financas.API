@@ -2,9 +2,11 @@
 using Financas.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // <-- IMPORT ADICIONADO AQUI
 
 namespace Financas.API.Controllers;
 
+[Authorize] // <-- CADEADO ADICIONADO AQUI: Protege todas as rotas de categorias
 [Route("api/[controller]")]
 [ApiController]
 public class CategoriasController : ControllerBase
