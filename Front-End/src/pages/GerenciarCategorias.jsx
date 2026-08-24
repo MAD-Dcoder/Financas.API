@@ -133,6 +133,7 @@ function GerenciarCategorias({ temaAtual }) {
   const bgClass = isDark ? '#121214' : '#f0f2f5';
   const textClass = isDark ? 'text-white' : 'text-dark';
   const borderClass = isDark ? 'border-secondary border-opacity-25' : 'border-light-subtle';
+  // Note: o inputClass agora é reaproveitado na label para garantir visual igual ao text
   const inputClass = isDark ? "bg-transparent text-white border-secondary shadow-none" : "bg-transparent text-dark border-light-subtle shadow-none";
 
   return (
@@ -162,45 +163,45 @@ function GerenciarCategorias({ temaAtual }) {
             <option value="receita" className={isDark ? "bg-dark" : ""}>Receita</option>
           </select>
           
-          {/* NOVO LAYOUT: Caixa de cor separada, igual ao botão de '+' */}
-          <div 
-            className={`d-flex align-items-center justify-content-center border ${isDark ? 'border-secondary border-opacity-50' : 'border-light-subtle'} rounded`}
+          {/* Caixa de cor corrigida usando label e escondendo o input nativo */}
+          <label 
+            className={`d-flex align-items-center justify-content-center border rounded mb-0 form-control ${inputClass}`}
             style={{ 
               width: '42px', 
+              padding: 0,
               flexShrink: 0, 
-              position: 'relative', 
-              overflow: 'hidden',
-              backgroundColor: isDark ? 'transparent' : '#fff'
+              cursor: 'pointer'
             }}
             title="Escolher cor"
           >
-            {/* A bolinha visual */}
             <div 
               style={{
                 width: '18px',
                 height: '18px',
                 borderRadius: '50%',
                 backgroundColor: corNovaCategoria,
-                boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.1)' : '0 0 0 1px rgba(0,0,0,0.1)'
+                boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.15)' : '0 0 0 1px rgba(0,0,0,0.15)'
               }}
             />
-            {/* Input invisível cobrindo toda a caixa para facilitar o clique */}
+            {/* O input de cor fica totalmente escondido do fluxo visual, resolvendo o bug do iOS */}
             <input 
               type="color" 
               value={corNovaCategoria}
               onChange={(e) => setCorNovaCategoria(e.target.value)}
-              style={{
-                opacity: 0,
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                cursor: 'pointer'
+              style={{ 
+                position: 'absolute', 
+                opacity: 0, 
+                width: '1px', 
+                height: '1px', 
+                padding: 0, 
+                margin: '-1px', 
+                overflow: 'hidden', 
+                clip: 'rect(0,0,0,0)', 
+                border: 0 
               }}
               disabled={isSubmitting}
             />
-          </div>
+          </label>
 
           <input 
             type="text" 
@@ -252,16 +253,15 @@ function GerenciarCategorias({ temaAtual }) {
                             
                             {editandoId === cat.id ? (
                               <div className="d-flex align-items-center gap-2 w-100 pe-2">
-                                {/* Caixa de cor separada também no modo de edição */}
-                                <div 
-                                  className={`d-flex align-items-center justify-content-center border ${isDark ? 'border-secondary border-opacity-50' : 'border-light-subtle'} rounded`}
+                                {/* Caixa de cor de edição corrigida para o iOS também */}
+                                <label 
+                                  className={`d-flex align-items-center justify-content-center border rounded mb-0 form-control ${inputClass}`}
                                   style={{ 
                                     width: '36px', 
                                     height: '32px',
+                                    padding: 0,
                                     flexShrink: 0, 
-                                    position: 'relative', 
-                                    overflow: 'hidden',
-                                    backgroundColor: isDark ? 'transparent' : '#fff'
+                                    cursor: 'pointer'
                                   }}
                                 >
                                   <div 
@@ -270,24 +270,26 @@ function GerenciarCategorias({ temaAtual }) {
                                       height: '14px',
                                       borderRadius: '50%',
                                       backgroundColor: corEditada,
-                                      boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.1)' : '0 0 0 1px rgba(0,0,0,0.1)'
+                                      boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.15)' : '0 0 0 1px rgba(0,0,0,0.15)'
                                     }}
                                   />
                                   <input 
                                     type="color" 
                                     value={corEditada}
                                     onChange={(e) => setCorEditada(e.target.value)}
-                                    style={{
-                                      opacity: 0,
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      cursor: 'pointer'
+                                    style={{ 
+                                      position: 'absolute', 
+                                      opacity: 0, 
+                                      width: '1px', 
+                                      height: '1px', 
+                                      padding: 0, 
+                                      margin: '-1px', 
+                                      overflow: 'hidden', 
+                                      clip: 'rect(0,0,0,0)', 
+                                      border: 0 
                                     }}
                                   />
-                                </div>
+                                </label>
                                 <input 
                                   type="text" 
                                   className={`form-control form-control-sm ${inputClass} flex-grow-1`}
