@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
 import GerenciarCategorias from './components/GerenciarCategorias';
+import ConfiguracoesGlobais from './pages/ConfiguracoesGlobais';
 
 function App() {
   const { isLoggedIn, handleLoginSuccess } = useContext(AuthContext);
@@ -25,30 +26,45 @@ function App() {
     setTemaAtual(temaAtual === 'dark' ? 'light' : 'dark');
   };
 
-  // 4. Sistema de Rotas
+  // 4. Função para descobrir qual é a tela inicial do usuário
+  const getRotaInicial = () => {
+    const configsStr = localStorage.getItem('firmo_configs');
+    if (!configsStr) return '/dashboard';
+
+    try {
+      const configsSalvas = JSON.parse(configsStr);
+      const tela = configsSalvas.telaInicialPadrao || 'dashboard';
+
+      switch (tela) {
+        case 'transacoes':
+          return '/transacoes'; 
+        case 'cartoes':
+          return '/meus-cartoes';
+        case 'novo_lancamento':
+          return '/dashboard?acao=novolancamento'; // NOME ATUALIZADO AQUI!
+        default:
+          return '/dashboard';
+      }
+    } catch (error) {
+      return '/dashboard';
+    }
+  };
+
+  // 5. Sistema de Rotas
   return (
     <Routes>
       {isLoggedIn ? (
-        // ROTAS PRIVADAS (Só entra se estiver logado)
         <>
-          {/* Nova rota do Dashboard com o endpoint na URL */}
           <Route path="/dashboard" element={<Dashboard temaAtual={temaAtual} toggleTema={toggleTema} />} />
-          
-          {/* Se acessar apenas "/", redireciona para "/dashboard" */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          
+          <Route path="/" element={<Navigate to={getRotaInicial()} replace />} />
+          <Route path="/configuracoes" element={<ConfiguracoesGlobais temaAtual={temaAtual} />} />
           <Route path="/meus-dados" element={<MeusDados temaAtual={temaAtual} />} />
           <Route path="/gerenciar-categorias" element={<GerenciarCategorias temaAtual={temaAtual} />} />
-          
-          {/* Se tentar acessar uma URL inválida logado, volta pro Dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </>
       ) : (
-        // ROTAS PÚBLICAS (Se não estiver logado)
         <>
           <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-          
-          {/* Se tentar acessar qualquer coisa sem estar logado, joga pro Login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}

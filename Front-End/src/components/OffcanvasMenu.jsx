@@ -84,8 +84,15 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
               </div>
             </div>
 
-            {/* CONFIGURAÇÕES GLOBAIS */}
-            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }}>
+            {/* CONFIGURAÇÕES GLOBAIS - AQUI FOI ADICIONADO O ONCLICK */}
+            <div 
+              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setShowProfile(false);
+                navigate('/configuracoes');
+              }}
+            >
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiSettings size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Configurações Globais</span>

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom'; // IMPORT NOVO AQUI
 import PullToRefresh from 'react-simple-pull-to-refresh';
 import { useDashboard } from '../hooks/useDashboard';
-import './Dashboard.css'; // NOVO IMPORT DO CSS AQUI!
+import './Dashboard.css';
 
 import OffcanvasMenu from '../components/OffcanvasMenu';
 import CardSettings from '../components/CardSettings';
@@ -25,6 +26,18 @@ import { mapaCoresCartao } from '../utils/constants';
 
 function Dashboard ({ temaAtual, toggleTema }) {  
   const dash = useDashboard(temaAtual);
+  
+  // SETUP DO LEITOR DE URL
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  // EFEITO QUE ABRE A GAVETA DE NOVO LANÇAMENTO
+  useEffect(() => {
+    if (searchParams.get('acao') === 'novolancamento') {
+      dash.setShowBottomSheet(true); // Abre a gaveta
+      navigate('/dashboard', { replace: true }); // Limpa a URL para não reabrir no F5
+    }
+  }, [searchParams, navigate, dash]);
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -214,16 +227,16 @@ function Dashboard ({ temaAtual, toggleTema }) {
           
           <CardSettings 
             showCardSettings={dash.showCardSettings} setShowCardSettings={dash.setShowCardSettings} 
-            diaVencimento={dash.cartaoAtivo.diaVencimento} diaFechamento={dash.cartaoAtivo.diaFechamento} 
-            corCartao={mapaCoresCartao[dash.cartaoAtivo.corCartao] || dash.cartaoAtivo.corCartao} 
-            apelidoCartao={dash.cartaoAtivo.apelidoCartao} finalCartao={dash.cartaoAtivo.finalCartao} 
-            bandeiraCartao={dash.cartaoAtivo.bandeiraCartao} tempDiaVencimento={dash.tempDiaVencimento} 
+            diaVencimento={dash.cartaoAtivo?.diaVencimento} diaFechamento={dash.cartaoAtivo?.diaFechamento} 
+            corCartao={mapaCoresCartao[dash.cartaoAtivo?.corCartao] || dash.cartaoAtivo?.corCartao} 
+            apelidoCartao={dash.cartaoAtivo?.apelidoCartao} finalCartao={dash.cartaoAtivo?.finalCartao} 
+            bandeiraCartao={dash.cartaoAtivo?.bandeiraCartao} tempDiaVencimento={dash.tempDiaVencimento} 
             setTempDiaVencimento={dash.setTempDiaVencimento} tempDiaFechamento={dash.tempDiaFechamento} 
             setTempDiaFechamento={dash.setTempDiaFechamento} tempCor={dash.tempCor} setTempCor={dash.setTempCor} 
             tempApelido={dash.tempApelido} setTempApelido={dash.setTempApelido} tempFinal={dash.tempFinal} 
             setTempFinal={dash.setTempFinal} tempBandeira={dash.tempBandeira} setTempBandeira={dash.setTempBandeira} 
             tempLimite={dash.tempLimite} setTempLimite={dash.setTempLimite} 
-            handleSalvarConfigCartao={dash.handleSalvarConfigCartao} cartaoId={dash.cartaoAtivo.id}
+            handleSalvarConfigCartao={dash.handleSalvarConfigCartao} cartaoId={dash.cartaoAtivo?.id}
             onDeletarCartao={() => dash.carregarCartoes()} temaAtual={temaAtual}
             onAtualizarCartaoTemp={dash.handleAtualizarCartaoTemp}
           />
