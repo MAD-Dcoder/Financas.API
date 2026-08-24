@@ -6,7 +6,7 @@ import { AuthContext } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
-import GerenciarCategorias from './components/GerenciarCategorias';
+import GerenciarCategorias from './pages/GerenciarCategorias';
 import ConfiguracoesGlobais from './pages/ConfiguracoesGlobais';
 
 function App() {

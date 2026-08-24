@@ -326,8 +326,9 @@ export function useDashboard(temaAtual) {
       
       catResponse.forEach((c, index) => {
         mapaCategoriasAtivas[c.id] = { nome: c.nome, cor: c.corHex };
-        const corDaPaleta = PALETA_CORES[index % PALETA_CORES.length];
-        mapaCoresDinamicas[c.nome] = corDaPaleta;
+        // CORREÇÃO: Puxa a cor original do banco de dados e só usa a paleta se estiver vazio
+        const corOficial = c.corHex || PALETA_CORES[index % PALETA_CORES.length];
+        mapaCoresDinamicas[c.nome] = corOficial;
       });
       setCoresDinamicas(mapaCoresDinamicas);
 
