@@ -6,7 +6,7 @@ import { AuthContext } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
-import GerenciarCategorias from './components/GerenciarCategorias'; // <-- IMPORT DA ROTA DE CATEGORIAS
+import GerenciarCategorias from './components/GerenciarCategorias';
 
 function App() {
   const { isLoggedIn, handleLoginSuccess } = useContext(AuthContext);
@@ -31,12 +31,17 @@ function App() {
       {isLoggedIn ? (
         // ROTAS PRIVADAS (Só entra se estiver logado)
         <>
-          <Route path="/" element={<Dashboard temaAtual={temaAtual} toggleTema={toggleTema} />} />
+          {/* Nova rota do Dashboard com o endpoint na URL */}
+          <Route path="/dashboard" element={<Dashboard temaAtual={temaAtual} toggleTema={toggleTema} />} />
+          
+          {/* Se acessar apenas "/", redireciona para "/dashboard" */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          
           <Route path="/meus-dados" element={<MeusDados temaAtual={temaAtual} />} />
-          <Route path="/gerenciar-categorias" element={<GerenciarCategorias temaAtual={temaAtual} />} /> {/* <-- NOVA ROTA ADICIONADA */}
+          <Route path="/gerenciar-categorias" element={<GerenciarCategorias temaAtual={temaAtual} />} />
           
           {/* Se tentar acessar uma URL inválida logado, volta pro Dashboard */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </>
       ) : (
         // ROTAS PÚBLICAS (Se não estiver logado)
@@ -44,7 +49,7 @@ function App() {
           <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
           
           {/* Se tentar acessar qualquer coisa sem estar logado, joga pro Login */}
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </>
       )}
     </Routes>

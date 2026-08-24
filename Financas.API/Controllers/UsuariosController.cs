@@ -9,6 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 
 namespace Financas.API.Controllers
@@ -26,18 +27,47 @@ namespace Financas.API.Controllers
             _configuration = configuration;
         }
 
+        // ==========================================
+        // MÉTODOS AUXILIARES: MAPEAMENTO SEGURO (DTO)
+        // ==========================================
+        // Esta função pega um Usuario do banco e transforma no DTO seguro, deixando a SenhaHash de fora.
+        private UsuarioRetornoDto MapearParaDto(Usuario usuario)
+        {
+            return new UsuarioRetornoDto
+            {
+                Id = usuario.Id,
+                Nome = usuario.Nome,
+                Email = usuario.Email,
+                // CriadoEm = usuario.CriadoEm, // Descomente se tiver essa propriedade no seu model
+                DataNascimento = usuario.DataNascimento,
+                ConfiguracaoMoradia = usuario.ConfiguracaoMoradia,
+                Profissao = usuario.Profissao,
+                MomentoVida = usuario.MomentoVida,
+                ObjetivoFinanceiro = usuario.ObjetivoFinanceiro,
+                PossuiVeiculo = usuario.PossuiVeiculo,
+                MaiorPecado = usuario.MaiorPecado,
+                UsoCartao = usuario.UsoCartao,
+                NivelConhecimento = usuario.NivelConhecimento
+            };
+        }
+
         // GET: api/Usuarios
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Usuario>>> GetUsuarios()
+        public async Task<ActionResult<IEnumerable<UsuarioRetornoDto>>> GetUsuarios()
         {
-            return await _context.Usuarios.ToListAsync();
+            var usuarios = await _context.Usuarios.ToListAsync();
+
+            // Converte a lista de entidades para a lista de DTOs seguros
+            var usuariosSeguros = usuarios.Select(u => MapearParaDto(u));
+
+            return Ok(usuariosSeguros);
         }
 
         // ==========================================
-        // NOVO: ROTA DE BUSCA DE USUÁRIO POR ID
+        // ROTA DE BUSCA DE USUÁRIO POR ID
         // ==========================================
         [HttpGet("{id}")]
-        public async Task<ActionResult<Usuario>> GetUsuario(int id)
+        public async Task<ActionResult<UsuarioRetornoDto>> GetUsuario(int id)
         {
             var usuario = await _context.Usuarios.FindAsync(id);
 
@@ -46,14 +76,12 @@ namespace Financas.API.Controllers
                 return NotFound(new { message = "Usuário não encontrado." });
             }
 
-            // Limpa a senha antes de devolver os dados para o Front-End
-            usuario.SenhaHash = "";
-
-            return Ok(usuario);
+            // Retorna apenas o DTO mapeado
+            return Ok(MapearParaDto(usuario));
         }
 
         // ==========================================
-        // 1. ROTA DE CADASTRO (CRIPTOGRAFANDO A SENHA E GERANDO TOKEN)
+        // 1. ROTA DE CADASTRO
         // ==========================================
         [HttpPost]
         public async Task<ActionResult> PostUsuario(Usuario usuario)
@@ -64,14 +92,14 @@ namespace Financas.API.Controllers
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            usuario.SenhaHash = "";
             var token = GerarTokenJwt(usuario);
 
-            return Ok(new { token = token, usuario = usuario });
+            // Retorna o token e o usuário blindado
+            return Ok(new { token = token, usuario = MapearParaDto(usuario) });
         }
 
         // ==========================================
-        // 2. ROTA DE LOGIN (COM MIGRAÇÃO E GERANDO TOKEN)
+        // 2. ROTA DE LOGIN
         // ==========================================
         [HttpPost("login")]
         public async Task<ActionResult> Login([FromBody] Usuario loginInfo)
@@ -105,10 +133,10 @@ namespace Financas.API.Controllers
                 return Unauthorized(new { message = "E-mail ou senha inválidos." });
             }
 
-            usuario.SenhaHash = "";
             var token = GerarTokenJwt(usuario);
 
-            return Ok(new { token = token, usuario = usuario });
+            // Retorna o token e o usuário blindado
+            return Ok(new { token = token, usuario = MapearParaDto(usuario) });
         }
 
         // ==========================================
@@ -141,7 +169,6 @@ namespace Financas.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> AtualizarPerfil(int id, [FromBody] AtualizarPerfilDto dto)
         {
-            // Busca o usuário no banco
             var usuario = await _context.Usuarios.FindAsync(id);
 
             if (usuario == null)
@@ -149,7 +176,6 @@ namespace Financas.API.Controllers
                 return NotFound(new { message = "Usuário não encontrado." });
             }
 
-            // Mapeia os dados recebidos para o usuário (respeitando os nomes do seu BD)
             usuario.DataNascimento = dto.DataNascimento;
             usuario.ConfiguracaoMoradia = dto.ConfiguracaoMoradia;
             usuario.Profissao = dto.Profissao;
@@ -164,9 +190,8 @@ namespace Financas.API.Controllers
             {
                 await _context.SaveChangesAsync();
 
-                // Limpa a senha antes de devolver os dados atualizados para o Front-End
-                usuario.SenhaHash = "";
-                return Ok(usuario);
+                // Retorna apenas o DTO mapeado
+                return Ok(MapearParaDto(usuario));
             }
             catch (Exception ex)
             {
@@ -176,10 +201,30 @@ namespace Financas.API.Controllers
     }
 
     // ==========================================
-    // DTO: MODELO DE DADOS ESPERADO NO PUT
+    // DTOs (Data Transfer Objects)
     // ==========================================
+
+    // DTO usado para RECEBER dados de atualização
     public class AtualizarPerfilDto
     {
+        public DateTime? DataNascimento { get; set; }
+        public string ConfiguracaoMoradia { get; set; }
+        public string Profissao { get; set; }
+        public string MomentoVida { get; set; }
+        public string ObjetivoFinanceiro { get; set; }
+        public string PossuiVeiculo { get; set; }
+        public string MaiorPecado { get; set; }
+        public string UsoCartao { get; set; }
+        public string NivelConhecimento { get; set; }
+    }
+
+    // DTO usado para ENVIAR dados seguros para o Frontend
+    public class UsuarioRetornoDto
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; }
+        public string Email { get; set; }
+        // public DateTime CriadoEm { get; set; } // Descomente caso exista
         public DateTime? DataNascimento { get; set; }
         public string ConfiguracaoMoradia { get; set; }
         public string Profissao { get; set; }

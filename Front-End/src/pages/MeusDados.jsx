@@ -39,8 +39,8 @@ export default function MeusDados({ temaAtual }) {
         const response = await api.get(`/Usuarios/${usuarioLogado.id}`);
         const dados = response.data;
 
-        // Log para ajudar a inspecionar o que o C# está retornando no F12 do navegador
-        console.log("Dados recebidos da API:", dados);
+        // LOG REMOVIDO PARA SEGURANÇA
+        // console.log("Dados recebidos da API:", dados); 
 
         if (!isMounted) return;
 
