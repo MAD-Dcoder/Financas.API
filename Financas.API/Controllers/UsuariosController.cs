@@ -34,6 +34,25 @@ namespace Financas.API.Controllers
         }
 
         // ==========================================
+        // NOVO: ROTA DE BUSCA DE USUÁRIO POR ID
+        // ==========================================
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Usuario>> GetUsuario(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuário não encontrado." });
+            }
+
+            // Limpa a senha antes de devolver os dados para o Front-End
+            usuario.SenhaHash = "";
+
+            return Ok(usuario);
+        }
+
+        // ==========================================
         // 1. ROTA DE CADASTRO (CRIPTOGRAFANDO A SENHA E GERANDO TOKEN)
         // ==========================================
         [HttpPost]
@@ -166,9 +185,7 @@ namespace Financas.API.Controllers
         public string Profissao { get; set; }
         public string MomentoVida { get; set; }
         public string ObjetivoFinanceiro { get; set; }
-
         public string PossuiVeiculo { get; set; }
-
         public string MaiorPecado { get; set; }
         public string UsoCartao { get; set; }
         public string NivelConhecimento { get; set; }
