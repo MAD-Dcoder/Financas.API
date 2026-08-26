@@ -50,7 +50,30 @@ function TransactionDetails({
               className={`btn btn-link p-0 shadow-none d-flex align-items-center justify-content-center border-0 ${isDark ? 'text-white opacity-75' : 'text-danger'}`}
               onClick={(e) => {
                 e.stopPropagation();
-                setMenuAcaoDetalhes(2); 
+                
+                // INTEGRAÇÃO DA CONFIGURAÇÃO: Confirmar Exclusões
+                let pedirConfirmacao = true;
+                const configsSalvas = localStorage.getItem('firmo_configs');
+                
+                if (configsSalvas) {
+                  try {
+                    const configs = JSON.parse(configsSalvas);
+                    // Só desativa a confirmação se estiver explicitamente 'false' no localstorage
+                    if (configs.confirmacaoExcluir === false) {
+                      pedirConfirmacao = false;
+                    }
+                  } catch (error) {
+                    console.error("Erro ao ler configuração de exclusão:", error);
+                  }
+                }
+
+                // Se a confirmação está desativada e a transação é simples (não recorrente), apaga direto!
+                if (!pedirConfirmacao && !transacaoSelecionada.recorrente) {
+                  handleEfetuarExclusao(false);
+                } else {
+                  // Se a confirmação está ativada OU se é recorrente (precisa escolher entre 1 ou todas), abre o menu
+                  setMenuAcaoDetalhes(2); 
+                }
               }}
             >
               <FiTrash2 size={20} />

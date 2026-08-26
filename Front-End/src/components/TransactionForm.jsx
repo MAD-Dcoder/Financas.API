@@ -4,7 +4,7 @@ import { FiAlertCircle } from 'react-icons/fi';
 import { isDataInputFuture } from '../utils/dateUtils';
 import { formatarMoeda } from '../utils/formatters';
 import { mapaContasAPI } from '../utils/constants';
-import categoriasService from '../api/categoriasService'; // NOVO: Serviço de categorias
+import categoriasService from '../api/categoriasService';
 import api from '../api/axios';
 
 function TransactionForm({
@@ -20,7 +20,7 @@ function TransactionForm({
   const [tipoTransacao, setTipoTransacao] = useState('despesa');
   const [valorInput, setValorInput] = useState('');
   const [tituloInput, setTituloInput] = useState('');
-  const [categoriaInput, setCategoriaInput] = useState(''); // Agora armazena o ID da categoria
+  const [categoriaInput, setCategoriaInput] = useState(''); 
   const [pagamentoInput, setPagamentoInput] = useState('');
   const [cartaoIdInput, setCartaoIdInput] = useState('');
   const [dataInput, setDataInput] = useState(new Date().toISOString().substring(0,10));
@@ -34,12 +34,10 @@ function TransactionForm({
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // NOVO: Estado para armazenar as categorias vindas da API
   const [listaCategorias, setListaCategorias] = useState([]);
 
   const editandoId = transacaoParaEditar ? transacaoParaEditar.id : null;
 
-  // NOVO: Busca as categorias dinâmicas sempre que abrir o modal
   useEffect(() => {
     if (showBottomSheet && usuarioLogado?.id) {
       carregarCategorias();
@@ -59,7 +57,7 @@ function TransactionForm({
     if (transacaoParaEditar) {
       setValorInput((Number(transacaoParaEditar.valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setTituloInput(transacaoParaEditar.titulo || '');
-      setCategoriaInput(transacaoParaEditar.categoriaId || ''); // Pega o ID na edição
+      setCategoriaInput(transacaoParaEditar.categoriaId || ''); 
       setPagamentoInput(transacaoParaEditar.pagamento || '');
       setCartaoIdInput(transacaoParaEditar.cartaoId || '');
       const partes = (transacaoParaEditar.data || '').split('/');
@@ -134,7 +132,7 @@ function TransactionForm({
       usuarioId: usuarioLogado.id, 
       contaOrigemId: mapaContasAPI[pagamentoInput], 
       contaDestinoId: null, 
-      categoriaId: Number(categoriaInput), // Agora enviamos diretamente o ID armazenado no state
+      categoriaId: Number(categoriaInput),
       cartaoId: pagamentoInput === 'Crédito' ? Number(cartaoIdInput) : null,
       valor: valorFinalTransacao,
       tipo: tipoTransacao,
@@ -152,6 +150,7 @@ function TransactionForm({
           dataTransacao: dataHoraLocal 
         });
         await carregarTransacoes();
+        fecharModal(); // Sempre fecha o modal quando for uma edição
       } else {
         for (let i = 0; i < parcelas; i++) {
           const dataParcela = new Date(`${dataInput}T12:00:00`);
@@ -175,8 +174,31 @@ function TransactionForm({
           await api.post(TRANSACOES_API_URL, payloadCriacao);
         }
         await carregarTransacoes();
+
+        // INTEGRAÇÃO DA CONFIGURAÇÃO: Lançamento Contínuo
+        const configsSalvas = localStorage.getItem('firmo_configs');
+        let isLancamentoContinuo = false;
+        
+        if (configsSalvas) {
+          try {
+            isLancamentoContinuo = JSON.parse(configsSalvas).lancamentoContinuo;
+          } catch (e) {
+            console.error("Erro ao ler configuração de lançamento contínuo", e);
+          }
+        }
+
+        if (isLancamentoContinuo) {
+          // Limpa apenas os dados específicos para o próximo lançamento fluir mais rápido
+          setValorInput('');
+          setTituloInput('');
+          setCategoriaInput('');
+          setObservacaoInput('');
+          setEhRecorrente(false);
+          // Mantém: Data, Forma de Pagamento e Cartão (facilita muito pra lançar recibos em lote!)
+        } else {
+          fecharModal();
+        }
       }
-      fecharModal();
     } catch (error) {
       console.error("Erro ao salvar transação:", error);
       alert("Houve um erro ao salvar. Verifique se a API está rodando.");

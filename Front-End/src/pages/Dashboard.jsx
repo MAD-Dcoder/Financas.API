@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom'; // IMPORT NOVO AQUI
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import PullToRefresh from 'react-simple-pull-to-refresh';
 import { useDashboard } from '../hooks/useDashboard';
 import './Dashboard.css';
@@ -27,17 +27,58 @@ import { mapaCoresCartao } from '../utils/constants';
 function Dashboard ({ temaAtual, toggleTema }) {  
   const dash = useDashboard(temaAtual);
   
-  // SETUP DO LEITOR DE URL
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // EFEITO QUE ABRE A GAVETA DE NOVO LANÇAMENTO
+  // EFEITO ÚNICO DE INICIALIZAÇÃO DA TELA
   useEffect(() => {
+    let vaiFlipar = false;
+    let vaiAbrirForm = false;
+
+    // 1. Checa se veio ordem da URL
     if (searchParams.get('acao') === 'novolancamento') {
-      dash.setShowBottomSheet(true); // Abre a gaveta
-      navigate('/dashboard', { replace: true }); // Limpa a URL para não reabrir no F5
+      vaiAbrirForm = true;
+      navigate(location.pathname, { replace: true });
+    } 
+    // 2. Checa se veio ordem do Login
+    else if (location.state?.acaoInicial) {
+      if (location.state.acaoInicial === 'abrir_gaveta_lancamento') {
+        vaiAbrirForm = true;
+      } else if (location.state.acaoInicial === 'flip_cartoes') {
+        vaiFlipar = true;
+      }
+      window.history.replaceState({}, document.title);
     }
-  }, [searchParams, navigate, dash]);
+    // 3. Checa direto do LocalStorage (Caso o usuário apenas volte da tela de configs ou recarregue a página)
+    else {
+      const configs = localStorage.getItem('firmo_configs');
+      if (configs) {
+        try {
+          const { telaInicialPadrao } = JSON.parse(configs);
+          if (telaInicialPadrao === 'cartoes') {
+            vaiFlipar = true;
+          } else if (telaInicialPadrao === 'novo_lancamento') {
+            vaiAbrirForm = true;
+          }
+        } catch (e) {
+          console.error("Erro ao ler configs iniciais", e);
+        }
+      }
+    }
+
+    // Aplica as ações com um leve atraso (150ms)
+    // Isso evita que a ação seja atropelada pelo carregamento inicial do SkeletonDashboard
+    if (vaiFlipar) {
+      setTimeout(() => dash.setIsCardFlipped(true), 150);
+    }
+    if (vaiAbrirForm) {
+      setTimeout(() => dash.setShowBottomSheet(true), 150);
+    }
+
+    // A dependência vazia garante que isso rode apenas UMA VEZ ao montar o Dashboard
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -55,7 +96,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
     }
   };
 
-  // Aqui injetamos as variáveis CSS no root para manter o Dark Mode 100% dinâmico
   const dashboardStyle = {
     backgroundColor: dash.isDark ? '#121214' : '#f0f2f5', 
     minHeight: '100vh', 

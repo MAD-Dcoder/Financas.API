@@ -98,12 +98,17 @@ export default function ConfiguracoesGlobais({ temaAtual }) {
               <div className="d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '36px', height: '36px', backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f0f2f5', borderRadius: '12px', marginRight: '12px' }}>
                 <FiLayout size={18} color={textMuted} />
               </div>
-              <select name="telaInicialPadrao" className="form-select shadow-none border-0 bg-transparent py-3" value={config.telaInicialPadrao} onChange={handleChange} style={{ color: textColor, fontSize: '0.95rem', cursor: 'pointer' }}>
-                <option value="dashboard" style={{ backgroundColor: bgInput, color: textColor }}>Dashboard Geral</option>
-                <option value="transacoes" style={{ backgroundColor: bgInput, color: textColor }}>Lista de Transações</option>
+              <select 
+              name="telaInicialPadrao" 
+              className="form-select shadow-none border-0 bg-transparent py-3" 
+              value={config.telaInicialPadrao} 
+              onChange={handleChange} 
+              style={{ color: textColor, fontSize: '0.95rem', cursor: 'pointer' }}
+>
+              <option value="dashboard" style={{ backgroundColor: bgInput, color: textColor }}>Dashboard Geral</option>
                 <option value="cartoes" style={{ backgroundColor: bgInput, color: textColor }}>Meus Cartões</option>
-                <option value="novo_lancamento" style={{ backgroundColor: bgInput, color: textColor }}>Tela de Lançamento (Atalho Rápido)</option>
-              </select>
+                  <option value="novo_lancamento" style={{ backgroundColor: bgInput, color: textColor }}>Tela de Lançamento (Atalho Rápido)</option>
+</select>
             </div>
           </div>
 

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield } from 'react-icons/fi';
 import api from '../api/axios';
 
 function Login({ onLoginSuccess }) {
+  const navigate = useNavigate();
+  
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,6 +54,27 @@ function Login({ onLoginSuccess }) {
 
       onLoginSuccess(usuario);
       
+      // LÓGICA DE PREFERÊNCIAS DE TELA INICIAL
+      const configsSalvas = localStorage.getItem('firmo_configs');
+      let rotaDestino = '/'; 
+      let stateDestino = {}; 
+
+      if (configsSalvas) {
+        try {
+          const { telaInicialPadrao } = JSON.parse(configsSalvas);
+          
+          if (telaInicialPadrao === 'cartoes') {
+            stateDestino = { acaoInicial: 'flip_cartoes' }; 
+          } else if (telaInicialPadrao === 'novo_lancamento') {
+            stateDestino = { acaoInicial: 'abrir_gaveta_lancamento' }; 
+          }
+        } catch (err) {
+          console.error("Erro ao processar as configurações de redirecionamento", err);
+        }
+      }
+
+      navigate(rotaDestino, { state: stateDestino });
+
     } catch (error) {
       if (error.response && error.response.status === 401) {
         setErrorMsg('E-mail ou senha inválidos. Tente novamente.');
@@ -75,7 +99,6 @@ function Login({ onLoginSuccess }) {
     <div className="app-container d-flex flex-column align-items-center justify-content-center px-4 position-relative py-5" 
          style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, #064e3b 0%, #121214 40%)', overflowX: 'hidden' }}>
       
-      {/* TELA DE LOADING COM BLUR E AS 3 BOLINHAS INTERATIVAS */}
       {isLoading && (
         <div className="auth-loading-overlay">
           <div className="dots-loader-container">

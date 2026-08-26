@@ -18,7 +18,21 @@ export function useDashboard(temaAtual) {
   const isDark = temaAtual === 'dark';
   const carrosselRef = useRef(null);
 
-  const [showBalance, setShowBalance] = useState(true);
+  // INICIALIZAÇÃO INTELIGENTE DO MODO PRIVACIDADE
+  const [showBalance, setShowBalance] = useState(() => {
+    const configsSalvas = localStorage.getItem('firmo_configs');
+    if (configsSalvas) {
+      try {
+        const { ocultarValores } = JSON.parse(configsSalvas);
+        // Se 'ocultarValores' for true, começamos com showBalance como false
+        return !ocultarValores; 
+      } catch (error) {
+        console.error("Erro ao ler configuração de privacidade:", error);
+      }
+    }
+    return true; // Padrão: mostrar os valores
+  });
+
   const [showProfile, setShowProfile] = useState(false);  
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [showMonthSelector, setShowMonthSelector] = useState(false);
@@ -326,7 +340,6 @@ export function useDashboard(temaAtual) {
       
       catResponse.forEach((c, index) => {
         mapaCategoriasAtivas[c.id] = { nome: c.nome, cor: c.corHex };
-        // CORREÇÃO: Puxa a cor original do banco de dados e só usa a paleta se estiver vazio
         const corOficial = c.corHex || PALETA_CORES[index % PALETA_CORES.length];
         mapaCoresDinamicas[c.nome] = corOficial;
       });
