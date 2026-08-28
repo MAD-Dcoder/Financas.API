@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api/axios';
@@ -7,8 +7,10 @@ import './Login.css';
 
 function Login({ onLoginSuccess }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  // Verifica se a URL veio com ?modo=cadastro para iniciar direto na tela de registro
+  const [isLoginMode, setIsLoginMode] = useState(searchParams.get('modo') !== 'cadastro');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');

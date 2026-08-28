@@ -1,0 +1,67 @@
+.welcome-container {
+  height: 100dvh;
+  width: 100vw;
+  background: radial-gradient(circle at top, #064e3b 0%, #0a0a0c 70%);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.welcome-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem 2rem 1rem 2rem;
+}
+
+.welcome-logo {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 2px;
+  margin-bottom: auto;
+}
+
+.welcome-title {
+  font-size: 3.3rem;
+  font-weight: 800;
+  color: rgb(255, 255, 255);
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 1rem;
+}
+
+.welcome-bottom-sheet {
+  background: white;
+  border-radius: 28px 28px 0 0;
+  padding: 2rem 1.5rem 2.5rem 1.5rem;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.welcome-btn-primary {
+  background: linear-gradient(to right, #10b981, #059669) !important;
+  border: none !important;
+  padding: 0.95rem !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: white !important;
+}
+
+.welcome-btn-secondary {
+  background: white !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 0.95rem !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+  color: #0f172a !important;
+  transition: all 0.2s;
+}
+
+.welcome-btn-secondary:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}

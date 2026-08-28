@@ -8,10 +8,14 @@ import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
 import GerenciarCategorias from './pages/GerenciarCategorias';
 import ConfiguracoesGlobais from './pages/ConfiguracoesGlobais';
+import Welcome from './pages/Welcome'; // Importação da nova tela de Onboarding
 import api from './api/axios'; // Importado para o ping fantasma
 
 function App() {
   const { isLoggedIn, handleLoginSuccess } = useContext(AuthContext);
+
+  // Descobre se o usuário já fez o onboarding alguma vez
+  const requiresOnboarding = !localStorage.getItem('firmo_onboarding_done');
 
   // 0. Ping Fantasma: Acorda o servidor no Render silenciosamente
   useEffect(() => {
@@ -71,8 +75,10 @@ function App() {
         </>
       ) : (
         <>
+          {/* Rotas deslogadas: Verifica a necessidade de Onboarding e direciona o acesso */}
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to={requiresOnboarding ? "/welcome" : "/login"} replace />} />
         </>
       )}
     </Routes>
