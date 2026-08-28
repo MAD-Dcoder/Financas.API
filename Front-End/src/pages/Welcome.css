@@ -1,7 +1,7 @@
 .welcome-container {
   height: 100dvh;
   width: 100vw;
-  background: transparent; /* <- Mude para transparente */
+  background: transparent;
   display: flex;
   flex-direction: column;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
@@ -64,4 +64,15 @@
 .welcome-btn-secondary:hover {
   background: #f8fafc !important;
   border-color: #94a3b8 !important;
+}
+
+/* Ajuste do divisor "ou" para o fundo branco do Welcome */
+.welcome-bottom-sheet .sso-divider {
+  color: #64748b !important;
+  font-weight: 600;
+}
+
+.welcome-bottom-sheet .sso-divider::before, 
+.welcome-bottom-sheet .sso-divider::after {
+  border-bottom: 1px solid #e2e8f0 !important;
 }
