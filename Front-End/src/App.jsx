@@ -8,9 +8,16 @@ import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
 import GerenciarCategorias from './pages/GerenciarCategorias';
 import ConfiguracoesGlobais from './pages/ConfiguracoesGlobais';
+import api from './api/axios'; // Importado para o ping fantasma
 
 function App() {
   const { isLoggedIn, handleLoginSuccess } = useContext(AuthContext);
+
+  // 0. Ping Fantasma: Acorda o servidor no Render silenciosamente
+  useEffect(() => {
+    // Faz um GET em qualquer endpoint leve do seu C# para tirar o servidor do modo sleep
+    api.get('/Usuarios').catch(() => {});
+  }, []);
 
   // 1. Estado do Tema
   const [temaAtual, setTemaAtual] = useState(localStorage.getItem('firmo_tema') || 'dark');
@@ -41,7 +48,7 @@ function App() {
         case 'cartoes':
           return '/meus-cartoes';
         case 'novo_lancamento':
-          return '/dashboard?acao=novolancamento'; // NOME ATUALIZADO AQUI!
+          return '/dashboard?acao=novolancamento';
         default:
           return '/dashboard';
       }

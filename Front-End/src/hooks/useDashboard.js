@@ -11,6 +11,7 @@ import {
   PALETA_CORES
 } from '../utils/constants';
 import { isPastOrToday } from '../utils/dateUtils';
+import { jwtDecode } from 'jwt-decode';
 
 export function useDashboard(temaAtual) {
   const TRANSACOES_API_URL = '/Transacoes';
@@ -24,13 +25,12 @@ export function useDashboard(temaAtual) {
     if (configsSalvas) {
       try {
         const { ocultarValores } = JSON.parse(configsSalvas);
-        // Se 'ocultarValores' for true, começamos com showBalance como false
         return !ocultarValores; 
       } catch (error) {
         console.error("Erro ao ler configuração de privacidade:", error);
       }
     }
-    return true; // Padrão: mostrar os valores
+    return true; 
   });
 
   const [showProfile, setShowProfile] = useState(false);  
@@ -47,7 +47,9 @@ export function useDashboard(temaAtual) {
   const [transacoes, setTransacoes] = useState([]);
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
   const [coresDinamicas, setCoresDinamicas] = useState({ ...coresCategorias });
-  const [isRefreshingUI, setIsRefreshingUI] = useState(false);
+  
+  // Mantemos true na inicialização para exibir o Skeleton enquanto o Render acorda
+  const [isRefreshingUI, setIsRefreshingUI] = useState(true);
 
   const [mesFiltro, setMesFiltro] = useState(() => {
     const hoje = new Date();
@@ -376,15 +378,34 @@ export function useDashboard(temaAtual) {
       });
       setTransacoes(transacoesDoBanco);
     } catch (error) {
-      if(error.response && error.response.status === 401) {
-          handleLogout();
-          alert("Sua sessão expirou, faça login novamente.");
+      // Validação de segurança aprimorada para o Render:
+      // Só desloga se o erro for explicitamente 401 E o token JWT local realmente estiver expirado.
+      if (error.response && error.response.status === 401) {
+        const savedData = localStorage.getItem('firmo_user');
+        if (savedData) {
+          try {
+            const { token } = JSON.parse(savedData);
+            const decoded = jwtDecode(token);
+            if (decoded.exp < Date.now() / 1000) {
+              handleLogout();
+              alert("Sua sessão expirou, faça login novamente.");
+            }
+          } catch (e) {
+            handleLogout();
+          }
+        }
+      } else {
+        console.error("Erro de conexão/servidor ao buscar transações (Servidor acordando?):", error);
       }
-      console.error("Erro ao buscar transações da API:", error);
+    } finally {
+      // Garante que o Skeleton desliga após a primeira tentativa (mesmo se o servidor demorar)
+      setIsRefreshingUI(false);
     }
   };
 
-  useEffect(() => { carregarTransacoes(); }, [isLoggedIn, usuarioLogado]);
+  useEffect(() => { 
+    carregarTransacoes(); 
+  }, [isLoggedIn, usuarioLogado]);
 
   const handleToggleFlip = (novoEstado) => {
     setIsCardFlipped(novoEstado);

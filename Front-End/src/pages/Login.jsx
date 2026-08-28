@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api/axios';
+import './Login.css';
 
 function Login({ onLoginSuccess }) {
   const navigate = useNavigate();
@@ -10,23 +12,42 @@ function Login({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [contaSalva, setContaSalva] = useState(null);
 
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [confirmaSenha, setConfirmaSenha] = useState('');
+  const [formData, setFormData] = useState({
+    nome: '', email: '', senha: '', confirmaSenha: ''
+  });
+
+  useEffect(() => {
+    const savedAccount = localStorage.getItem('firmo_conta_salva');
+    if (savedAccount) {
+      const parsedAccount = JSON.parse(savedAccount);
+      setContaSalva(parsedAccount);
+      setFormData(prev => ({ ...prev, email: parsedAccount.email }));
+    }
+  }, []);
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const toggleMode = () => {
     setIsLoginMode(!isLoginMode);
     setErrorMsg('');
-    setNome('');
-    setSenha('');
-    setConfirmaSenha('');
+    setFormData({ nome: '', email: '', senha: '', confirmaSenha: '' });
+  };
+
+  const limparContaSalva = () => {
+    localStorage.removeItem('firmo_conta_salva');
+    setContaSalva(null);
+    setFormData({ nome: '', email: '', senha: '', confirmaSenha: '' });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    const { nome, email, senha, confirmaSenha } = formData;
 
     if (!email || !senha || (!isLoginMode && (!nome || !confirmaSenha))) {
       setErrorMsg('Por favor, preencha todos os campos.');
@@ -34,7 +55,7 @@ function Login({ onLoginSuccess }) {
     }
 
     if (!isLoginMode && senha !== confirmaSenha) {
-      setErrorMsg('As senhas não coincidem. Verifique e tente novamente.');
+      setErrorMsg('As senhas não coincidem.');
       return;
     }
 
@@ -50,178 +71,151 @@ function Login({ onLoginSuccess }) {
 
       const { token, usuario } = response.data;
       localStorage.setItem('firmo_user', JSON.stringify({ token, usuario }));
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      onLoginSuccess(usuario);
       
-      // LÓGICA DE PREFERÊNCIAS DE TELA INICIAL
-      const configsSalvas = localStorage.getItem('firmo_configs');
-      let rotaDestino = '/'; 
-      let stateDestino = {}; 
+      localStorage.setItem('firmo_conta_salva', JSON.stringify({ 
+        nome: usuario.nome || nome || 'Usuário', 
+        email: email 
+      }));
 
-      if (configsSalvas) {
-        try {
-          const { telaInicialPadrao } = JSON.parse(configsSalvas);
-          
-          if (telaInicialPadrao === 'cartoes') {
-            stateDestino = { acaoInicial: 'flip_cartoes' }; 
-          } else if (telaInicialPadrao === 'novo_lancamento') {
-            stateDestino = { acaoInicial: 'abrir_gaveta_lancamento' }; 
-          }
-        } catch (err) {
-          console.error("Erro ao processar as configurações de redirecionamento", err);
-        }
-      }
-
-      navigate(rotaDestino, { state: stateDestino });
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      onLoginSuccess(usuario);
+      navigate('/'); 
 
     } catch (error) {
-      if (error.response && error.response.status === 401) {
-        setErrorMsg('E-mail ou senha inválidos. Tente novamente.');
-      } else {
-        setErrorMsg(error.response?.data?.message || 'Erro de conexão. O servidor pode estar iniciando, tente novamente em instantes.');
-      }
+      setErrorMsg(error.response?.data?.message || 'E-mail ou senha inválidos.');
       setIsLoading(false);
     }
   };
 
-  const marqueeText = (
-    <>
-      <span>• PROJETO DESENVOLVIDO POR MATHEUS AURÉLIO</span>
-      <span>• STACK: REACT.JS, .NET, C#, JAVASCRIPT, POSTGRESQL, CSS & BOOTSTRAP</span>
-      <span>• ESTUDANTE DE ANÁLISE E DESENVOLVIMENTO DE SISTEMAS NA PUC MINAS</span>
-      <span>• ARQUITETURA LIMPA E ESCALÁVEL</span>
-      <span>• GESTÃO FINANCEIRA SIMPLIFICADA E SEGURA</span>
-    </>
-  );
-
   return (
-    <div className="app-container d-flex flex-column align-items-center justify-content-center px-4 position-relative py-5" 
-         style={{ minHeight: '100vh', background: 'radial-gradient(circle at top, #064e3b 0%, #121214 40%)', overflowX: 'hidden' }}>
-      
+    <div className="login-screen-container">
       {isLoading && (
         <div className="auth-loading-overlay">
           <div className="dots-loader-container">
-            <div className="dot"></div>
-            <div className="dot"></div>
-            <div className="dot"></div>
+            <div className="dot"></div><div className="dot"></div><div className="dot"></div>
           </div>
-          <p className="text-white fw-bold mb-1 mt-2" style={{ fontSize: '1.1rem', letterSpacing: '0.5px' }}>
-            {isLoginMode ? 'Acessando sua conta...' : 'Criando sua conta...'}
-          </p>
-          <p className="text-secondary small">Preparando seu ambiente financeiro</p>
+          <p className="text-white fw-bold mb-1 mt-2">{isLoginMode ? 'Acessando sua conta...' : 'Criando sua conta...'}</p>
         </div>
       )}
 
-      <div className="w-100 my-auto" style={{ maxWidth: '400px', zIndex: 1, paddingBottom: '3rem' }}>
-        
-        <div className="text-center mb-4">
-          <h2 className="fw-bold text-white mb-1" style={{ letterSpacing: '1px', fontSize: '2.3rem' }}>
-            {isLoginMode ? 'Entrar no Firmo' : 'Criar Conta'}
-          </h2>
-          <p className="text-light opacity-50 small">
-            {isLoginMode ? 'O controle do seu dinheiro na palma da mão.' : 'Junte-se ao FIRMO'}
-          </p>
-        </div>
-
-        <form 
-          onSubmit={handleSubmit} 
-          className="card dark-card p-4 shadow-lg border border-secondary border-opacity-25" 
-          style={{ background: 'rgba(30, 30, 36, 0.7)', backdropFilter: 'blur(10px)', borderRadius: '20px' }}
-        >
-          {errorMsg && (
-            <div className="alert alert-danger py-2 small text-center border-0 mb-4" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }}>
-              {errorMsg}
-            </div>
-          )}
-
-          {!isLoginMode && (
-            <div className="soft-input-group slide-down-fade">
-              <input 
-                type="text" 
-                className="form-control soft-input" 
-                placeholder="Seu nome completo"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-              />
-              <FiUser className="input-icon-left" size={18} />
-            </div>
-          )}
-
-          <div className="soft-input-group">
-            <input 
-              type="email" 
-              className="form-control soft-input" 
-              placeholder="Seu e-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <FiMail className="input-icon-left" size={18} />
+      <div className="main-content-wrapper">
+        <div className="w-100 mx-auto layout-limiter">
+          
+          <div className="text-center header-spacing">
+            <h2 className="text-white mb-1 title-responsive">
+              {isLoginMode ? (contaSalva ? 'Bem-vindo de volta' : 'Entrar no Firmo') : 'Criar Conta'}
+            </h2>
+            <p className="text-light opacity-50 subtitle-responsive mb-0">
+              {isLoginMode ? 'O controle do seu dinheiro na palma da mão.' : 'Junte-se ao FIRMO'}
+            </p>
           </div>
 
-          <div className="soft-input-group">
-            <input 
-              type={showPassword ? "text" : "password"} 
-              className="form-control soft-input" 
-              placeholder={isLoginMode ? "Sua senha" : "Crie uma senha"}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-            />
-            <FiLock className="input-icon-left" size={18} />
-            <div className="input-icon-right" onClick={() => setShowPassword(!showPassword)}>
-              {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-            </div>
-          </div>
+          <form onSubmit={handleSubmit} className="card dark-card shadow-lg border border-secondary border-opacity-25 glass-panel">
+            {errorMsg && (
+              <div className="alert alert-danger py-2 small text-center border-0 mb-3" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#f87171' }}>
+                {errorMsg}
+              </div>
+            )}
 
-          {!isLoginMode && (
-            <div className="soft-input-group slide-down-fade">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                className="form-control soft-input" 
-                placeholder="Repita a senha"
-                value={confirmaSenha}
-                onChange={(e) => setConfirmaSenha(e.target.value)}
-              />
+            {contaSalva && isLoginMode ? (
+              <div className="saved-profile-badge mb-3">
+                <div className="d-flex align-items-center">
+                  <div className="avatar-circle me-3">
+                    {contaSalva.nome.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="profile-info text-start overflow-hidden">
+                    <h6 className="mb-0 text-white fw-bold text-truncate" style={{ fontSize: '0.95rem' }}>{contaSalva.nome}</h6>
+                    <small className="text-light opacity-50">{contaSalva.email.replace(/(.{2})(.*)(?=@)/, '$1***')}</small>
+                  </div>
+                </div>
+                <button type="button" className="btn-trocar" onClick={limparContaSalva}>Trocar</button>
+              </div>
+            ) : (
+              <>
+                {!isLoginMode && (
+                  <div className="soft-input-group mb-2">
+                    <input type="text" className="form-control soft-input" name="nome" placeholder="Seu nome completo" value={formData.nome} onChange={handleInputChange} />
+                    <FiUser className="input-icon-left" size={18} />
+                  </div>
+                )}
+                <div className="soft-input-group mb-2">
+                  <input type="email" className="form-control soft-input" name="email" placeholder="Seu e-mail" value={formData.email} onChange={handleInputChange} autoComplete="username" />
+                  <FiMail className="input-icon-left" size={18} />
+                </div>
+              </>
+            )}
+
+            <div className={`soft-input-group ${isLoginMode ? 'mb-1' : 'mb-2'}`}>
+              <input type={showPassword ? "text" : "password"} className="form-control soft-input" name="senha" placeholder={isLoginMode ? "Sua senha" : "Crie uma senha"} value={formData.senha} onChange={handleInputChange} autoComplete="current-password" />
               <FiLock className="input-icon-left" size={18} />
+              <div className="input-icon-right" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </div>
+            </div>
+
+            {isLoginMode && (
+              <div className="text-end mb-2 pe-1">
+                <span className="forgot-password-link">Esqueci minha senha</span>
+              </div>
+            )}
+
+            {!isLoginMode && (
+              <div className="soft-input-group mb-3 mt-2">
+                <input type={showPassword ? "text" : "password"} className="form-control soft-input" name="confirmaSenha" placeholder="Repita a senha" value={formData.confirmaSenha} onChange={handleInputChange} />
+                <FiLock className="input-icon-left" size={18} />
+              </div>
+            )}
+
+            <button type="submit" className="btn w-100 py-3 rounded-4 fw-bold shadow text-white border-0 mt-2 btn-glow d-flex justify-content-center align-items-center gap-2" disabled={isLoading}>
+              {isLoginMode ? 'Acessar Conta' : 'Abrir minha conta'}
+              <FiArrowRight className="arrow-icon" />
+            </button>
+            
+            {(!contaSalva || !isLoginMode) && (
+              <div className="sso-container mt-3">
+                <div className="sso-divider"><span>ou continue com</span></div>
+                <div className="d-flex gap-2 mt-2">
+                  <button type="button" className="btn btn-sso w-50 d-flex align-items-center justify-content-center gap-2">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" alt="Google" style={{width: '16px'}} /> Google
+                  </button>
+                  <button type="button" className="btn btn-sso w-50 d-flex align-items-center justify-content-center gap-2">
+                    <img src="https://cdn-icons-png.flaticon.com/512/0/747.png" alt="Apple" style={{width: '16px', filter: 'invert(1)'}} /> Apple
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+
+          {(!contaSalva || !isLoginMode) && (
+            <div className="text-center link-spacing">
+              <p className="text-light opacity-50 small mb-0 font-weight-medium">
+                {isLoginMode ? 'Ainda não tem conta? ' : 'Já tem uma conta? '}
+                <span onClick={toggleMode} className="text-emerald fw-bold" style={{ cursor: 'pointer', transition: 'color 0.2s' }}>
+                  {isLoginMode ? 'Criar conta' : 'Fazer login'}
+                </span>
+              </p>
             </div>
           )}
 
-          <button 
-            type="submit" 
-            className="btn w-100 py-3 rounded-4 fw-bold shadow text-white border-0 mt-2" 
-            style={{ background: 'linear-gradient(to right, #10b981, #059669)', transition: 'all 0.3s' }}
-            disabled={isLoading}
-          >
-            {isLoginMode ? 'Acessar Conta' : 'Abrir minha conta'}
-          </button>
-        </form>
+          <div className="d-flex align-items-center justify-content-center text-light opacity-25 mt-4 security-text">
+            <FiShield className="me-2" size={14} /> Dados criptografados de ponta a ponta
+          </div>
 
-        <div className="text-center mt-4">
-          <p className="text-light opacity-50 small">
-            {isLoginMode ? 'Ainda não tem conta? ' : 'Já tem uma conta? '}
-            <span 
-              onClick={toggleMode} 
-              className="text-emerald fw-bold" 
-              style={{ cursor: 'pointer', transition: 'color 0.2s' }}
-            >
-              {isLoginMode ? 'Criar conta' : 'Fazer login'}
-            </span>
-          </p>
-        </div>
-
-        <div className="mt-4 d-flex align-items-center justify-content-center text-light opacity-25" style={{ fontSize: '0.75rem' }}>
-          <FiShield className="me-2" size={14} />
-          Dados criptografados de ponta a ponta
         </div>
       </div>
 
-      <div className="marquee-wrapper">
-        <div className="marquee-content">
-          {marqueeText}
-          {marqueeText}
+      <div className="footer-wrapper">
+        <div className="marquee-wrapper">
+          <div className="marquee-content d-flex">
+            <span>• PROJETO DESENVOLVIDO POR MATHEUS AURÉLIO</span>
+            <span>• STACK: REACT.JS, .NET, C#, JAVASCRIPT, POSTGRESQL, CSS & BOOTSTRAP</span>
+            <span>• ESTUDANTE DE ANÁLISE E DESENVOLVIMENTO DE SISTEMAS NA PUC MINAS</span>
+            <span>• ARQUITETURA LIMPA E ESCALÁVEL</span>
+            <span>• PROJETO DESENVOLVIDO POR MATHEUS AURÉLIO</span>
+            <span>• STACK: REACT.JS, .NET, C#, JAVASCRIPT, POSTGRESQL, CSS & BOOTSTRAP</span>
+          </div>
         </div>
       </div>
-
     </div>
   );
 }
