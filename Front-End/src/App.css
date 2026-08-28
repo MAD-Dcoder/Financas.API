@@ -47,7 +47,7 @@
 .nav-icon {
   color: #6b7280;
   cursor: pointer;
-  transition: 0.3s;
+  transition: color 0.3s ease;
 }
 
 .nav-icon.active {
@@ -71,14 +71,20 @@
   justify-content: center;
   align-items: center;
   color: #121214;
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+  /* Efeito Glow Aprimorado */
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fab-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.7);
 }
 
 .fab-button:active {
   transform: scale(0.92);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
 }
 
 .input-busca::placeholder {
@@ -281,13 +287,12 @@
   position: absolute;
   width: 12px;
   height: 12px;
-  background-color: #10b981; /* Verde esmeralda */
+  background-color: #10b981; 
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
   animation: dot-dance 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
-/* Cada bolinha tem um comportamento orbital ligeiramente deslocado para parecer que interagem */
 .dot:nth-child(1) {
   animation-delay: 0s;
 }
@@ -301,29 +306,11 @@
 }
 
 @keyframes dot-dance {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.8;
-  }
-  /* Elas se aproximam e se fundem no centro */
-  35% {
-    transform: translate(0, 0) scale(1.4);
-    background-color: #34d99f;
-    box-shadow: 0 0 16px rgba(52, 217, 159, 1);
-  }
-  50% {
-    transform: translate(0, 0) scale(0.5); /* Viram quase um ponto único juntas */
-    opacity: 0.4;
-  }
-  /* Elas se soltam e vão para posições diferentes */
-  75% {
-    transform: translate(-22px, 12px) scale(1);
-    opacity: 0.9;
-  }
-  100% {
-    transform: translate(22px, -12px) scale(1);
-    opacity: 0.8;
-  }
+  0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+  35% { transform: translate(0, 0) scale(1.4); background-color: #34d99f; box-shadow: 0 0 16px rgba(52, 217, 159, 1); }
+  50% { transform: translate(0, 0) scale(0.5); opacity: 0.4; }
+  75% { transform: translate(-22px, 12px) scale(1); opacity: 0.9; }
+  100% { transform: translate(22px, -12px) scale(1); opacity: 0.8; }
 }
 
 /* ==========================================
@@ -332,7 +319,7 @@
 .dashboard-ticker {
   width: 100%;
   overflow: hidden;
-  background: rgba(16, 185, 129, 0.05); /* Um verdinho bem sutil de fundo */
+  background: rgba(16, 185, 129, 0.05); 
   border-top: 1px dashed rgba(16, 185, 129, 0.2);
   border-bottom: 1px dashed rgba(16, 185, 129, 0.2);
   padding: 10px 0;
@@ -344,7 +331,7 @@
 .dashboard-ticker-content {
   display: inline-block;
   animation: ticker-scroll 30s linear infinite;
-  color: #10b981; /* Verde esmeralda do Firmo */
+  color: #10b981; 
   font-family: monospace, sans-serif;
   font-size: 0.8rem;
   letter-spacing: 1.5px;

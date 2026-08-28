@@ -259,7 +259,15 @@ function Dashboard ({ temaAtual, toggleTema }) {
             </>
           )}
 
-          <BottomNav handleGoHome={dash.handleGoHome} setShowBottomSheet={dash.setShowBottomSheet} setIsCardFlipped={dash.setIsCardFlipped} temaAtual={temaAtual} />
+          {/* AQUI ESTÁ A ALTERAÇÃO: Passando a prop abaAtiva baseada no estado isCardFlipped */}
+          <BottomNav 
+            handleGoHome={dash.handleGoHome} 
+            setShowBottomSheet={dash.setShowBottomSheet} 
+            setIsCardFlipped={dash.setIsCardFlipped} 
+            temaAtual={temaAtual} 
+            abaAtiva={dash.isCardFlipped ? 'cartoes' : 'home'} 
+          />
+          
           <OffcanvasMenu showProfile={dash.showProfile} setShowProfile={dash.setShowProfile} usuarioLogado={dash.usuarioLogado} handleLogout={() => { dash.setShowProfile(false); dash.handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
           
           <CardSettings 
