@@ -134,7 +134,7 @@
 }
 
 .marquee-content {
-  white-space: nowrap; animation: marquee-scroll 40s linear infinite;
+  white-space: nowrap; animation: marquee-scroll 18s linear infinite;
   color: rgba(255, 255, 255, 0.2); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
 }
 .marquee-content span { margin-right: 3rem; }

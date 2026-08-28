@@ -378,8 +378,6 @@ export function useDashboard(temaAtual) {
       });
       setTransacoes(transacoesDoBanco);
     } catch (error) {
-      // Validação de segurança aprimorada para o Render:
-      // Só desloga se o erro for explicitamente 401 E o token JWT local realmente estiver expirado.
       if (error.response && error.response.status === 401) {
         const savedData = localStorage.getItem('firmo_user');
         if (savedData) {
@@ -398,7 +396,6 @@ export function useDashboard(temaAtual) {
         console.error("Erro de conexão/servidor ao buscar transações (Servidor acordando?):", error);
       }
     } finally {
-      // Garante que o Skeleton desliga após a primeira tentativa (mesmo se o servidor demorar)
       setIsRefreshingUI(false);
     }
   };
@@ -482,7 +479,14 @@ export function useDashboard(temaAtual) {
     if (!swipeCoords.current.x || !swipeCoords.current.y) return;
     const diffX = Math.abs(e.touches[0].clientX - swipeCoords.current.x);
     const diffY = Math.abs(e.touches[0].clientY - swipeCoords.current.y);
-    if (diffX > diffY) e.stopPropagation();
+    
+    // INTELIGÊNCIA DO SWIPE: 
+    // Se o movimento horizontal for maior que o vertical, paramos a propagação
+    // para evitar que o pull-to-refresh seja acionado acidentalmente.
+    // Se o movimento vertical for maior, o navegador cuida naturalmente do pull-to-refresh.
+    if (diffX > diffY) {
+      e.stopPropagation();
+    }
   };
 
   const handleScrollCartoes = (e) => {

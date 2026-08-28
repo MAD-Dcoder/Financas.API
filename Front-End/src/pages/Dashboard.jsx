@@ -31,17 +31,14 @@ function Dashboard ({ temaAtual, toggleTema }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // EFEITO ÚNICO DE INICIALIZAÇÃO DA TELA
   useEffect(() => {
     let vaiFlipar = false;
     let vaiAbrirForm = false;
 
-    // 1. Checa se veio ordem da URL
     if (searchParams.get('acao') === 'novolancamento') {
       vaiAbrirForm = true;
       navigate(location.pathname, { replace: true });
     } 
-    // 2. Checa se veio ordem do Login
     else if (location.state?.acaoInicial) {
       if (location.state.acaoInicial === 'abrir_gaveta_lancamento') {
         vaiAbrirForm = true;
@@ -50,7 +47,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       }
       window.history.replaceState({}, document.title);
     }
-    // 3. Checa direto do LocalStorage (Caso o usuário apenas volte da tela de configs ou recarregue a página)
     else {
       const configs = localStorage.getItem('firmo_configs');
       if (configs) {
@@ -67,8 +63,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       }
     }
 
-    // Aplica as ações com um leve atraso (150ms)
-    // Isso evita que a ação seja atropelada pelo carregamento inicial do SkeletonDashboard
     if (vaiFlipar) {
       setTimeout(() => dash.setIsCardFlipped(true), 150);
     }
@@ -76,7 +70,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
       setTimeout(() => dash.setShowBottomSheet(true), 150);
     }
 
-    // A dependência vazia garante que isso rode apenas UMA VEZ ao montar o Dashboard
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
@@ -111,6 +104,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
   return (
     <div style={dashboardStyle}>
       <PullToRefresh 
+        // 1. O PULO DO GATO: Desativa o refresh quando o cartão estiver flipado!
+        isPullable={!dash.isCardFlipped} 
         onRefresh={dash.handleRefresh}
         pullDownThreshold={60} 
         maxPullDownDistance={95} 
@@ -141,6 +136,8 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 onTouchStart={dash.handleHorizontalSwipeStart}
                 onTouchMove={dash.handleHorizontalSwipeMove}
                 ref={dash.carrosselRef}
+                // 2. BLOQUEIO NATIVO: Eixo Y travado apenas quando os cartões estão na tela
+                style={{ touchAction: dash.isCardFlipped ? 'pan-x' : 'auto' }}
               >
                 {dash.meusCartoes.map((cartao, index) => {
                   const { total, status, mesVencimentoFatura, nomeMesVencimentoFatura } = dash.calcularDadosFatura(cartao);

@@ -75,7 +75,7 @@ function FlipCard({
         )}
         
         {/* CARTÃO GERAL (FRONT) */}
-        <div className={`flip-card-front card p-4 d-flex flex-column justify-content-between h-100 ${isDark ? 'dark-card' : 'bg-white shadow-sm border-0'}`}>
+        <div className={`flip-card-front card p-4 d-flex flex-column justify-content-between h-100 ${isDark ? 'dark-card' : 'bg-white border-0'}`}>
           <div>
             <p className={`mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>Saldo atual livre</p>
             <h1 className={`mb-0 fw-bold ${isDark ? 'text-white' : 'text-dark'}`}>
@@ -101,7 +101,7 @@ function FlipCard({
 
         {/* CARTÃO DE CRÉDITO (BACK) */}
         <div 
-          className="flip-card-back shadow-lg h-100" 
+          className="flip-card-back h-100" 
           style={{ 
             background: corCartao, 
             padding: '1.25rem', 
