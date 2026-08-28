@@ -3,7 +3,7 @@
 .login-screen-container {
   height: 100dvh; 
   width: 100vw;
-  background: transparent; /* <- Mude para transparente */
+  background: transparent;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -36,13 +36,12 @@
 
 .title-responsive {
   font-weight: 800;
-  letter-spacing: -1px; /* Estreita as letras do título */
+  letter-spacing: -1px;
 }
 
-/* COMPONENTES DO CARD */
+/* COMPONENTES DO CARD (Sem desfoque para as estrelas ficarem nítidas) */
 .glass-panel {
-  background: rgba(20, 20, 24, 0.7) !important;
-  backdrop-filter: blur(16px);
+  background: rgba(20, 20, 24, 0.6) !important;
   border-radius: 20px !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   padding: 1.5rem !important;
@@ -75,15 +74,27 @@
 .soft-input-group { position: relative; }
 
 .soft-input {
-  background-color: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important; 
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: white !important; padding: 0.9rem 1rem 0.9rem 2.8rem !important; border-radius: 12px !important;
   font-size: 0.95rem !important; font-weight: 500 !important; transition: all 0.3s ease !important;
 }
+
 .soft-input:focus {
   border-color: #10b981 !important; background-color: rgba(255, 255, 255, 0.06) !important;
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
 }
+
 .soft-input::placeholder { font-weight: 400; }
+
+/* Remove o fundo padrão (clarão) do preenchimento automático do navegador */
+.soft-input:-webkit-autofill,
+.soft-input:-webkit-autofill:hover,
+.soft-input:-webkit-autofill:focus,
+.soft-input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s !important;
+  -webkit-text-fill-color: white !important;
+}
 
 .input-icon-left {
   position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
@@ -127,7 +138,6 @@
 
 /* MARQUEE */
 .marquee-wrapper {
-  /* POSICIONAMENTO ABSOLUTO NO FUNDO DA TELA */
   position: absolute !important;
   bottom: 0;
   left: 0;
@@ -135,16 +145,7 @@
   overflow: hidden;
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-  padding-bottom: 0.8rem; /* Pequeno respiro na parte inferior, se necessário */
-}
-
-/* Remove o fundo padrão (clarão) do preenchimento automático do navegador */
-.soft-input:-webkit-autofill,
-.soft-input:-webkit-autofill:hover,
-.soft-input:-webkit-autofill:focus,
-.soft-input:-webkit-autofill:active {
-  transition: background-color 5000s ease-in-out 0s !important;
-  -webkit-text-fill-color: white !important;
+  padding-bottom: 0.8rem;
 }
 
 .marquee-content {
@@ -153,6 +154,34 @@
 }
 .marquee-content span { margin-right: 3rem; }
 @keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* BOTÃO FECHAR/VOLTAR */
+.btn-close-app {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.btn-close-app:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
 
 /* MEDIA QUERIES PARA CELULARES PEQUENOS */
 @media (max-height: 750px) {
@@ -166,4 +195,11 @@
   .sso-divider { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
   .btn-sso { padding: 0.5rem !important; }
   .security-text { font-size: 0.65rem !important; margin-top: 0.75rem !important; }
+  
+  .btn-close-app {
+    top: 1rem;
+    left: 1rem;
+    width: 36px;
+    height: 36px;
+  }
 }

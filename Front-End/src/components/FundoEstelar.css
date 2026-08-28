@@ -19,6 +19,7 @@
   position: absolute;
   background: transparent;
   border-radius: 50%;
+  z-index: 0;
 }
 
 /* CAMADA 1: Estrelas pequenas e rápidas */
