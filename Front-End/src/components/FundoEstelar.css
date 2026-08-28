@@ -1,0 +1,46 @@
+.fundo-espacial-container {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at top, #064e3b 0%, #0a0a0c 70%); /* Seu gradiente original aqui */
+  overflow: hidden;
+}
+
+.conteudo-pagina {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Gerando as estrelas com box-shadow (os valores em px são as posições x e y) */
+.estrelas-1, .estrelas-2, .estrelas-3 {
+  position: absolute;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.estrelas-1 {
+  width: 2px;
+  height: 2px;
+  box-shadow: 10vw 20vh #fff, 40vw 60vh #fff, 80vw 10vh #fff, 20vw 80vh #fff, 70vw 90vh #fff, 90vw 40vh #fff;
+  animation: animarEstrelas 50s linear infinite;
+}
+
+.estrelas-2 {
+  width: 3px;
+  height: 3px;
+  box-shadow: 15vw 70vh #fff, 50vw 30vh #fff, 85vw 60vh #fff, 30vw 15vh #fff, 60vw 85vh #fff, 5vw 45vh #fff;
+  animation: animarEstrelas 100s linear infinite;
+}
+
+/* Animação sutil subindo */
+@keyframes animarEstrelas {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100vh);
+  }
+}

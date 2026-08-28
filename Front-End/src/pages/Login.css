@@ -1,10 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* RESET E ESTRUTURA BASE */
 .login-screen-container {
   height: 100dvh; 
   width: 100vw;
-  background: radial-gradient(circle at top, #064e3b 0%, #0a0a0c 60%);
+  background: transparent; /* <- Mude para transparente */
   position: relative;
   overflow: hidden;
   display: flex;
@@ -137,6 +136,15 @@
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   padding-bottom: 0.8rem; /* Pequeno respiro na parte inferior, se necessário */
+}
+
+/* Remove o fundo padrão (clarão) do preenchimento automático do navegador */
+.soft-input:-webkit-autofill,
+.soft-input:-webkit-autofill:hover,
+.soft-input:-webkit-autofill:focus,
+.soft-input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s !important;
+  -webkit-text-fill-color: white !important;
 }
 
 .marquee-content {
