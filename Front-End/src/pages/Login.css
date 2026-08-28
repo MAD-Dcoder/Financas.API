@@ -128,9 +128,15 @@
 
 /* MARQUEE */
 .marquee-wrapper {
-  position: relative !important; width: 100%; overflow: hidden;
+  /* POSICIONAMENTO ABSOLUTO NO FUNDO DA TELA */
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  padding-bottom: 0.8rem; /* Pequeno respiro na parte inferior, se necessário */
 }
 
 .marquee-content {
