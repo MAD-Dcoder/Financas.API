@@ -187,12 +187,24 @@ function Login({ onLoginSuccess }) {
 
         {isLoading && (
           <div className="auth-loading-overlay">
+            {/* As 3 Bolinhas Animadas */}
             <div className="dots-loader-container">
-              <div className="dot"></div><div className="dot"></div><div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
             </div>
-            <p className="text-white fw-bold mb-1 mt-2">
-              {viewMode === 'login' ? 'Acessando sua conta...' : viewMode === 'cadastro' ? 'Criando sua conta...' : 'Alterando senha...'}
-            </p>
+            
+            {/* Textos imersivos */}
+            <div className="loading-text-container mt-3 text-center" style={{ animation: 'fadeIn 0.5s ease-in-out' }}>
+              <p className="text-white fw-bold mb-1" style={{ fontSize: '1rem' }}>
+                {viewMode === 'login' ? 'Acessando sua conta...' : viewMode === 'cadastro' ? 'Criando sua conta...' : 'Alterando senha...'}
+              </p>
+              <p className="text-light opacity-75 small mb-0" style={{ fontSize: '0.8rem' }}>
+                {viewMode === 'login' ? 'Preparando seu painel financeiro...' : 
+                 viewMode === 'cadastro' ? 'Construindo seu ambiente seguro...' : 
+                 'Criptografando seus novos dados...'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -456,8 +468,13 @@ function Login({ onLoginSuccess }) {
               <span>• STACK: REACT.JS, .NET, C#, JAVASCRIPT, POSTGRESQL, CSS & BOOTSTRAP</span>
               <span>• ESTUDANTE DE ANÁLISE E DESENVOLVIMENTO DE SISTEMAS NA PUC MINAS</span>
               <span>• ARQUITETURA LIMPA E ESCALÁVEL</span>
+              <span>• &copy; {new Date().getFullYear()} FIRMO. TODOS OS DIREITOS RESERVADOS.</span>
+              
               <span>• PROJETO DESENVOLVIDO POR MATHEUS AURÉLIO</span>
               <span>• STACK: REACT.JS, .NET, C#, JAVASCRIPT, POSTGRESQL, CSS & BOOTSTRAP</span>
+              <span>• ESTUDANTE DE ANÁLISE E DESENVOLVIMENTO DE SISTEMAS NA PUC MINAS</span>
+              <span>• ARQUITETURA LIMPA E ESCALÁVEL</span>
+              <span>• &copy; {new Date().getFullYear()} FIRMO. TODOS OS DIREITOS RESERVADOS.</span>
             </div>
           </div>
         </div>
