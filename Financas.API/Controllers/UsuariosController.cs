@@ -30,7 +30,6 @@ namespace Financas.API.Controllers
         // ==========================================
         // MÉTODOS AUXILIARES: MAPEAMENTO SEGURO (DTO)
         // ==========================================
-        // Esta função pega um Usuario do banco e transforma no DTO seguro, deixando a SenhaHash de fora.
         private UsuarioRetornoDto MapearParaDto(Usuario usuario)
         {
             return new UsuarioRetornoDto
@@ -38,7 +37,6 @@ namespace Financas.API.Controllers
                 Id = usuario.Id,
                 Nome = usuario.Nome,
                 Email = usuario.Email,
-                // CriadoEm = usuario.CriadoEm, // Descomente se tiver essa propriedade no seu model
                 DataNascimento = usuario.DataNascimento,
                 ConfiguracaoMoradia = usuario.ConfiguracaoMoradia,
                 Profissao = usuario.Profissao,
@@ -56,10 +54,7 @@ namespace Financas.API.Controllers
         public async Task<ActionResult<IEnumerable<UsuarioRetornoDto>>> GetUsuarios()
         {
             var usuarios = await _context.Usuarios.ToListAsync();
-
-            // Converte a lista de entidades para a lista de DTOs seguros
             var usuariosSeguros = usuarios.Select(u => MapearParaDto(u));
-
             return Ok(usuariosSeguros);
         }
 
@@ -76,7 +71,6 @@ namespace Financas.API.Controllers
                 return NotFound(new { message = "Usuário não encontrado." });
             }
 
-            // Retorna apenas o DTO mapeado
             return Ok(MapearParaDto(usuario));
         }
 
@@ -94,7 +88,6 @@ namespace Financas.API.Controllers
 
             var token = GerarTokenJwt(usuario);
 
-            // Retorna o token e o usuário blindado
             return Ok(new { token = token, usuario = MapearParaDto(usuario) });
         }
 
@@ -134,9 +127,39 @@ namespace Financas.API.Controllers
             }
 
             var token = GerarTokenJwt(usuario);
-
-            // Retorna o token e o usuário blindado
             return Ok(new { token = token, usuario = MapearParaDto(usuario) });
+        }
+
+        // ==========================================
+        // 5. ROTA DE RECUPERAÇÃO DE SENHA (TEMPORÁRIO)
+        // ==========================================
+        [HttpPost("reset-temporario")]
+        public async Task<IActionResult> ResetTemporario([FromBody] ResetTemporarioDto dto)
+        {
+            const string CHAVE_ESPERADA = "FIRMO_BETA_2026";
+
+            // Tratamento contra nulos e espaços fantasmas
+            if (string.IsNullOrWhiteSpace(dto.ChaveMestra) || dto.ChaveMestra.Trim() != CHAVE_ESPERADA)
+            {
+                return Unauthorized(new { message = "Código de segurança inválido." });
+            }
+
+            var emailLimpo = dto.Email?.Trim();
+
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Email == emailLimpo);
+
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuário não encontrado." });
+            }
+
+            // Aplica o hash na nova senha
+            usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(dto.NovaSenha);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Senha atualizada com sucesso." });
         }
 
         // ==========================================
@@ -189,8 +212,6 @@ namespace Financas.API.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-
-                // Retorna apenas o DTO mapeado
                 return Ok(MapearParaDto(usuario));
             }
             catch (Exception ex)
@@ -204,7 +225,6 @@ namespace Financas.API.Controllers
     // DTOs (Data Transfer Objects)
     // ==========================================
 
-    // DTO usado para RECEBER dados de atualização
     public class AtualizarPerfilDto
     {
         public DateTime? DataNascimento { get; set; }
@@ -218,13 +238,11 @@ namespace Financas.API.Controllers
         public string NivelConhecimento { get; set; }
     }
 
-    // DTO usado para ENVIAR dados seguros para o Frontend
     public class UsuarioRetornoDto
     {
         public int Id { get; set; }
         public string Nome { get; set; }
         public string Email { get; set; }
-        // public DateTime CriadoEm { get; set; } // Descomente caso exista
         public DateTime? DataNascimento { get; set; }
         public string ConfiguracaoMoradia { get; set; }
         public string Profissao { get; set; }
@@ -234,5 +252,13 @@ namespace Financas.API.Controllers
         public string MaiorPecado { get; set; }
         public string UsoCartao { get; set; }
         public string NivelConhecimento { get; set; }
+    }
+
+    // NOVO DTO PARA RESET DE SENHA
+    public class ResetTemporarioDto
+    {
+        public string Email { get; set; }
+        public string NovaSenha { get; set; }
+        public string ChaveMestra { get; set; }
     }
 }

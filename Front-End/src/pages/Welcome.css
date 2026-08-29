@@ -42,12 +42,20 @@
 
 .welcome-btn-primary {
   background: linear-gradient(to right, #10b981, #059669) !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important; 
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
   padding: 0.95rem !important;
   border-radius: 14px !important;
   font-weight: 700 !important;
   font-size: 1rem !important;
   color: white !important;
+  transition: all 0.3s ease !important;
+}
+
+.welcome-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
 }
 
 .welcome-btn-secondary {

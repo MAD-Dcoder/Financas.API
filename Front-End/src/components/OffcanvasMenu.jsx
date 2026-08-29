@@ -5,6 +5,7 @@ import {
   FiUser, FiSettings, FiShield, FiBell, FiHelpCircle, 
   FiLogOut, FiChevronRight, FiX, FiSun, FiMoon, FiList 
 } from 'react-icons/fi';
+import { getIniciais, getNomeCurto } from '../utils/formatters'; // <-- Importando os formatadores
 
 function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogout, temaAtual, toggleTema }) {
   const isDark = temaAtual === 'dark';
@@ -33,10 +34,12 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
             <FiX size={24} />
           </button>
           <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 mt-3 shadow-lg" 
-               style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '32px' }}>
-            {usuarioLogado?.nome ? usuarioLogado.nome.charAt(0).toUpperCase() : 'U'}
+                style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '32px' }}>
+            {/* Aplicando a formatação de 2 iniciais */}
+            {getIniciais(usuarioLogado?.nome)}
           </div>
-          <h5 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{usuarioLogado?.nome}</h5>
+          {/* Aplicando a formatação de no máximo 2 nomes */}
+          <h5 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{getNomeCurto(usuarioLogado?.nome)}</h5>
           <small className={isDark ? "text-light opacity-75" : "text-muted"}>{usuarioLogado?.email}</small>
         </div>
         
@@ -84,7 +87,7 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
               </div>
             </div>
 
-            {/* CONFIGURAÇÕES GLOBAIS - AQUI FOI ADICIONADO O ONCLICK */}
+            {/* CONFIGURAÇÕES GLOBAIS */}
             <div 
               className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
               style={{ cursor: 'pointer' }}
