@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight, FiArrowLeft, FiKey } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight, FiArrowLeft, FiKey, FiHelpCircle } from 'react-icons/fi';
 import api from '../api/axios';
 import FundoEstelar from '../components/FundoEstelar';
 import { getIniciais, getNomeCurto } from '../utils/formatters';
@@ -18,6 +18,8 @@ function Login({ onLoginSuccess }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [contaSalva, setContaSalva] = useState(null);
+  
+  const [showHelp, setShowHelp] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: '', email: '', senha: '', confirmaSenha: '', chaveMestra: ''
@@ -42,6 +44,7 @@ function Login({ onLoginSuccess }) {
     setViewMode(viewMode === 'login' ? 'cadastro' : 'login');
     setErrorMsg('');
     setSuccessMsg('');
+    setShowHelp(false);
     setFormData({ nome: '', email: '', senha: '', confirmaSenha: '', chaveMestra: '' });
   };
 
@@ -95,6 +98,7 @@ function Login({ onLoginSuccess }) {
         
         setSuccessMsg('Senha alterada com sucesso! Faça login.');
         setViewMode('login');
+        setShowHelp(false);
         setFormData(prev => ({ ...prev, senha: '', confirmaSenha: '', chaveMestra: '' }));
         setIsLoading(false);
         return;
@@ -215,28 +219,61 @@ function Login({ onLoginSuccess }) {
               )}
 
               {viewMode === 'recuperacao' && (
-                <div className="soft-input-group mb-3">
-                  <input 
-                    type="text" 
-                    className="form-control soft-input" 
-                    name="chaveMestra" 
-                    placeholder="Código de Segurança" 
-                    value={formData.chaveMestra} 
-                    onChange={handleInputChange} 
-                    style={{ 
-                      borderColor: isChavePreenchida ? (isChaveValida ? '#10b981' : '#f87171') : '',
-                      transition: 'border-color 0.3s ease'
-                    }}
-                  />
-                  <FiKey 
-                    className="input-icon-left" 
-                    size={18} 
-                    style={{ 
-                      color: isChavePreenchida ? (isChaveValida ? '#10b981' : '#f87171') : '',
-                      transition: 'color 0.3s ease'
-                    }} 
-                  />
-                </div>
+                <>
+                  <div className={`soft-input-group ${showHelp ? 'mb-2' : 'mb-3'}`}>
+                    <input 
+                      type="text" 
+                      className="form-control soft-input" 
+                      name="chaveMestra" 
+                      placeholder="Código de Segurança" 
+                      value={formData.chaveMestra} 
+                      onChange={handleInputChange} 
+                      style={{ 
+                        borderColor: isChavePreenchida ? (isChaveValida ? '#10b981' : '#f87171') : '',
+                        transition: 'border-color 0.3s ease',
+                        paddingRight: '2.8rem' 
+                      }}
+                    />
+                    <FiKey 
+                      className="input-icon-left" 
+                      size={18} 
+                      style={{ 
+                        color: isChavePreenchida ? (isChaveValida ? '#10b981' : '#f87171') : '',
+                        transition: 'color 0.3s ease'
+                      }} 
+                    />
+                    
+                    <div 
+                      className="input-icon-right d-flex align-items-center justify-content-center"
+                      onClick={() => setShowHelp(!showHelp)}
+                      title="Como conseguir o código?"
+                      style={{ 
+                        color: showHelp ? '#10b981' : 'rgba(255, 255, 255, 0.4)', 
+                        transition: 'color 0.2s',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <FiHelpCircle size={18} />
+                    </div>
+                  </div>
+                  
+                  {showHelp && (
+                    <div className="text-start mb-3 px-1" style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
+                      <p className="text-light opacity-75 mb-1" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
+                        O Firmo está em versão Beta. Por segurança, solicite o código com o desenvolvedor.
+                      </p>
+                      <a 
+                        href="https://wa.me/5531997148385?text=Fala%2C%20Matheus%21%20Esqueci%20minha%20senha%20no%20Firmo%20e%20preciso%20da%20Chave%20Mestra%20pra%20recuperar%20meu%20acesso." 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-emerald text-decoration-none fw-bold d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: '0.85rem', transition: 'all 0.2s' }}
+                      >
+                        Solicitar código via WhatsApp <FiArrowRight size={12} />
+                      </a>
+                    </div>
+                  )}
+                </>
               )}
 
               <div className={`soft-input-group ${viewMode === 'login' ? 'mb-2' : 'mb-3'}`}>
@@ -249,7 +286,7 @@ function Login({ onLoginSuccess }) {
 
               {viewMode === 'login' && (
                 <div className="text-end mb-3 pe-1">
-                  <span className="forgot-password-link" onClick={() => { setViewMode('recuperacao'); setErrorMsg(''); setSuccessMsg(''); }}>Esqueci minha senha</span>
+                  <span className="forgot-password-link" onClick={() => { setViewMode('recuperacao'); setErrorMsg(''); setSuccessMsg(''); setShowHelp(false); }}>Esqueci minha senha</span>
                 </div>
               )}
 

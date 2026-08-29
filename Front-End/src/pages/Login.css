@@ -115,6 +115,8 @@
 .btn-glow {
   background: linear-gradient(to right, #10b981, #059669) !important;
   transition: all 0.3s ease !important; font-size: 0.95rem !important;
+  /* Garante que o botão principal não cole nos inputs de cima */
+  margin-top: 0.5rem; 
 }
 .btn-glow:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3) !important; }
 .btn-glow:hover .arrow-icon { transform: translateX(4px); }
@@ -135,6 +137,12 @@
 
 .text-emerald { color: #10b981; }
 .security-text { font-size: 0.75rem; font-weight: 500; }
+
+/* ANIMAÇÃO DA CAIXA DE AJUDA */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 /* MARQUEE */
 .marquee-wrapper {
