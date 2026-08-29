@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight, FiArrowLeft, FiKey, FiHelpCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiShield, FiArrowRight, FiArrowLeft, FiKey, FiHelpCircle, FiCheck } from 'react-icons/fi';
 import api from '../api/axios';
 import FundoEstelar from '../components/FundoEstelar';
+import DrawerTermos from '../components/DrawerTermos';
 import { getIniciais, getNomeCurto } from '../utils/formatters';
 import './Login.css';
 
@@ -20,6 +21,9 @@ function Login({ onLoginSuccess }) {
   const [contaSalva, setContaSalva] = useState(null);
   
   const [showHelp, setShowHelp] = useState(false);
+
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
 
   const [formData, setFormData] = useState({
     nome: '', email: '', senha: '', confirmaSenha: '', chaveMestra: ''
@@ -40,17 +44,27 @@ function Login({ onLoginSuccess }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleAbrirTermos = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setShowDrawer(true);
+  };
+
   const toggleMode = () => {
     setViewMode(viewMode === 'login' ? 'cadastro' : 'login');
     setErrorMsg('');
     setSuccessMsg('');
     setShowHelp(false);
+    setAceitouTermos(false);
     setFormData({ nome: '', email: '', senha: '', confirmaSenha: '', chaveMestra: '' });
   };
 
   const limparContaSalva = () => {
     localStorage.removeItem('firmo_conta_salva');
     setContaSalva(null);
+    setAceitouTermos(false);
     setFormData({ nome: '', email: '', senha: '', confirmaSenha: '', chaveMestra: '' });
   };
 
@@ -67,10 +81,18 @@ function Login({ onLoginSuccess }) {
       setErrorMsg('Por favor, preencha todos os campos.');
       return;
     }
-    if (viewMode === 'cadastro' && (!nome || !emailLimpo || !senha || !confirmaSenha)) {
-      setErrorMsg('Por favor, preencha todos os campos.');
-      return;
+    
+    if (viewMode === 'cadastro') {
+      if (!nome || !emailLimpo || !senha || !confirmaSenha) {
+        setErrorMsg('Por favor, preencha todos os campos.');
+        return;
+      }
+      if (!aceitouTermos) {
+        setErrorMsg('Você precisa aceitar os Termos de Uso e a Política de Privacidade.');
+        return;
+      }
     }
+
     if (viewMode === 'recuperacao') {
       if (!emailLimpo || !chaveMestraLimpa || !senha || !confirmaSenha) {
         setErrorMsg('Por favor, preencha todos os campos.');
@@ -81,6 +103,8 @@ function Login({ onLoginSuccess }) {
         return;
       }
     }
+    
+    // Validação de senhas desiguais que bloqueia o cadastro
     if ((viewMode === 'cadastro' || viewMode === 'recuperacao') && senha !== confirmaSenha) {
       setErrorMsg('As senhas não coincidem.');
       return;
@@ -143,6 +167,11 @@ function Login({ onLoginSuccess }) {
 
   const isChaveValida = formData.chaveMestra.trim() === CHAVE_ESPERADA;
   const isChavePreenchida = formData.chaveMestra.trim().length > 0;
+  
+  // Variáveis para controle visual das senhas
+  const isModoComDuasSenhas = viewMode === 'cadastro' || viewMode === 'recuperacao';
+  const digitouConfirmaSenha = formData.confirmaSenha.length > 0;
+  const senhasIguais = formData.senha === formData.confirmaSenha;
 
   return (
     <FundoEstelar>
@@ -277,8 +306,27 @@ function Login({ onLoginSuccess }) {
               )}
 
               <div className={`soft-input-group ${viewMode === 'login' ? 'mb-2' : 'mb-3'}`}>
-                <input type={showPassword ? "text" : "password"} className="form-control soft-input" name="senha" placeholder={viewMode === 'login' ? "Sua senha" : "Crie uma senha"} value={formData.senha} onChange={handleInputChange} autoComplete="current-password" />
-                <FiLock className="input-icon-left" size={18} />
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  className="form-control soft-input" 
+                  name="senha" 
+                  placeholder={viewMode === 'login' ? "Sua senha" : "Crie uma senha"} 
+                  value={formData.senha} 
+                  onChange={handleInputChange} 
+                  autoComplete="current-password" 
+                  style={{
+                    borderColor: isModoComDuasSenhas && digitouConfirmaSenha ? (senhasIguais ? '#10b981' : '#f87171') : '',
+                    transition: 'border-color 0.3s ease'
+                  }}
+                />
+                <FiLock 
+                  className="input-icon-left" 
+                  size={18} 
+                  style={{
+                    color: isModoComDuasSenhas && digitouConfirmaSenha ? (senhasIguais ? '#10b981' : '#f87171') : '',
+                    transition: 'color 0.3s ease'
+                  }}
+                />
                 <div className="input-icon-right" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                 </div>
@@ -290,10 +338,72 @@ function Login({ onLoginSuccess }) {
                 </div>
               )}
 
-              {viewMode !== 'login' && (
-                <div className="soft-input-group mb-4">
-                  <input type={showPassword ? "text" : "password"} className="form-control soft-input" name="confirmaSenha" placeholder="Repita a senha" value={formData.confirmaSenha} onChange={handleInputChange} />
-                  <FiLock className="input-icon-left" size={18} />
+              {isModoComDuasSenhas && (
+                <div className={`soft-input-group ${viewMode === 'cadastro' ? 'mb-3' : 'mb-4'}`}>
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    className="form-control soft-input" 
+                    name="confirmaSenha" 
+                    placeholder="Repita a senha" 
+                    value={formData.confirmaSenha} 
+                    onChange={handleInputChange} 
+                    style={{
+                      borderColor: digitouConfirmaSenha ? (senhasIguais ? '#10b981' : '#f87171') : '',
+                      transition: 'border-color 0.3s ease'
+                    }}
+                  />
+                  <FiLock 
+                    className="input-icon-left" 
+                    size={18} 
+                    style={{
+                      color: digitouConfirmaSenha ? (senhasIguais ? '#10b981' : '#f87171') : '',
+                      transition: 'color 0.3s ease'
+                    }}
+                  />
+                </div>
+              )}
+
+              {viewMode === 'cadastro' && (
+                <div className="d-flex align-items-start mb-4 px-1" style={{ animation: 'fadeIn 0.3s ease-in-out' }}>
+                  
+                  <div 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (!aceitouTermos) {
+                        handleAbrirTermos(e);
+                      } else {
+                        setAceitouTermos(false);
+                      }
+                    }}
+                    style={{ cursor: 'pointer', marginTop: '2px', display: 'flex' }}
+                  >
+                    <div style={{
+                      width: '18px', 
+                      height: '18px', 
+                      minWidth: '18px',
+                      borderRadius: '4px',
+                      border: `1.5px solid ${aceitouTermos ? '#10b981' : 'rgba(255, 255, 255, 0.4)'}`,
+                      backgroundColor: aceitouTermos ? '#10b981' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      {aceitouTermos && <FiCheck size={14} color="#fff" style={{ strokeWidth: 4 }} />}
+                    </div>
+                  </div>
+
+                  <div className="ms-2 text-start text-light opacity-75" style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
+                    Li e concordo com os{' '}
+                    <span onClick={handleAbrirTermos} className="text-emerald fw-bold text-decoration-none" style={{ cursor: 'pointer' }}>
+                      Termos de Uso
+                    </span>{' '}
+                    e a{' '}
+                    <span onClick={handleAbrirTermos} className="text-emerald fw-bold text-decoration-none" style={{ cursor: 'pointer' }}>
+                      Política de Privacidade
+                    </span>.
+                  </div>
+                  
                 </div>
               )}
 
@@ -352,6 +462,13 @@ function Login({ onLoginSuccess }) {
           </div>
         </div>
       </div>
+      
+      <DrawerTermos 
+        isOpen={showDrawer} 
+        onClose={() => setShowDrawer(false)} 
+        onAccept={() => setAceitouTermos(true)} 
+      />
+
     </FundoEstelar>
   );
 }

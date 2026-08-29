@@ -20,8 +20,9 @@ namespace Financas.API.Models
         [Column("senha_hash")]
         public string SenhaHash { get; set; } = string.Empty;
 
+        // AQUI ESTÁ A CORREÇÃO:
         [Column("criado_em")]
-        public DateTime CriadoEm { get; set; }
+        public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
         // ==========================================
         // DADOS DO PERFIL (FIRMO 1.0.1v)
