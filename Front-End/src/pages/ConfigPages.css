@@ -300,11 +300,3 @@
 [data-bs-theme="light"] .config-bottom-bar {
   background: linear-gradient(to top, #f8fafc 70%, transparent) !important;
 }
-
-/* Ajuste da borda neon no light mode para manter contraste */
-[data-bs-theme="light"] .neon-border-wrapper {
-  background: #ffffff !important;
-}
-[data-bs-theme="light"] .neon-border-content {
-  background-color: #ffffff !important;
-}

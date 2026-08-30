@@ -104,7 +104,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
   return (
     <div style={dashboardStyle}>
       <PullToRefresh 
-        // 1. O PULO DO GATO: Desativa o refresh quando o cartão estiver flipado!
         isPullable={!dash.isCardFlipped} 
         onRefresh={dash.handleRefresh}
         pullDownThreshold={60} 
@@ -136,7 +135,6 @@ function Dashboard ({ temaAtual, toggleTema }) {
                 onTouchStart={dash.handleHorizontalSwipeStart}
                 onTouchMove={dash.handleHorizontalSwipeMove}
                 ref={dash.carrosselRef}
-                // 2. BLOQUEIO NATIVO: Eixo Y travado apenas quando os cartões estão na tela
                 style={{ touchAction: dash.isCardFlipped ? 'pan-x' : 'auto' }}
               >
                 {dash.meusCartoes.map((cartao, index) => {
@@ -259,11 +257,11 @@ function Dashboard ({ temaAtual, toggleTema }) {
             </>
           )}
 
-          {/* AQUI ESTÁ A ALTERAÇÃO: Passando a prop abaAtiva baseada no estado isCardFlipped */}
           <BottomNav 
             handleGoHome={dash.handleGoHome} 
             setShowBottomSheet={dash.setShowBottomSheet} 
             setIsCardFlipped={dash.setIsCardFlipped} 
+            setShowProfile={dash.setShowProfile}
             temaAtual={temaAtual} 
             abaAtiva={dash.isCardFlipped ? 'cartoes' : 'home'} 
           />

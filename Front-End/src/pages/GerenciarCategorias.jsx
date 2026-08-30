@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
-import { FiArrowLeft, FiTrash2, FiPlus, FiEdit2, FiCheck, FiX, FiMenu } from 'react-icons/fi';
+import { FiArrowLeft, FiTrash2, FiPlus, FiEdit2, FiCheck, FiX, FiMenu, FiChevronDown } from 'react-icons/fi';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import categoriasService from '../api/categoriasService';
+import './ConfigPages.css';
 
 function GerenciarCategorias({ temaAtual }) {
   const isDark = temaAtual === 'dark';
@@ -13,7 +14,7 @@ function GerenciarCategorias({ temaAtual }) {
   const [categorias, setCategorias] = useState([]);
   const [novaCategoria, setNovaCategoria] = useState('');
   const [tipoNovaCategoria, setTipoNovaCategoria] = useState('despesa');
-  const [corNovaCategoria, setCorNovaCategoria] = useState('#3b82f6'); 
+  const [corNovaCategoria, setCorNovaCategoria] = useState('#3b82f6');
   
   const [editandoId, setEditandoId] = useState(null);
   const [nomeEditado, setNomeEditado] = useState('');
@@ -130,48 +131,55 @@ function GerenciarCategorias({ temaAtual }) {
     }
   };
 
-  const bgClass = isDark ? '#121214' : '#f0f2f5';
-  const textClass = isDark ? 'text-white' : 'text-dark';
-  const borderClass = isDark ? 'border-secondary border-opacity-25' : 'border-light-subtle';
-  // Note: o inputClass agora é reaproveitado na label para garantir visual igual ao text
-  const inputClass = isDark ? "bg-transparent text-white border-secondary shadow-none" : "bg-transparent text-dark border-light-subtle shadow-none";
-
   return (
-    <div style={{ backgroundColor: bgClass, minHeight: '100vh', transition: 'all 0.3s ease-in-out' }}>
+    <div className={`config-page ${isDark ? 'theme-dark' : 'theme-light'}`} data-bs-theme={temaAtual}>
       
-      <div className={`d-flex align-items-center p-4 border-bottom ${borderClass}`}>
-        <button onClick={() => navigate(-1)} className={`btn btn-link p-0 text-decoration-none shadow-none ${textClass}`}>
+      <div className="config-header">
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
+        >
           <FiArrowLeft size={24} />
         </button>
-        <h5 className={`mb-0 ms-3 fw-bold ${textClass}`}>Gerenciar Categorias</h5>
+        <h1 className={isDark ? 'text-white' : 'text-dark'}>Gerenciar Categorias</h1>
+        <p>Adicione, edite ou altere a prioridade e a cor das suas categorias.</p>
       </div>
 
-      <div className="p-4 container">
-        <p className={`small mb-4 ${isDark ? 'text-light opacity-75' : 'text-secondary'}`}>
-          Adicione, edite ou altere a prioridade e a cor das suas categorias.
-        </p>
-
-        <form onSubmit={handleAdicionar} className="d-flex gap-2 mb-4">
-          <select 
-            value={tipoNovaCategoria} 
-            onChange={(e) => setTipoNovaCategoria(e.target.value)}
-            className={`form-select ${inputClass}`}
-            style={{ width: '110px', flexShrink: 0 }}
-            disabled={isSubmitting}
-          >
-            <option value="despesa" className={isDark ? "bg-dark" : ""}>Despesa</option>
-            <option value="receita" className={isDark ? "bg-dark" : ""}>Receita</option>
-          </select>
+      <div className="config-section">
+        
+        <form onSubmit={handleAdicionar} className="config-card p-2 d-flex gap-2 mb-4 align-items-center">
           
-          {/* Caixa de cor corrigida usando label e escondendo o input nativo */}
+          <div className="position-relative d-flex align-items-center" style={{ width: 'auto', minWidth: '95px', flexShrink: 0 }}>
+            <select 
+              value={tipoNovaCategoria} 
+              onChange={(e) => setTipoNovaCategoria(e.target.value)}
+              className="config-select m-0 pe-4"
+              style={{ 
+                appearance: 'none', 
+                WebkitAppearance: 'none', 
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: isDark ? '#e5e7eb' : '#1e293b',
+                fontSize: '15px',
+                fontWeight: '400',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+              disabled={isSubmitting}
+            >
+              <option value="despesa" className={isDark ? "bg-dark" : ""}>Despesa</option>
+              <option value="receita" className={isDark ? "bg-dark" : ""}>Receita</option>
+            </select>
+            <FiChevronDown 
+              className="position-absolute" 
+              style={{ right: '4px', pointerEvents: 'none', color: '#9ca3af' }} 
+              size={18} 
+            />
+          </div>
+          
           <label 
-            className={`d-flex align-items-center justify-content-center border rounded mb-0 form-control ${inputClass}`}
-            style={{ 
-              width: '42px', 
-              padding: 0,
-              flexShrink: 0, 
-              cursor: 'pointer'
-            }}
+            className="d-flex align-items-center justify-content-center mb-0 ms-1"
+            style={{ width: '36px', padding: 0, flexShrink: 0, cursor: 'pointer' }}
             title="Escolher cor"
           >
             <div 
@@ -183,21 +191,13 @@ function GerenciarCategorias({ temaAtual }) {
                 boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.15)' : '0 0 0 1px rgba(0,0,0,0.15)'
               }}
             />
-            {/* O input de cor fica totalmente escondido do fluxo visual, resolvendo o bug do iOS */}
             <input 
               type="color" 
               value={corNovaCategoria}
               onChange={(e) => setCorNovaCategoria(e.target.value)}
               style={{ 
-                position: 'absolute', 
-                opacity: 0, 
-                width: '1px', 
-                height: '1px', 
-                padding: 0, 
-                margin: '-1px', 
-                overflow: 'hidden', 
-                clip: 'rect(0,0,0,0)', 
-                border: 0 
+                position: 'absolute', opacity: 0, width: '1px', height: '1px', 
+                padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: 0 
               }}
               disabled={isSubmitting}
             />
@@ -205,31 +205,34 @@ function GerenciarCategorias({ temaAtual }) {
 
           <input 
             type="text" 
-            placeholder="Nome..." 
+            placeholder="Nome da categoria..." 
             value={novaCategoria}
             onChange={(e) => setNovaCategoria(e.target.value)}
-            className={`form-control ${inputClass} flex-grow-1`}
+            className="flex-grow-1 bg-transparent border-0 shadow-none px-1"
+            style={{ color: isDark ? '#e5e7eb' : '#1e293b', outline: 'none', fontSize: '15px' }}
             disabled={isSubmitting}
           />
 
           <button 
             type="submit" 
-            className={`btn border shadow-sm d-flex align-items-center justify-content-center ${isDark ? 'btn-outline-light border-secondary' : 'btn-light border-light-subtle'}`}
-            style={{ width: '42px', flexShrink: 0 }}
+            className="btn btn-link p-0 text-success shadow-none d-flex align-items-center justify-content-center me-2"
+            style={{ width: '32px', flexShrink: 0 }}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <div className="spinner-border spinner-border-sm" role="status"><span className="visually-hidden">...</span></div>
-            ) : (<FiPlus />)}
+            ) : (<FiPlus size={22} />)}
           </button>
         </form>
+
+        <p className="config-section-title">Suas Categorias</p>
 
         <div>
           <DragDropContext onDragEnd={handleOnDragEnd}>
             <Droppable droppableId="categorias-lista">
               {(provided) => (
                 <ul 
-                  className="list-unstyled mt-3" 
+                  className="list-unstyled m-0" 
                   {...provided.droppableProps} 
                   ref={provided.innerRef}
                 >
@@ -239,37 +242,29 @@ function GerenciarCategorias({ temaAtual }) {
                         <li 
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`d-flex justify-content-between align-items-center p-3 rounded-3 mb-2 border ${snapshot.isDragging ? 'shadow-lg' : 'shadow-sm'} ${textClass}`} 
+                          className={`config-card mb-2 ${snapshot.isDragging ? 'shadow-lg' : ''}`} 
                           style={{ 
                             ...provided.draggableProps.style,
-                            backgroundColor: isDark ? (snapshot.isDragging ? '#2d2d36' : '#1a1a1e') : (snapshot.isDragging ? '#ffffff' : '#ffffff'),
-                            borderColor: isDark ? (snapshot.isDragging ? '#3d3d44' : '#2d2d36') : (snapshot.isDragging ? '#dee2e6' : '#dee2e6') 
+                            ...(snapshot.isDragging && { 
+                              backgroundColor: isDark ? '#2d2d36' : '#f8fafc',
+                              borderColor: isDark ? '#3d3d44' : '#e2e8f0' 
+                            })
                           }}
                         >
-                          <div className="d-flex align-items-center gap-3 w-100">
+                          <div className="config-card-left w-100 gap-2">
                             <div {...provided.dragHandleProps} className="p-1" style={{ cursor: 'grab' }}>
-                              <FiMenu className={`${isDark ? 'text-secondary' : 'text-muted'} opacity-50`} size={20} />
+                              <FiMenu className="config-icon opacity-50" size={20} />
                             </div>
                             
                             {editandoId === cat.id ? (
                               <div className="d-flex align-items-center gap-2 w-100 pe-2">
-                                {/* Caixa de cor de edição corrigida para o iOS também */}
                                 <label 
-                                  className={`d-flex align-items-center justify-content-center border rounded mb-0 form-control ${inputClass}`}
-                                  style={{ 
-                                    width: '36px', 
-                                    height: '32px',
-                                    padding: 0,
-                                    flexShrink: 0, 
-                                    cursor: 'pointer'
-                                  }}
+                                  className="d-flex align-items-center justify-content-center mb-0"
+                                  style={{ width: '32px', height: '32px', padding: 0, flexShrink: 0, cursor: 'pointer' }}
                                 >
                                   <div 
                                     style={{
-                                      width: '14px',
-                                      height: '14px',
-                                      borderRadius: '50%',
-                                      backgroundColor: corEditada,
+                                      width: '14px', height: '14px', borderRadius: '50%', backgroundColor: corEditada,
                                       boxShadow: isDark ? '0 0 0 1px rgba(255,255,255,0.15)' : '0 0 0 1px rgba(0,0,0,0.15)'
                                     }}
                                   />
@@ -277,45 +272,36 @@ function GerenciarCategorias({ temaAtual }) {
                                     type="color" 
                                     value={corEditada}
                                     onChange={(e) => setCorEditada(e.target.value)}
-                                    style={{ 
-                                      position: 'absolute', 
-                                      opacity: 0, 
-                                      width: '1px', 
-                                      height: '1px', 
-                                      padding: 0, 
-                                      margin: '-1px', 
-                                      overflow: 'hidden', 
-                                      clip: 'rect(0,0,0,0)', 
-                                      border: 0 
-                                    }}
+                                    style={{ position: 'absolute', opacity: 0, width: '1px', height: '1px', overflow: 'hidden' }}
                                   />
                                 </label>
                                 <input 
                                   type="text" 
-                                  className={`form-control form-control-sm ${inputClass} flex-grow-1`}
+                                  className="flex-grow-1 bg-transparent border-0 shadow-none"
+                                  style={{ color: isDark ? '#e5e7eb' : '#1e293b', outline: 'none', borderBottom: '1px solid #10b981' }}
                                   value={nomeEditado}
                                   onChange={(e) => setNomeEditado(e.target.value)}
                                   autoFocus
                                 />
                               </div>
                             ) : (
-                              <div className="d-flex align-items-center gap-2">
-                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: cat.corHex || '#6b7280' }} />
-                                <span>{cat.nome}</span>
+                              <div className="d-flex align-items-center gap-2 ms-1">
+                                <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: cat.corHex || '#6b7280' }} />
+                                <span className="config-text-main">{cat.nome}</span>
                               </div>
                             )}
                           </div>
 
-                          <div className="d-flex gap-2 ms-2">
+                          <div className="d-flex gap-3 ms-2">
                             {editandoId === cat.id ? (
                               <>
-                                <button className="btn btn-link p-0 text-success shadow-none" onClick={() => salvarEdicao(cat)}><FiCheck size={18} /></button>
-                                <button className="btn btn-link p-0 text-secondary shadow-none" onClick={() => setEditandoId(null)}><FiX size={18} /></button>
+                                <button className="btn btn-link p-0 text-success shadow-none" onClick={() => salvarEdicao(cat)}><FiCheck size={20} /></button>
+                                <button className="btn btn-link p-0 text-secondary shadow-none" onClick={() => setEditandoId(null)}><FiX size={20} /></button>
                               </>
                             ) : (
                               <>
-                                <button className="btn btn-link p-0 text-secondary opacity-75 shadow-none" onClick={() => iniciarEdicao(cat)}><FiEdit2 size={16} /></button>
-                                <button className="btn btn-link p-0 text-danger opacity-75 shadow-none ms-2" onClick={() => handleExcluir(cat.id)}><FiTrash2 size={16} /></button>
+                                <button className="btn btn-link p-0 text-secondary opacity-75 shadow-none" onClick={() => iniciarEdicao(cat)}><FiEdit2 size={18} /></button>
+                                <button className="btn btn-link p-0 text-danger opacity-75 shadow-none" onClick={() => handleExcluir(cat.id)}><FiTrash2 size={18} /></button>
                               </>
                             )}
                           </div>
@@ -330,7 +316,7 @@ function GerenciarCategorias({ temaAtual }) {
            </DragDropContext>
 
           {categoriasFiltradas.length === 0 && (
-            <div className={`text-center py-4 ${isDark ? 'text-light opacity-50' : 'text-muted'}`}>
+            <div className="text-center py-4 config-text-sub">
               Nenhuma categoria de {tipoNovaCategoria} cadastrada.
             </div>
           )}
