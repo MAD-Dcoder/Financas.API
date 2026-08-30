@@ -3,8 +3,9 @@ import { FiArrowLeft, FiChevronDown, FiPlayCircle, FiLifeBuoy, FiZap, FiArrowRig
 import { useNavigate } from 'react-router-dom';
 import './ConfigPages.css';
 
-const CentralAjuda = () => {
+const CentralAjuda = ({ temaAtual }) => {
   const navigate = useNavigate();
+  const isDark = temaAtual === 'dark';
   const [faqAberto, setFaqAberto] = useState(null);
   const [devDrawerOpen, setDevDrawerOpen] = useState(false);
 
@@ -39,17 +40,20 @@ const CentralAjuda = () => {
     },
     {
       pergunta: "O que é o Modo Pânico?",
-      resposta: "É um recurso de privacidade. Quando ativado na aba 'Segurança', basta virar a tela do seu celular para baixo para ocultar imediatamente todos os saldos e valores da tela."
+      resposta: "É um recurso de privacidade. Когда ativado na aba 'Segurança', basta virar a tela do seu celular para baixo para ocultar imediatamente todos os saldos e valores da tela."
     }
   ];
 
   return (
-    <div className="config-page">
+    <div className={`config-page ${isDark ? 'theme-dark' : 'theme-light'}`} data-bs-theme={temaAtual}>
       <div className="config-header">
-        <button onClick={() => navigate(-1)} className="btn btn-link text-white p-0 border-0 mb-3 shadow-none">
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
+        >
           <FiArrowLeft size={24} />
         </button>
-        <h1>Central de Ajuda</h1>
+        <h1 className={isDark ? 'text-white' : 'text-dark'}>Central de Ajuda</h1>
         <p>Tire dúvidas e resolva problemas rápidos.</p>
       </div>
 
@@ -85,7 +89,7 @@ const CentralAjuda = () => {
           {faqs.map((faq, index) => (
             <div key={index} className="faq-item">
               <button onClick={() => toggleFaq(index)} className="faq-btn shadow-none">
-                <span style={{color: faqAberto === index ? '#00c982' : '#e5e7eb', fontSize: '13px'}}>{faq.pergunta}</span>
+                <span style={{color: faqAberto === index ? '#00c982' : (isDark ? '#e5e7eb' : '#1e293b'), fontSize: '13px'}}>{faq.pergunta}</span>
                 <FiChevronDown style={{ transform: faqAberto === index ? 'rotate(180deg)' : 'none', transition: '0.3s', color: faqAberto === index ? '#00c982' : '#9ca3af'}} />
               </button>
               <div className={`faq-content ${faqAberto === index ? 'open' : ''}`}>

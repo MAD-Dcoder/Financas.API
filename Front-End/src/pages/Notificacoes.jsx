@@ -3,20 +3,35 @@ import { FiArrowLeft, FiBell, FiMoon, FiPieChart, FiCalendar } from 'react-icons
 import { useNavigate } from 'react-router-dom';
 import './ConfigPages.css';
 
-const Notificacoes = () => {
+const Notificacoes = ({ temaAtual }) => {
   const navigate = useNavigate();
+  const isDark = temaAtual === 'dark';
   const [dailyReminder, setDailyReminder] = useState(true);
   const [weekendMute, setWeekendMute] = useState(false);
   const [limitAlert, setLimitAlert] = useState(true);
   const [monthTurn, setMonthTurn] = useState(true);
 
+  // Toggle com borda visível e fundo limpo (como na foto 2)
+  const getToggleStyle = (checked) => ({
+    cursor: 'pointer',
+    width: '2.5em',
+    height: '1.25em',
+    backgroundColor: checked ? '#10b981' : (isDark ? 'transparent' : '#ffffff'),
+    borderColor: checked ? '#10b981' : (isDark ? 'rgba(255,255,255,0.3)' : '#cbd5e1'),
+    borderWidth: '1px',
+    borderStyle: 'solid'
+  });
+
   return (
-    <div className="config-page">
+    <div className={`config-page ${isDark ? 'theme-dark' : 'theme-light'}`} data-bs-theme={temaAtual}>
       <div className="config-header">
-        <button onClick={() => navigate(-1)} className="btn btn-link text-white p-0 border-0 mb-3 shadow-none">
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
+        >
           <FiArrowLeft size={24} />
         </button>
-        <h1>Notificações</h1>
+        <h1 className={isDark ? 'text-white' : 'text-dark'}>Notificações</h1>
         <p>Configure os lembretes para manter o hábito.</p>
       </div>
 
@@ -39,15 +54,15 @@ const Notificacoes = () => {
                 role="switch" 
                 checked={dailyReminder} 
                 onChange={() => setDailyReminder(!dailyReminder)}
-                style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: dailyReminder ? '#10b981' : 'transparent', borderColor: dailyReminder ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+                style={getToggleStyle(dailyReminder)}
               />
             </div>
           </div>
           
           {dailyReminder && (
-            <div style={{display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px', paddingLeft: '32px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0'}`, paddingTop: '12px', paddingLeft: '32px'}}>
               <span style={{fontSize: '14px', color: '#9ca3af'}}>Horário do alerta</span>
-              <select className="config-select shadow-none" style={{color: '#fff'}}>
+              <select className={`config-select shadow-none ${isDark ? 'text-white' : 'text-dark'}`}>
                 <option value="18:00">18:00</option>
                 <option value="20:00">20:00</option>
                 <option value="22:00">22:00</option>
@@ -71,7 +86,7 @@ const Notificacoes = () => {
               role="switch" 
               checked={weekendMute} 
               onChange={() => setWeekendMute(!weekendMute)}
-              style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: weekendMute ? '#10b981' : 'transparent', borderColor: weekendMute ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+              style={getToggleStyle(weekendMute)}
             />
           </div>
         </div>
@@ -95,7 +110,7 @@ const Notificacoes = () => {
               role="switch" 
               checked={limitAlert} 
               onChange={() => setLimitAlert(!limitAlert)}
-              style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: limitAlert ? '#10b981' : 'transparent', borderColor: limitAlert ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+              style={getToggleStyle(limitAlert)}
             />
           </div>
         </div>
@@ -115,14 +130,14 @@ const Notificacoes = () => {
               role="switch" 
               checked={monthTurn} 
               onChange={() => setMonthTurn(!monthTurn)}
-              style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: monthTurn ? '#10b981' : 'transparent', borderColor: monthTurn ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+              style={getToggleStyle(monthTurn)}
             />
           </div>
         </div>
       </div>
 
       <div className="config-bottom-bar">
-        <button className="config-btn-save">✓ Salvar Preferências</button>
+        <button className="config-btn-save text-white">✓ Salvar Preferências</button>
       </div>
     </div>
   );

@@ -205,7 +205,9 @@
   opacity: 1;
 }
 
-/* Efeito Neon Cobrinha (Falar com o Dev) */
+/* ==========================================
+   EFEITO NEON COBRINHA (Falar com o Dev)
+   ========================================== */
 .neon-border-wrapper {
   position: relative;
   border-radius: 16px;
@@ -213,6 +215,7 @@
   overflow: hidden;
   background: #1c1d21;
   isolation: isolate;
+  display: flex; /* Garante que o fundo preencha bem quando a caixa expandir */
 }
 
 .neon-border-wrapper::before {
@@ -220,26 +223,28 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  /* Forçando um quadrado perfeito muito grande para não distorcer o gradiente */
-  width: 1000px; 
+  /* Quadrado gigante fixo para a rotação ser sempre um círculo exato */
+  width: 1000px;
   height: 1000px;
+  /* CENTRALIZAÇÃO VIA MARGEM: Evita conflito de cálculos no 'transform' */
+  margin-top: -500px;
+  margin-left: -500px;
   background: conic-gradient(
-    transparent, 
-    transparent 60%, 
+    transparent 0%, 
+    transparent 65%, 
     #10b981 75%, 
     #3b82f6 85%, 
-    #f59e0b 100%
+    #f59e0b 98%, 
+    transparent 100% /* Ponta suavizada para disfarçar quinas */
   );
-  /* Centraliza e roda no próprio eixo de forma constante */
-  transform-origin: center;
   animation: spin-neon 3.5s linear infinite;
   z-index: -1;
 }
 
 @keyframes spin-neon {
-  /* O translate mantém a luz centralizada no card independente do tamanho */
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+  /* Animação puramente focada no eixo Z, super leve para o celular */
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .neon-border-content {
@@ -247,6 +252,59 @@
   background-color: #1c1d21;
   border-radius: 14px;
   z-index: 1;
-  height: 100%;
   width: 100%;
+  height: 100%;
+}
+
+
+/* ==========================================
+   SUPORTE AO TEMA CLARO (LIGHT MODE)
+   ========================================== */
+
+/* Quando o app estiver no modo light (herdado do Bootstrap data-bs-theme) */
+[data-bs-theme="light"] .config-page {
+  background-color: #f8fafc !important; 
+  color: #0f172a !important;
+}
+
+[data-bs-theme="light"] .config-header h1 {
+  color: #0f172a !important;
+}
+
+[data-bs-theme="light"] .config-header p,
+[data-bs-theme="light"] .config-text-sub {
+  color: #64748b !important;
+}
+
+[data-bs-theme="light"] .config-card,
+[data-bs-theme="light"] .faq-item,
+[data-bs-theme="light"] .config-grid-card {
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+[data-bs-theme="light"] .config-text-main,
+[data-bs-theme="light"] .faq-btn span {
+  color: #1e293b !important;
+}
+
+[data-bs-theme="light"] .config-select {
+  color: #475569 !important;
+}
+
+[data-bs-theme="light"] .config-divider {
+  background-color: #e2e8f0 !important;
+}
+
+[data-bs-theme="light"] .config-bottom-bar {
+  background: linear-gradient(to top, #f8fafc 70%, transparent) !important;
+}
+
+/* Ajuste da borda neon no light mode para manter contraste */
+[data-bs-theme="light"] .neon-border-wrapper {
+  background: #ffffff !important;
+}
+[data-bs-theme="light"] .neon-border-content {
+  background-color: #ffffff !important;
 }

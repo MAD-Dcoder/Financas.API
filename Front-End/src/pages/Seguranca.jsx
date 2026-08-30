@@ -3,18 +3,33 @@ import { FiArrowLeft, FiSmartphone, FiClock, FiWind, FiTrash2 } from 'react-icon
 import { useNavigate } from 'react-router-dom';
 import './ConfigPages.css';
 
-const Seguranca = () => {
+const Seguranca = ({ temaAtual }) => {
   const navigate = useNavigate();
+  const isDark = temaAtual === 'dark';
   const [useBiometrics, setUseBiometrics] = useState(true);
   const [panicMode, setPanicMode] = useState(false);
 
+  // Toggle com borda visível e fundo limpo (como na foto 2)
+  const getToggleStyle = (checked) => ({
+    cursor: 'pointer',
+    width: '2.5em',
+    height: '1.25em',
+    backgroundColor: checked ? '#10b981' : (isDark ? 'transparent' : '#ffffff'),
+    borderColor: checked ? '#10b981' : (isDark ? 'rgba(255,255,255,0.3)' : '#cbd5e1'),
+    borderWidth: '1px',
+    borderStyle: 'solid'
+  });
+
   return (
-    <div className="config-page">
+    <div className={`config-page ${isDark ? 'theme-dark' : 'theme-light'}`} data-bs-theme={temaAtual}>
       <div className="config-header">
-        <button onClick={() => navigate(-1)} className="btn btn-link text-white p-0 border-0 mb-3 shadow-none">
+        <button 
+          onClick={() => navigate(-1)} 
+          className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
+        >
           <FiArrowLeft size={24} />
         </button>
-        <h1>Segurança e Privacidade</h1>
+        <h1 className={isDark ? 'text-white' : 'text-dark'}>Segurança e Privacidade</h1>
         <p>Controle o acesso e proteja seu histórico.</p>
       </div>
 
@@ -36,7 +51,7 @@ const Seguranca = () => {
               role="switch" 
               checked={useBiometrics} 
               onChange={() => setUseBiometrics(!useBiometrics)}
-              style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: useBiometrics ? '#10b981' : 'transparent', borderColor: useBiometrics ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+              style={getToggleStyle(useBiometrics)}
             />
           </div>
         </div>
@@ -71,7 +86,7 @@ const Seguranca = () => {
               role="switch" 
               checked={panicMode} 
               onChange={() => setPanicMode(!panicMode)}
-              style={{ cursor: 'pointer', width: '2.5em', height: '1.25em', backgroundColor: panicMode ? '#10b981' : 'transparent', borderColor: panicMode ? '#10b981' : 'rgba(255,255,255,0.2)' }}
+              style={getToggleStyle(panicMode)}
             />
           </div>
         </div>
@@ -91,7 +106,7 @@ const Seguranca = () => {
       </div>
 
       <div className="config-bottom-bar">
-        <button className="config-btn-save">✓ Salvar Preferências</button>
+        <button className="config-btn-save text-white">✓ Salvar Preferências</button>
       </div>
     </div>
   );
