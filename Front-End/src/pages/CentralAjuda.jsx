@@ -16,7 +16,7 @@ const CentralAjuda = ({ temaAtual }) => {
   const faqs = [
     {
       pergunta: "O Firmo se conecta ao meu banco?",
-      resposta: "Não. O Firmo utiliza a metodologia de 'Rastreamento Ativo'. Acreditamos que o ato de registrar manualmente cada gasto gera mais consciência financeira."
+      resposta: "Não. O Firmo utiliza a metodologia de \"Rastreamento Ativo\". Acreditamos que o ato de registrar manualmente cada gasto gera mais consciência financeira."
     },
     {
       pergunta: "Meus dados financeiros estão seguros?",
@@ -28,19 +28,19 @@ const CentralAjuda = ({ temaAtual }) => {
     },
     {
       pergunta: "Como lanço compras parceladas?",
-      resposta: "Ao adicionar uma despesa, selecione 'Repetir Lançamento' ou 'Parcelado' e defina os meses. O Firmo alocará o valor automaticamente para os próximos meses."
+      resposta: "Ao adicionar uma despesa, selecione \"Repetir Lançamento\" ou \"Parcelado\" e defina os meses. O Firmo alocará o valor automaticamente para os próximos meses."
     },
     {
       pergunta: "Meu salário cai no dia 5. O que faço?",
-      resposta: "Vá em 'Configurações Globais' e altere o 'Início do Mês Financeiro' para o dia 5. Seus gráficos e limites resetarão nessa data."
+      resposta: "Vá em \"Configurações Globais\" e altere o \"Início do Mês Financeiro\" para o dia 5. Seus gráficos e limites resetarão nessa data."
     },
     {
       pergunta: "Como crio categorias específicas?",
-      resposta: "Acesse a opção 'Gerenciar Categorias' no menu principal. Lá você pode adicionar novas categorias personalizadas, escolher ícones e cores para organizar os gastos do seu jeito."
+      resposta: "Acesse a opção \"Gerenciar Categorias\" no menu principal. Lá você pode adicionar novas categorias personalizadas, escolher ícones e cores para organizar os gastos do seu jeito."
     },
     {
       pergunta: "O que é o Modo Pânico?",
-      resposta: "É um recurso de privacidade. Когда ativado na aba 'Segurança', basta virar a tela do seu celular para baixo para ocultar imediatamente todos os saldos e valores da tela."
+      resposta: "É um recurso de privacidade. Quando ativado na aba \"Segurança\", basta virar a tela do seu celular para baixo para ocultar imediatamente todos os saldos e valores da tela."
     }
   ];
 
