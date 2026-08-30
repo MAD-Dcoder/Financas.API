@@ -301,7 +301,7 @@ function Login({ onLoginSuccess }) {
                   {showHelp && (
                     <div className="text-start mb-3 px-1" style={{ animation: 'fadeIn 0.2s ease-in-out' }}>
                       <p className="text-light opacity-75 mb-1" style={{ fontSize: '0.85rem', lineHeight: '1.4' }}>
-                        O Firmo está em versão Beta. Por segurança, solicite o código com o desenvolvedor.
+                        O Firmo está em versão Beta. Por segurança, solicite o código com a equipe de desenvolvimento.
                       </p>
                       <a 
                         href="https://wa.me/5531997148385?text=Fala%2C%20Matheus%21%20Esqueci%20minha%20senha%20no%20Firmo%20e%20preciso%20da%20Chave%20Mestra%20pra%20recuperar%20meu%20acesso." 

@@ -1,0 +1,252 @@
+.config-page {
+  min-height: 100vh;
+  background-color: #121317;
+  color: #ffffff;
+  padding-bottom: 100px;
+  font-family: sans-serif;
+  position: relative;
+}
+
+.config-header {
+  padding: 40px 24px 24px;
+}
+
+.config-header h1 {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  margin-top: 16px;
+}
+
+.config-header p {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.config-section {
+  padding: 0 24px 32px;
+}
+
+.config-section-title {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.config-card {
+  background-color: #1c1d21;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  width: 100%;
+}
+
+.config-card-danger {
+  border: 1px solid rgba(153, 27, 27, 0.3);
+}
+
+.config-card-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-icon {
+  color: #9ca3af;
+  font-size: 20px;
+}
+
+.config-text-main {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e5e7eb;
+  text-align: left;
+}
+
+.config-text-sub {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: left;
+}
+
+/* Toggle Switch Customizado */
+.config-toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  position: relative;
+  border: none;
+  transition: background-color 0.3s;
+}
+
+.config-toggle.active { background-color: #00c982; }
+.config-toggle.inactive { background-color: #4b5563; }
+
+.config-toggle-circle {
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  transition: transform 0.3s;
+}
+
+.config-toggle.active .config-toggle-circle { transform: translateX(24px); }
+.config-toggle.inactive .config-toggle-circle { transform: translateX(4px); }
+
+/* Outros Elementos */
+.config-select {
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  border: none;
+  outline: none;
+  text-align: right;
+  cursor: pointer;
+}
+
+.config-divider {
+  height: 1px;
+  background-color: #1f2937;
+  margin: 24px 0;
+}
+
+.config-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px;
+  background: linear-gradient(to top, #121317 70%, transparent);
+  pointer-events: none;
+}
+
+.config-btn-save {
+  width: 100%;
+  background-color: #00c982;
+  color: black;
+  font-weight: bold;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px 0 rgba(0,201,130,0.25);
+  pointer-events: auto;
+}
+
+/* Grid e Atalhos da Central de Ajuda */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.config-grid-card {
+  background-color: #1c1d21;
+  padding: 16px;
+  border-radius: 16px;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.icon-circle-blue {
+  width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.2); color: #60a5fa; display: flex; align-items: center; justify-content: center;
+}
+.icon-circle-green {
+  width: 32px; height: 32px; border-radius: 50%; background: rgba(0, 201, 130, 0.2); color: #00c982; display: flex; align-items: center; justify-content: center;
+}
+
+/* FAQ Accordion */
+.faq-item {
+  background-color: #1c1d21;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.faq-btn {
+  width: 100%;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: #e5e7eb;
+  text-align: left;
+}
+.faq-content {
+  padding: 0 16px;
+  font-size: 14px;
+  color: #9ca3af;
+  max-height: 0;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.faq-content.open {
+  max-height: 200px;
+  padding-bottom: 16px;
+  opacity: 1;
+}
+
+/* Efeito Neon Cobrinha (Falar com o Dev) */
+.neon-border-wrapper {
+  position: relative;
+  border-radius: 16px;
+  padding: 2px;
+  overflow: hidden;
+  background: #1c1d21;
+  isolation: isolate;
+}
+
+.neon-border-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Forçando um quadrado perfeito muito grande para não distorcer o gradiente */
+  width: 1000px; 
+  height: 1000px;
+  background: conic-gradient(
+    transparent, 
+    transparent 60%, 
+    #10b981 75%, 
+    #3b82f6 85%, 
+    #f59e0b 100%
+  );
+  /* Centraliza e roda no próprio eixo de forma constante */
+  transform-origin: center;
+  animation: spin-neon 3.5s linear infinite;
+  z-index: -1;
+}
+
+@keyframes spin-neon {
+  /* O translate mantém a luz centralizada no card independente do tamanho */
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.neon-border-content {
+  position: relative;
+  background-color: #1c1d21;
+  border-radius: 14px;
+  z-index: 1;
+  height: 100%;
+  width: 100%;
+}

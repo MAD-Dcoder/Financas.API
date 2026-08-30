@@ -5,7 +5,7 @@ import {
   FiUser, FiSettings, FiShield, FiBell, FiHelpCircle, 
   FiLogOut, FiChevronRight, FiX, FiSun, FiMoon, FiList 
 } from 'react-icons/fi';
-import { getIniciais, getNomeCurto } from '../utils/formatters'; // <-- Importando os formatadores
+import { getIniciais, getNomeCurto } from '../utils/formatters';
 
 function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogout, temaAtual, toggleTema }) {
   const isDark = temaAtual === 'dark';
@@ -35,10 +35,8 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
           </button>
           <div className="rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 mt-3 shadow-lg" 
                 style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #047857 100%)', color: '#fff', fontWeight: 'bold', fontSize: '32px' }}>
-            {/* Aplicando a formatação de 2 iniciais */}
             {getIniciais(usuarioLogado?.nome)}
           </div>
-          {/* Aplicando a formatação de no máximo 2 nomes */}
           <h5 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{getNomeCurto(usuarioLogado?.nome)}</h5>
           <small className={isDark ? "text-light opacity-75" : "text-muted"}>{usuarioLogado?.email}</small>
         </div>
@@ -122,7 +120,14 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
             </div>
 
             {/* SEGURANÇA */}
-            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }}>
+            <div 
+              className="d-flex align-items-center justify-content-between p-3" 
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setShowProfile(false);
+                navigate('/seguranca');
+              }}
+            >
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiShield size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Segurança</span>
@@ -134,7 +139,16 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
           <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>MAIS OPÇÕES</small>
           
           <div className={`card ${isDark ? 'dark-card bg-dark' : 'bg-white'} border-0 mb-4 shadow-sm`} style={{ borderRadius: '1rem' }}>
-            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }}>
+            
+            {/* NOTIFICAÇÕES */}
+            <div 
+              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setShowProfile(false);
+                navigate('/notificacoes');
+              }}
+            >
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiBell size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Notificações</span>
@@ -142,7 +156,15 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
               <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
             </div>
             
-            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }}>
+            {/* CENTRAL DE AJUDA */}
+            <div 
+              className="d-flex align-items-center justify-content-between p-3" 
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                setShowProfile(false);
+                navigate('/central-ajuda');
+              }}
+            >
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiHelpCircle size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Central de Ajuda</span>

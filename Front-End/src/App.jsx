@@ -8,8 +8,11 @@ import Dashboard from './pages/Dashboard';
 import MeusDados from './pages/MeusDados';
 import GerenciarCategorias from './pages/GerenciarCategorias';
 import ConfiguracoesGlobais from './pages/ConfiguracoesGlobais';
-import Welcome from './pages/Welcome'; // Importação da nova tela de Onboarding
-import api from './api/axios'; // Importado para o ping fantasma
+import Welcome from './pages/Welcome'; 
+import Seguranca from './pages/Seguranca'; 
+import Notificacoes from './pages/Notificacoes'; 
+import CentralAjuda from './pages/CentralAjuda'; 
+import api from './api/axios'; 
 
 function App() {
   const { isLoggedIn, handleLoginSuccess } = useContext(AuthContext);
@@ -71,6 +74,12 @@ function App() {
           <Route path="/configuracoes" element={<ConfiguracoesGlobais temaAtual={temaAtual} />} />
           <Route path="/meus-dados" element={<MeusDados temaAtual={temaAtual} />} />
           <Route path="/gerenciar-categorias" element={<GerenciarCategorias temaAtual={temaAtual} />} />
+          
+          {/* Novas rotas adicionadas aqui */}
+          <Route path="/seguranca" element={<Seguranca temaAtual={temaAtual} />} />
+          <Route path="/notificacoes" element={<Notificacoes temaAtual={temaAtual} />} />
+          <Route path="/central-ajuda" element={<CentralAjuda temaAtual={temaAtual} />} />
+          
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </>
       ) : (
