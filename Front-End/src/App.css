@@ -346,3 +346,16 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
+
+/* ==========================================
+   OTIMIZAÇÃO DE PERFORMANCE (iOS / DARK MODE)
+========================================== */
+body, .app-container {
+  transition: background-color 0.35s ease, color 0.35s ease !important;
+  will-change: background-color; /* Avisa a GPU para focar só na cor */
+}
+
+/* Reduz o lag dos cartões e caixas do menu lateral */
+.card, .dark-card {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
