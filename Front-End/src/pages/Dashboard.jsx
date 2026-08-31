@@ -35,6 +35,7 @@ function Dashboard ({ temaAtual, toggleTema }) {
     let vaiFlipar = false;
     let vaiAbrirForm = false;
 
+    // 1. Prioridade para ações diretas (URL Params ou Navigate State)
     if (searchParams.get('acao') === 'novolancamento') {
       vaiAbrirForm = true;
       navigate(location.pathname, { replace: true });
@@ -42,24 +43,33 @@ function Dashboard ({ temaAtual, toggleTema }) {
     else if (location.state?.acaoInicial) {
       if (location.state.acaoInicial === 'abrir_gaveta_lancamento') {
         vaiAbrirForm = true;
+        navigate(location.pathname, { replace: true, state: {} });
       } else if (location.state.acaoInicial === 'flip_cartoes') {
         vaiFlipar = true;
+        navigate(location.pathname, { replace: true, state: {} });
       }
-      window.history.replaceState({}, document.title);
     }
     else {
-      const configs = localStorage.getItem('firmo_configs');
-      if (configs) {
-        try {
-          const { telaInicialPadrao } = JSON.parse(configs);
-          if (telaInicialPadrao === 'cartoes') {
-            vaiFlipar = true;
-          } else if (telaInicialPadrao === 'novo_lancamento') {
-            vaiAbrirForm = true;
+      // 2. Trava de Sessão: Executa a tela inicial padrão APENAS no primeiro acesso do login
+      const jaIniciouSessao = sessionStorage.getItem('firmo_startup_executado');
+      
+      if (!jaIniciouSessao) {
+        const configs = localStorage.getItem('firmo_configs');
+        if (configs) {
+          try {
+            const { telaInicialPadrao } = JSON.parse(configs);
+            // Se for "dashboard", ele apenas não faz nada e fica na tela inicial nativa.
+            if (telaInicialPadrao === 'cartoes') {
+              vaiFlipar = true;
+            } else if (telaInicialPadrao === 'novo_lancamento') {
+              vaiAbrirForm = true;
+            }
+          } catch (e) {
+            console.error("Erro ao ler configs iniciais", e);
           }
-        } catch (e) {
-          console.error("Erro ao ler configs iniciais", e);
         }
+        // Marca na memória da sessão que o app já processou a tela inicial
+        sessionStorage.setItem('firmo_startup_executado', 'true');
       }
     }
 
@@ -72,6 +82,35 @@ function Dashboard ({ temaAtual, toggleTema }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
+
+  useEffect(() => {
+    if (location.state?.acaoInicial === 'abrir_gaveta_config_cartao_existente' && dash.meusCartoes && dash.meusCartoes.length > 0) {
+      
+      const cartaoIdAlvo = location.state.cartaoIdAlvo;
+      const indexAlvo = dash.meusCartoes.findIndex(c => c.id === cartaoIdAlvo);
+
+      if (indexAlvo !== -1) {
+        dash.setIsCardFlipped(true); 
+        dash.setCartaoAtivoIndex(indexAlvo); 
+
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          const el = document.getElementById(`cartao-idx-${indexAlvo}`);
+          if (el && dash.carrosselRef.current) {
+            dash.carrosselRef.current.scrollTo({
+              left: el.offsetLeft - (dash.carrosselRef.current.offsetWidth - el.offsetWidth) / 2,
+              behavior: 'instant'
+            });
+          }
+
+          dash.setShowCardSettings(true);
+        }, 300);
+
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state?.acaoInicial, location.state?.cartaoIdAlvo, dash.meusCartoes, navigate, location.pathname, dash]);
 
   const obterIconeCategoria = (categoria) => {
     switch (categoria) {
@@ -266,7 +305,19 @@ function Dashboard ({ temaAtual, toggleTema }) {
             abaAtiva={dash.isCardFlipped ? 'cartoes' : 'home'} 
           />
           
-          <OffcanvasMenu showProfile={dash.showProfile} setShowProfile={dash.setShowProfile} usuarioLogado={dash.usuarioLogado} handleLogout={() => { dash.setShowProfile(false); dash.handleLogout(); }} temaAtual={temaAtual} toggleTema={toggleTema} />
+          <OffcanvasMenu 
+            showProfile={dash.showProfile} 
+            setShowProfile={dash.setShowProfile} 
+            usuarioLogado={dash.usuarioLogado} 
+            handleLogout={() => { 
+              // 🟢 A MÁGICA ACONTECE AQUI: Limpa a memória de inicialização ao deslogar
+              sessionStorage.removeItem('firmo_startup_executado'); 
+              dash.setShowProfile(false); 
+              dash.handleLogout(); 
+            }} 
+            temaAtual={temaAtual} 
+            toggleTema={toggleTema} 
+          />
           
           <CardSettings 
             showCardSettings={dash.showCardSettings} setShowCardSettings={dash.setShowCardSettings} 

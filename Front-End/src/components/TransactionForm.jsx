@@ -150,7 +150,7 @@ function TransactionForm({
           dataTransacao: dataHoraLocal 
         });
         await carregarTransacoes();
-        fecharModal(); // Sempre fecha o modal quando for uma edição
+        fecharModal(); 
       } else {
         for (let i = 0; i < parcelas; i++) {
           const dataParcela = new Date(`${dataInput}T12:00:00`);
@@ -175,7 +175,6 @@ function TransactionForm({
         }
         await carregarTransacoes();
 
-        // INTEGRAÇÃO DA CONFIGURAÇÃO: Lançamento Contínuo
         const configsSalvas = localStorage.getItem('firmo_configs');
         let isLancamentoContinuo = false;
         
@@ -188,13 +187,11 @@ function TransactionForm({
         }
 
         if (isLancamentoContinuo) {
-          // Limpa apenas os dados específicos para o próximo lançamento fluir mais rápido
           setValorInput('');
           setTituloInput('');
           setCategoriaInput('');
           setObservacaoInput('');
           setEhRecorrente(false);
-          // Mantém: Data, Forma de Pagamento e Cartão (facilita muito pra lançar recibos em lote!)
         } else {
           fecharModal();
         }
@@ -212,6 +209,7 @@ function TransactionForm({
     setTransacaoParaEditar(null);
   };
 
+  // ESTILOS DINÂMICOS
   const inputStyleClass = isDark 
     ? "form-control bg-dark border-secondary text-white shadow-none" 
     : "form-control bg-light border-light-subtle text-dark shadow-none";
@@ -219,6 +217,19 @@ function TransactionForm({
   const selectStyleClass = isDark 
     ? "form-select bg-dark border-secondary text-white shadow-none" 
     : "form-select bg-light border-light-subtle text-dark shadow-none";
+
+  const getToggleStyle = (checked) => ({
+    cursor: 'pointer',
+    width: '2.5em',
+    height: '1.25em',
+    backgroundColor: checked ? '#10b981' : (isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1'),
+    borderColor: checked ? '#10b981' : (isDark ? 'rgba(255,255,255,0.3)' : '#cbd5e1'),
+    backgroundImage: checked 
+      ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e\")"
+      : (isDark 
+          ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(255,255,255,0.5)'/%3e%3c/svg%3e\")" 
+          : "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e\")")
+  });
 
   return (
     <Offcanvas 
@@ -298,9 +309,7 @@ function TransactionForm({
                   maxLength={30}
                   style={{ paddingRight: '40px' }} 
                 />
-                <span 
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#6c757d', pointerEvents: 'none' }}
-                >
+                <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', color: '#6c757d', pointerEvents: 'none' }}>
                   {tituloInput.length}/30
                 </span>
               </div>
@@ -308,19 +317,12 @@ function TransactionForm({
             
             <div className="col-6">
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Categoria</label>
-              <select 
-                className={selectStyleClass}
-                value={categoriaInput}
-                onChange={(e) => setCategoriaInput(e.target.value)}
-              >
+              <select className={selectStyleClass} value={categoriaInput} onChange={(e) => setCategoriaInput(e.target.value)}>
                 <option value="" disabled>Selecione...</option>
-                {/* RENDERIZAÇÃO DINÂMICA DAS CATEGORIAS DA API */}
                 {listaCategorias
-                  .filter(cat => cat.tipo === tipoTransacao) // Filtra pelo tipo selecionado no topo
+                  .filter(cat => cat.tipo === tipoTransacao) 
                   .map(cat => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nome}
-                    </option>
+                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
                   ))
                 }
               </select>
@@ -330,11 +332,7 @@ function TransactionForm({
           <div className="row g-2">
             <div className="col-6">
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Forma de Pagamento</label>
-              <select 
-                className={selectStyleClass}
-                value={pagamentoInput}
-                onChange={(e) => setPagamentoInput(e.target.value)}
-              >
+              <select className={selectStyleClass} value={pagamentoInput} onChange={(e) => setPagamentoInput(e.target.value)}>
                 <option value="" disabled>Selecione...</option>
                 <option value="Pix">Pix</option>
                 <option value="Crédito">Cartão de Crédito</option>
@@ -345,24 +343,14 @@ function TransactionForm({
             </div>
             <div className="col-6">
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Data</label>
-              <input 
-                type="date" 
-                className={inputStyleClass} 
-                value={dataInput}
-                onChange={(e) => setDataInput(e.target.value)}
-              />
+              <input type="date" className={inputStyleClass} value={dataInput} onChange={(e) => setDataInput(e.target.value)} />
             </div>
           </div>
 
-          {/* SELETOR DE CARTÃO DINÂMICO */}
           {pagamentoInput === 'Crédito' && (
             <div>
               <label className={`form-label small mb-1 ${isDark ? 'text-light opacity-75' : 'text-secondary fw-semibold'}`}>Escolher Cartão</label>
-              <select 
-                className={selectStyleClass}
-                value={cartaoIdInput}
-                onChange={(e) => setCartaoIdInput(e.target.value)}
-              >
+              <select className={selectStyleClass} value={cartaoIdInput} onChange={(e) => setCartaoIdInput(e.target.value)}>
                 <option value="" disabled>Selecione o cartão...</option>
                 {meusCartoes.map((cartao) => (
                   <option key={cartao.id} value={cartao.id}>
@@ -385,16 +373,14 @@ function TransactionForm({
                 maxLength={255}
                 style={{ paddingBottom: '20px' }} 
               />
-              <span 
-                style={{ position: 'absolute', right: '10px', bottom: '8px', fontSize: '10px', color: '#6c757d', pointerEvents: 'none' }}
-              >
+              <span style={{ position: 'absolute', right: '10px', bottom: '8px', fontSize: '10px', color: '#6c757d', pointerEvents: 'none' }}>
                 {observacaoInput.length}/255
               </span>
             </div>
           </div>
         </div>
 
-        {/* SWITCHES */}
+        {/* SWITCHES - Agora com as cores padronizadas */}
         {isDataInputFuture(dataInput) && (
           <div className="form-check form-switch d-flex align-items-center justify-content-between px-0 mb-3">
             <label className={`form-check-label ms-0 ${isDark ? 'text-light opacity-75' : 'text-dark'}`} htmlFor="statusPago">Lançamento já foi pago/recebido?</label>
@@ -403,7 +389,7 @@ function TransactionForm({
               type="checkbox" 
               role="switch" 
               id="statusPago" 
-              style={{ width: '45px', height: '24px', cursor: 'pointer' }}
+              style={getToggleStyle(pagoInput)}
               checked={pagoInput}
               onChange={(e) => setPagoInput(e.target.checked)}
             />
@@ -417,7 +403,7 @@ function TransactionForm({
             type="checkbox" 
             role="switch" 
             id="recorrente" 
-            style={{ width: '45px', height: '24px', cursor: editandoId ? 'not-allowed' : 'pointer' }}
+            style={{ ...getToggleStyle(ehRecorrente), cursor: editandoId ? 'not-allowed' : 'pointer' }}
             checked={ehRecorrente}
             onChange={(e) => setEhRecorrente(e.target.checked)}
             disabled={!!editandoId} 
@@ -432,7 +418,7 @@ function TransactionForm({
               type="checkbox" 
               role="switch" 
               id="toggleTotal" 
-              style={{ width: '45px', height: '24px', cursor: 'pointer' }}
+              style={getToggleStyle(tipoValorParcela === 'total')}
               checked={tipoValorParcela === 'total'}
               onChange={(e) => setTipoValorParcela(e.target.checked ? 'total' : 'parcela')}
             />

@@ -3,7 +3,7 @@ import { Offcanvas } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { 
   FiUser, FiSettings, FiShield, FiBell, FiHelpCircle, 
-  FiLogOut, FiChevronRight, FiX, FiSun, FiMoon, FiList 
+  FiLogOut, FiChevronRight, FiX, FiSun, FiMoon, FiList, FiTarget 
 } from 'react-icons/fi';
 import { getIniciais, getNomeCurto } from '../utils/formatters';
 
@@ -25,7 +25,6 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
     >
       <Offcanvas.Body className="p-0 d-flex flex-column">
         
-        {/* CABEÇALHO DO PERFIL */}
         <div className="p-4 text-center position-relative" style={{ background: isDark ? 'linear-gradient(to bottom, rgba(16, 185, 129, 0.15), transparent)' : 'linear-gradient(to bottom, rgba(16, 185, 129, 0.10), transparent)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}` }}>
           <button 
             className={`btn btn-link position-absolute top-0 end-0 mt-3 me-2 opacity-50 shadow-none border-0 ${isDark ? 'text-white' : 'text-dark'}`}
@@ -40,94 +39,19 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
           <h5 className={`fw-bold mb-1 ${isDark ? 'text-white' : 'text-dark'}`}>{getNomeCurto(usuarioLogado?.nome)}</h5>
           <small className={isDark ? "text-light opacity-75" : "text-muted"}>{usuarioLogado?.email}</small>
         </div>
-        
 
-        {/* LISTA DE OPÇÕES */}
         <div className="px-3 pt-4 flex-grow-1 overflow-auto">
           
           <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>MINHA CONTA</small>
-          
           <div className={`card ${isDark ? 'dark-card bg-dark' : 'bg-white'} border-0 mb-4 shadow-sm`} style={{ borderRadius: '1rem' }}>
-            
-            {/* OPÇÃO: MEUS DADOS */}
-            <div 
-              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/meus-dados');
-              }}
-            >
+            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/meus-dados'); }}>
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiUser size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Meus Dados</span>
               </div>
               <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
             </div>
-
-            {/* APARÊNCIA */}
-            <div 
-              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
-              style={{ cursor: 'pointer' }}
-              onClick={toggleTema}
-            >
-              <div className="d-flex align-items-center gap-3">
-                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-warning' : 'bg-light text-warning'}`}>
-                  {isDark ? <FiMoon size={18} /> : <FiSun size={18} />}
-                </div>
-                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Aparência</span>
-              </div>
-              <div className="form-check form-switch m-0 p-0 d-flex align-items-center">
-                <input 
-                  className="form-check-input ms-0" type="checkbox" role="switch" checked={!isDark} readOnly 
-                  style={{ cursor: 'pointer', width: '2.5em', height: '1.25em' }}
-                />
-              </div>
-            </div>
-
-            {/* CONFIGURAÇÕES GLOBAIS */}
-            <div 
-              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/configuracoes');
-              }}
-            >
-              <div className="d-flex align-items-center gap-3">
-                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiSettings size={18} /></div>
-                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Configurações Globais</span>
-              </div>
-              <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
-            </div>
-
-            {/* OPÇÃO: GERENCIAR CATEGORIAS */}
-            <div 
-              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/gerenciar-categorias');
-              }}
-            >
-              <div className="d-flex align-items-center gap-3">
-                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}>
-                  <FiList size={18} />
-                </div>
-                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Gerenciar Categorias</span>
-              </div>
-              <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
-            </div>
-
-            {/* SEGURANÇA */}
-            <div 
-              className="d-flex align-items-center justify-content-between p-3" 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/seguranca');
-              }}
-            >
+            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/seguranca'); }}>
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiShield size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Segurança</span>
@@ -136,35 +60,71 @@ function OffcanvasMenu({ showProfile, setShowProfile, usuarioLogado, handleLogou
             </div>
           </div>
 
-          <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>MAIS OPÇÕES</small>
-          
+          <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>GESTÃO & PLANEJAMENTO</small>
           <div className={`card ${isDark ? 'dark-card bg-dark' : 'bg-white'} border-0 mb-4 shadow-sm`} style={{ borderRadius: '1rem' }}>
-            
-            {/* NOTIFICAÇÕES */}
-            <div 
-              className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/notificacoes');
-              }}
-            >
+            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/gerenciar-categorias'); }}>
+              <div className="d-flex align-items-center gap-3">
+                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiList size={18} /></div>
+                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Gerenciar Categorias</span>
+              </div>
+              <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
+            </div>
+            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/metas'); }}>
+              <div className="d-flex align-items-center gap-3">
+                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-success bg-opacity-25 text-success' : 'bg-success bg-opacity-10 text-success'}`}><FiTarget size={18} /></div>
+                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Limites & Metas</span>
+              </div>
+              <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
+            </div>
+          </div>
+
+          <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>PREFERÊNCIAS</small>
+          <div className={`card ${isDark ? 'dark-card bg-dark' : 'bg-white'} border-0 mb-4 shadow-sm`} style={{ borderRadius: '1rem' }}>
+            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }} onClick={toggleTema}>
+              <div className="d-flex align-items-center gap-3">
+                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-warning' : 'bg-light text-warning'}`}>
+                  {isDark ? <FiMoon size={18} /> : <FiSun size={18} />}
+                </div>
+                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Aparência</span>
+              </div>
+              <div className="form-check form-switch m-0 p-0 d-flex align-items-center">
+                {/* 🟢 Toggle ajustado para assumir as cores oficiais */}
+                <input 
+                  className="form-check-input ms-0 shadow-none" 
+                  type="checkbox" 
+                  role="switch" 
+                  checked={!isDark} 
+                  readOnly 
+                  style={{ 
+                    cursor: 'pointer', 
+                    width: '2.5em', 
+                    height: '1.25em',
+                    backgroundColor: !isDark ? '#10b981' : 'transparent',
+                    borderColor: !isDark ? '#10b981' : 'rgba(255,255,255,0.3)',
+                    backgroundImage: !isDark ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e\")" : "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(255,255,255,0.5)'/%3e%3c/svg%3e\")"
+                  }} 
+                />
+              </div>
+            </div>
+            <div className={`d-flex align-items-center justify-content-between p-3 border-bottom ${isDark ? 'border-secondary border-opacity-25' : 'border-light'}`} style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/configuracoes'); }}>
+              <div className="d-flex align-items-center gap-3">
+                <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiSettings size={18} /></div>
+                <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Configurações Globais</span>
+              </div>
+              <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
+            </div>
+            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/notificacoes'); }}>
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiBell size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Notificações</span>
               </div>
               <FiChevronRight className={`${isDark ? 'text-light' : 'text-dark'} opacity-50`} />
             </div>
-            
-            {/* CENTRAL DE AJUDA */}
-            <div 
-              className="d-flex align-items-center justify-content-between p-3" 
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                setShowProfile(false);
-                navigate('/central-ajuda');
-              }}
-            >
+          </div>
+
+          <small className={`${isDark ? 'text-light' : 'text-dark'} opacity-50 fw-bold ms-2 mb-2 d-block`} style={{ fontSize: '11px', letterSpacing: '1px' }}>SUPORTE</small>
+          <div className={`card ${isDark ? 'dark-card bg-dark' : 'bg-white'} border-0 mb-4 shadow-sm`} style={{ borderRadius: '1rem' }}>
+            <div className="d-flex align-items-center justify-content-between p-3" style={{ cursor: 'pointer' }} onClick={() => { setShowProfile(false); navigate('/central-ajuda'); }}>
               <div className="d-flex align-items-center gap-3">
                 <div className={`p-2 rounded-circle d-flex align-items-center justify-content-center ${isDark ? 'bg-secondary bg-opacity-25 text-white' : 'bg-light text-dark'}`}><FiHelpCircle size={18} /></div>
                 <span className={isDark ? "text-white" : "text-dark"} style={{ fontSize: '14px' }}>Central de Ajuda</span>

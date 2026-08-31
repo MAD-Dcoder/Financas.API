@@ -1,15 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiSmartphone, FiClock, FiWind, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import './ConfigPages.css';
+import toast from 'react-hot-toast'; // Opcional, para manter o padrão de notificação
 
 const Seguranca = ({ temaAtual }) => {
   const navigate = useNavigate();
   const isDark = temaAtual === 'dark';
-  const [useBiometrics, setUseBiometrics] = useState(true);
-  const [panicMode, setPanicMode] = useState(false);
+  
+  // 1. Definimos o estado inicial
+  const initialState = {
+    useBiometrics: true,
+    panicMode: false,
+    autoLock: '0'
+  };
 
-  // Toggle com borda visível e fundo limpo (como na foto 2)
+  // 2. Criamos o estado do formulário centralizado
+  const [formState, setFormState] = useState(initialState);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // 3. Verifica alterações para exibir ou ocultar o botão
+  useEffect(() => {
+    const isDifferent = JSON.stringify(initialState) !== JSON.stringify(formState);
+    setHasChanges(isDifferent);
+  }, [formState]);
+
+  const handleChange = (field, value) => {
+    setFormState(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    // Simula salvamento na API
+    toast.success('Preferências de segurança atualizadas!');
+    
+    // Transforma o estado atual no novo estado inicial, o que esconde o botão automaticamente
+    // setInitialState(formState); // Se você usar setInitialState dinâmico, defina-o no useState.
+    // Como aqui é um mockup sem API conectada, apenas forçamos o hasChanges para false:
+    setHasChanges(false);
+  };
+
   const getToggleStyle = (checked) => ({
     cursor: 'pointer',
     width: '2.5em',
@@ -49,9 +78,9 @@ const Seguranca = ({ temaAtual }) => {
               className="form-check-input ms-0 shadow-none" 
               type="checkbox" 
               role="switch" 
-              checked={useBiometrics} 
-              onChange={() => setUseBiometrics(!useBiometrics)}
-              style={getToggleStyle(useBiometrics)}
+              checked={formState.useBiometrics} 
+              onChange={() => handleChange('useBiometrics', !formState.useBiometrics)}
+              style={getToggleStyle(formState.useBiometrics)}
             />
           </div>
         </div>
@@ -61,7 +90,11 @@ const Seguranca = ({ temaAtual }) => {
             <FiClock className="config-icon" />
             <span className="config-text-main">Bloqueio Automático</span>
           </div>
-          <select className="config-select shadow-none">
+          <select 
+            className="config-select shadow-none"
+            value={formState.autoLock}
+            onChange={(e) => handleChange('autoLock', e.target.value)}
+          >
             <option value="0">Imediato</option>
             <option value="1">Após 1 minuto</option>
             <option value="5">Após 5 minutos</option>
@@ -84,9 +117,9 @@ const Seguranca = ({ temaAtual }) => {
               className="form-check-input ms-0 shadow-none" 
               type="checkbox" 
               role="switch" 
-              checked={panicMode} 
-              onChange={() => setPanicMode(!panicMode)}
-              style={getToggleStyle(panicMode)}
+              checked={formState.panicMode} 
+              onChange={() => handleChange('panicMode', !formState.panicMode)}
+              style={getToggleStyle(formState.panicMode)}
             />
           </div>
         </div>
@@ -94,7 +127,7 @@ const Seguranca = ({ temaAtual }) => {
         <div className="config-divider"></div>
 
         <p className="config-section-title text-danger">Zona de Perigo</p>
-        <button className="config-card config-card-danger bg-transparent">
+        <button className="config-card config-card-danger bg-transparent" onClick={() => toast.error('Ação de apagar dados bloqueada temporariamente.')}>
           <div className="config-card-left">
             <FiTrash2 className="config-icon text-danger" />
             <div>
@@ -105,9 +138,12 @@ const Seguranca = ({ temaAtual }) => {
         </button>
       </div>
 
-      <div className="config-bottom-bar">
-        <button className="config-btn-save text-white">✓ Salvar Preferências</button>
-      </div>
+      {/* 4. Renderização Condicional */}
+      {hasChanges && (
+        <div className="config-bottom-bar">
+          <button className="config-btn-save text-white" onClick={handleSave}>✓ Salvar Preferências</button>
+        </div>
+      )}
     </div>
   );
 };

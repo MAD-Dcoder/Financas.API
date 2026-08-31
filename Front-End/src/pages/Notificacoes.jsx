@@ -1,17 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiBell, FiMoon, FiPieChart, FiCalendar } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import './ConfigPages.css';
 
 const Notificacoes = ({ temaAtual }) => {
   const navigate = useNavigate();
   const isDark = temaAtual === 'dark';
-  const [dailyReminder, setDailyReminder] = useState(true);
-  const [weekendMute, setWeekendMute] = useState(false);
-  const [limitAlert, setLimitAlert] = useState(true);
-  const [monthTurn, setMonthTurn] = useState(true);
+  
+  // 1. Unificamos os estados
+  const initialState = {
+    dailyReminder: true,
+    reminderTime: '18:00', // Captura o valor do select também
+    weekendMute: false,
+    limitAlert: true,
+    monthTurn: true
+  };
 
-  // Toggle com borda visível e fundo limpo (como na foto 2)
+  const [formState, setFormState] = useState(initialState);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // 2. Compara em tempo real
+  useEffect(() => {
+    const isDifferent = JSON.stringify(initialState) !== JSON.stringify(formState);
+    setHasChanges(isDifferent);
+  }, [formState]);
+
+  const handleChange = (field, value) => {
+    setFormState(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    toast.success('Notificações atualizadas com sucesso!');
+    // 3. Reseta o estado para ocultar o botão
+    setHasChanges(false);
+  };
+
   const getToggleStyle = (checked) => ({
     cursor: 'pointer',
     width: '2.5em',
@@ -39,7 +63,7 @@ const Notificacoes = ({ temaAtual }) => {
         <p className="config-section-title">Rotina de Lançamentos</p>
         
         <div className="config-card" style={{flexDirection: 'column', alignItems: 'stretch'}}>
-          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: dailyReminder ? '16px' : '0'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: formState.dailyReminder ? '16px' : '0'}}>
             <div className="config-card-left">
               <FiBell className="config-icon" />
               <div>
@@ -52,17 +76,21 @@ const Notificacoes = ({ temaAtual }) => {
                 className="form-check-input ms-0 shadow-none" 
                 type="checkbox" 
                 role="switch" 
-                checked={dailyReminder} 
-                onChange={() => setDailyReminder(!dailyReminder)}
-                style={getToggleStyle(dailyReminder)}
+                checked={formState.dailyReminder} 
+                onChange={() => handleChange('dailyReminder', !formState.dailyReminder)}
+                style={getToggleStyle(formState.dailyReminder)}
               />
             </div>
           </div>
           
-          {dailyReminder && (
+          {formState.dailyReminder && (
             <div style={{display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.05)' : '#e2e8f0'}`, paddingTop: '12px', paddingLeft: '32px'}}>
               <span style={{fontSize: '14px', color: '#9ca3af'}}>Horário do alerta</span>
-              <select className={`config-select shadow-none ${isDark ? 'text-white' : 'text-dark'}`}>
+              <select 
+                className={`config-select shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
+                value={formState.reminderTime}
+                onChange={(e) => handleChange('reminderTime', e.target.value)}
+              >
                 <option value="18:00">18:00</option>
                 <option value="20:00">20:00</option>
                 <option value="22:00">22:00</option>
@@ -84,9 +112,9 @@ const Notificacoes = ({ temaAtual }) => {
               className="form-check-input ms-0 shadow-none" 
               type="checkbox" 
               role="switch" 
-              checked={weekendMute} 
-              onChange={() => setWeekendMute(!weekendMute)}
-              style={getToggleStyle(weekendMute)}
+              checked={formState.weekendMute} 
+              onChange={() => handleChange('weekendMute', !formState.weekendMute)}
+              style={getToggleStyle(formState.weekendMute)}
             />
           </div>
         </div>
@@ -108,9 +136,9 @@ const Notificacoes = ({ temaAtual }) => {
               className="form-check-input ms-0 shadow-none" 
               type="checkbox" 
               role="switch" 
-              checked={limitAlert} 
-              onChange={() => setLimitAlert(!limitAlert)}
-              style={getToggleStyle(limitAlert)}
+              checked={formState.limitAlert} 
+              onChange={() => handleChange('limitAlert', !formState.limitAlert)}
+              style={getToggleStyle(formState.limitAlert)}
             />
           </div>
         </div>
@@ -128,17 +156,20 @@ const Notificacoes = ({ temaAtual }) => {
               className="form-check-input ms-0 shadow-none" 
               type="checkbox" 
               role="switch" 
-              checked={monthTurn} 
-              onChange={() => setMonthTurn(!monthTurn)}
-              style={getToggleStyle(monthTurn)}
+              checked={formState.monthTurn} 
+              onChange={() => handleChange('monthTurn', !formState.monthTurn)}
+              style={getToggleStyle(formState.monthTurn)}
             />
           </div>
         </div>
       </div>
 
-      <div className="config-bottom-bar">
-        <button className="config-btn-save text-white">✓ Salvar Preferências</button>
-      </div>
+      {/* 4. Renderização Condicional */}
+      {hasChanges && (
+        <div className="config-bottom-bar">
+          <button className="config-btn-save text-white" onClick={handleSave}>✓ Salvar Preferências</button>
+        </div>
+      )}
     </div>
   );
 };
