@@ -2,29 +2,25 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import api from '../api/axios';
-import { FiArrowLeft, FiPieChart, FiBell, FiPlus, FiTarget, FiLock, FiCheck, FiHelpCircle, FiCreditCard, FiSliders, FiEdit3, FiCalendar } from 'react-icons/fi';
+import { FiArrowLeft, FiPieChart, FiBell, FiPlus, FiTarget, FiLock, FiCheck, FiHelpCircle, FiCreditCard } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import CardControleLimite from '../components/CardControleLimite';
 
 function LimitesMetas({ temaAtual }) {
   const navigate = useNavigate();
   const { usuarioLogado } = useContext(AuthContext);
   const isDark = temaAtual === 'dark'; 
   
-  const initialState = {
-    limiteMensal: '',
-    alertaPorcentagem: '',
-    travaAtiva: false,
-  };
-
+  const initialState = { limiteMensal: '', alertaPorcentagem: '', travaAtiva: false };
   const [formState, setFormState] = useState(initialState);
   const [savedConfig, setSavedConfig] = useState(initialState);
   const [hasChanges, setHasChanges] = useState(false);
   const [ajudaAtiva, setAjudaAtiva] = useState(null); 
-
   const [cartoes, setCartoes] = useState([]);
   const [transacoes, setTransacoes] = useState([]);
   const [limitesCartoes, setLimitesCartoes] = useState({}); 
   const [editandoLimiteId, setEditandoLimiteId] = useState(null);
+  const [processandoPagamento, setProcessandoPagamento] = useState(null);
 
   useEffect(() => {
     if (usuarioLogado?.id) {
@@ -34,80 +30,57 @@ function LimitesMetas({ temaAtual }) {
           const parsed = JSON.parse(configSalva);
           setFormState(parsed);
           setSavedConfig(parsed);
-        } catch (e) {
-          console.error("Erro ao ler LocalStorage", e);
-        }
+        } catch (e) { console.error("Erro", e); }
       }
     }
   }, [usuarioLogado?.id]);
 
-  useEffect(() => {
-    async function carregarDadosGerais() {
-      if (!usuarioLogado?.id) return;
-      try {
-        const [resCartoes, resTrans] = await Promise.all([
-          api.get(`/Cartoes/usuario/${usuarioLogado.id}`),
-          api.get(`/Transacoes/usuario/${usuarioLogado.id}`)
-        ]);
+  const carregarDadosGerais = async () => {
+    if (!usuarioLogado?.id) return;
+    try {
+      const [resCartoes, resTrans] = await Promise.all([
+        api.get(`/Cartoes/usuario/${usuarioLogado.id}`),
+        api.get(`/Transacoes/usuario/${usuarioLogado.id}`)
+      ]);
 
-        const listaCartoes = resCartoes.data || [];
-        setCartoes(listaCartoes);
+      setCartoes(resCartoes.data || []);
 
-        const transacoesNormalizadas = (resTrans.data || []).map(t => {
-          const dataStr = t.dataTransacao || t.DataTransacao || t.data || t.Data || new Date().toISOString();
-          const dataQuebrada = dataStr.split('T');
-          const dataBruta = dataQuebrada[0].split('-');
-          const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
-          
-          return {
-             ...t,
-             dataStrFormatada: dataCerta,
-             dataObj: dataBruta.length === 3 ? new Date(dataBruta[0], dataBruta[1] - 1, dataBruta[2]) : new Date(2000, 0, 1),
-             valorNumerico: Number(t.valor || t.Valor) || 0,
-             cartaoIdNumerico: Number(t.cartaoId || t.CartaoId),
-             tipoStr: (t.tipo || t.Tipo || '').toLowerCase(),
-             isPago: t.pago === true || t.Pago === true || t.pago === 1 || t.Pago === 1
-          };
-        });
-        
-        setTransacoes(transacoesNormalizadas);
+      const transacoesNormalizadas = (resTrans.data || []).map(t => {
+        const dataStr = t.dataTransacao || t.DataTransacao || t.data || t.Data || new Date().toISOString();
+        const dataQuebrada = dataStr.split('T');
+        const dataBruta = dataQuebrada[0].split('-');
+        const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
+        return {
+           ...t,
+           dataStrFormatada: dataCerta,
+           dataObj: dataBruta.length === 3 ? new Date(dataBruta[0], dataBruta[1] - 1, dataBruta[2]) : new Date(2000, 0, 1),
+           valorNumerico: Number(t.valor || t.Valor) || 0,
+           cartaoIdNumerico: Number(t.cartaoId || t.CartaoId),
+           tipoStr: (t.tipo || t.Tipo || '').toLowerCase(),
+           isPago: t.pago === true || t.Pago === true || t.pago === 1 || t.Pago === 1
+        };
+      });
+      
+      setTransacoes(transacoesNormalizadas);
+      const limitesIniciais = {};
+      (resCartoes.data || []).forEach(c => limitesIniciais[c.id] = Number(c.limiteTotal || c.LimiteTotal) || 0);
+      setLimitesCartoes(limitesIniciais);
+    } catch (error) { console.error("Erro ao carregar", error); }
+  };
 
-        const limitesIniciais = {};
-        listaCartoes.forEach(c => {
-          limitesIniciais[c.id] = Number(c.limiteTotal || c.LimiteTotal) || 0;
-        });
-        setLimitesCartoes(limitesIniciais);
-      } catch (error) {
-        console.error("Erro ao carregar dados de limites e cartões:", error);
-      }
-    }
-    carregarDadosGerais();
-  }, [usuarioLogado?.id]);
+  useEffect(() => { carregarDadosGerais(); }, [usuarioLogado?.id]);
 
   useEffect(() => {
-    const formMudou = JSON.stringify(formState) !== JSON.stringify(savedConfig);
-    setHasChanges(formMudou);
+    setHasChanges(JSON.stringify(formState) !== JSON.stringify(savedConfig));
   }, [formState, savedConfig]);
 
-  const handleToggleTrava = () => {
-    setFormState(prev => ({ ...prev, travaAtiva: !prev.travaAtiva }));
-  };
-
+  const handleToggleTrava = () => setFormState(prev => ({ ...prev, travaAtiva: !prev.travaAtiva }));
+  
   const handleChangeLimite = (e) => {
     const apenasNumeros = e.target.value.replace(/\D/g, ''); 
-    if (!apenasNumeros) {
-      setFormState(prev => ({ ...prev, limiteMensal: '' }));
-      return;
-    }
-    const valorFormatado = (parseInt(apenasNumeros, 10) / 100).toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+    if (!apenasNumeros) return setFormState(prev => ({ ...prev, limiteMensal: '' }));
+    const valorFormatado = (parseInt(apenasNumeros, 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     setFormState(prev => ({ ...prev, limiteMensal: valorFormatado }));
-  };
-
-  const handleSliderCartaoChange = (cartaoId, novoLimite) => {
-    setLimitesCartoes(prev => ({ ...prev, [cartaoId]: Number(novoLimite) }));
   };
 
   const handleSave = async () => {
@@ -119,36 +92,16 @@ function LimitesMetas({ temaAtual }) {
           await api.put(`/Cartoes/${cartao.id}`, { ...cartao, limiteTotal: novoLimite });
         }
       }
-      
       if (usuarioLogado?.id) {
         localStorage.setItem(`firmo_limites_${usuarioLogado.id}`, JSON.stringify(formState));
         setSavedConfig(formState);
       }
-
       toast.success('Limites e metas atualizados com sucesso!');
       setHasChanges(false); 
-    } catch (error) {
-      console.error("Erro ao salvar limites dos cartões:", error);
-      toast.error("Erro ao atualizar os limites no servidor.");
-    }
+    } catch (error) { toast.error("Erro ao atualizar os limites no servidor."); }
   };
 
-  const toggleAjuda = (tipo) => {
-    setAjudaAtiva(prev => (prev === tipo ? null : tipo));
-  };
-
-  const getDynamicColor = (percent) => {
-    let hue;
-    if (percent <= 60) {
-      hue = 140; 
-    } else if (percent <= 80) {
-      hue = 140 - ((percent - 60) * 5); 
-    } else {
-      hue = Math.max(0, 40 - ((percent - 80) * 2)); 
-    }
-    const lightness = isDark ? '55%' : '45%';
-    return `hsl(${hue}, 85%, ${lightness})`;
-  };
+  const toggleAjuda = (tipo) => setAjudaAtiva(prev => (prev === tipo ? null : tipo));
 
   const getFaturaVencimento = (dataStr, fechamentoCartao, vencimentoCartao) => {
     const partes = (dataStr || '').split('/');
@@ -160,160 +113,135 @@ function LimitesMetas({ temaAtual }) {
     const diaFechamento = parseInt(fechamentoCartao, 10) || 0;
     const diaVencimento = parseInt(vencimentoCartao, 10) || 0;
 
-    if (diaFechamento === 0 || diaVencimento === 0) {
-      return { num: String(mesTransacao).padStart(2, '0'), ano: String(anoTransacao) };
-    }
+    if (diaFechamento === 0 || diaVencimento === 0) return { num: String(mesTransacao).padStart(2, '0'), ano: String(anoTransacao) };
 
     let mesFechamento = mesTransacao;
     let anoFechamento = anoTransacao;
 
-    if (diaTransacao >= diaFechamento) {
+    if (diaTransacao > diaFechamento) {
       mesFechamento += 1;
-      if (mesFechamento > 12) {
-        mesFechamento = 1;
-        anoFechamento += 1;
-      }
+      if (mesFechamento > 12) { mesFechamento = 1; anoFechamento += 1; }
     }
-
     let mesVencimento = mesFechamento;
     let anoVencimento = anoFechamento;
 
     if (diaVencimento < diaFechamento) {
       mesVencimento += 1;
-      if (mesVencimento > 12) {
-        mesVencimento = 1;
-        anoVencimento += 1;
-      }
+      if (mesVencimento > 12) { mesVencimento = 1; anoVencimento += 1; }
     }
     return { num: String(mesVencimento).padStart(2, '0'), ano: String(anoVencimento) };
   };
 
-  const calcularFaturaAtualExata = (cartao) => {
-    const diaFechamento = parseInt(cartao.diaFechamento || cartao.DiaFechamento, 10) || 0;
+  const getMesVencimentoFaturaStr = (cartao) => {
     const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
-
     const hoje = new Date();
     let mesExibicaoNum = hoje.getMonth() + 1;
     let anoExibicaoNum = hoje.getFullYear();
-
     const dataVencimentoFatura = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
 
     if (hoje > dataVencimentoFatura) {
       mesExibicaoNum += 1;
-      if (mesExibicaoNum > 12) {
-        mesExibicaoNum = 1;
-        anoExibicaoNum += 1;
-      }
+      if (mesExibicaoNum > 12) { mesExibicaoNum = 1; anoExibicaoNum += 1; }
     }
+    
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return { num: String(mesExibicaoNum).padStart(2, '0'), ano: String(anoExibicaoNum), nomeMes: nomesMeses[mesExibicaoNum - 1] };
+  };
 
-    const mesVencimentoFaturaStr = String(mesExibicaoNum).padStart(2, '0');
-    const anoVencimentoFaturaStr = String(anoExibicaoNum);
+  const getTransacoesFaturaAtual = (cartao) => {
+    const diaFechamento = parseInt(cartao.diaFechamento || cartao.DiaFechamento, 10) || 0;
+    const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
+    const { num, ano } = getMesVencimentoFaturaStr(cartao);
 
     return transacoes.filter(t => {
       if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
       const fatura = getFaturaVencimento(t.dataStrFormatada, diaFechamento, diaVencimento);
-      return fatura && fatura.num === mesVencimentoFaturaStr && fatura.ano === anoVencimentoFaturaStr;
-    }).reduce((acc, t) => acc + t.valorNumerico, 0);
+      return fatura && fatura.num === num && fatura.ano === ano;
+    });
+  };
+
+  const handlePagarFatura = async (cartao) => {
+    setProcessandoPagamento(cartao.id);
+    try {
+      const transacoesDaFatura = getTransacoesFaturaAtual(cartao).filter(t => !t.isPago);
+      
+      for (const t of transacoesDaFatura) {
+        const payload = { ...t, pago: true };
+        await api.put(`/Transacoes/${t.id}`, payload);
+      }
+      
+      setTransacoes(prev => prev.map(t => {
+        if (transacoesDaFatura.some(tdf => tdf.id === t.id)) {
+          return { ...t, isPago: true, pago: true };
+        }
+        return t;
+      }));
+      
+      toast.success('Fatura paga com sucesso! Limite liberado.');
+    } catch (error) {
+      console.error("Erro ao pagar fatura:", error);
+      toast.error('Erro ao processar o pagamento.');
+    } finally {
+      setProcessandoPagamento(null);
+    }
+  };
+
+  const calcularFaturaAtualExata = (cartao) => {
+    return getTransacoesFaturaAtual(cartao).reduce((acc, t) => acc + t.valorNumerico, 0);
   };
 
   const calcularProximaFaturaExata = (cartao) => {
     const diaFechamento = parseInt(cartao.diaFechamento || cartao.DiaFechamento, 10) || 0;
     const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
-
-    const hoje = new Date();
-    let mesExibicaoNum = hoje.getMonth() + 1;
-    let anoExibicaoNum = hoje.getFullYear();
-
-    const dataVencimentoFatura = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
-
-    if (hoje > dataVencimentoFatura) {
-      mesExibicaoNum += 1;
-      if (mesExibicaoNum > 12) {
-        mesExibicaoNum = 1;
-        anoExibicaoNum += 1;
-      }
+    let { num, ano } = getMesVencimentoFaturaStr(cartao);
+    
+    let proxNum = parseInt(num, 10) + 1;
+    let proxAno = parseInt(ano, 10);
+    if (proxNum > 12) {
+      proxNum = 1;
+      proxAno += 1;
     }
-
-    mesExibicaoNum += 1;
-    if (mesExibicaoNum > 12) {
-      mesExibicaoNum = 1;
-      anoExibicaoNum += 1;
-    }
-
-    const mesVencimentoFaturaStr = String(mesExibicaoNum).padStart(2, '0');
-    const anoVencimentoFaturaStr = String(anoExibicaoNum);
 
     return transacoes.filter(t => {
       if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
       const fatura = getFaturaVencimento(t.dataStrFormatada, diaFechamento, diaVencimento);
-      return fatura && fatura.num === mesVencimentoFaturaStr && fatura.ano === anoVencimentoFaturaStr;
+      return fatura && fatura.num === String(proxNum).padStart(2, '0') && fatura.ano === String(proxAno);
     }).reduce((acc, t) => acc + t.valorNumerico, 0);
   };
 
   const calcularLimiteUtilizado = (cartao) => {
     const diaFechamento = Number(cartao.diaFechamento || cartao.DiaFechamento || 1);
     const hoje = new Date();
-    
     let mesFechamentoAnterior = hoje.getMonth() - 1;
     let anoFechamentoAnterior = hoje.getFullYear();
-    if (mesFechamentoAnterior < 0) {
-      mesFechamentoAnterior = 11;
-      anoFechamentoAnterior -= 1;
-    }
+    if (mesFechamentoAnterior < 0) { mesFechamentoAnterior = 11; anoFechamentoAnterior -= 1; }
     const dataCorteAnterior = new Date(anoFechamentoAnterior, mesFechamentoAnterior, diaFechamento);
 
-    return transacoes
-      .filter(t => {
-        if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
-        const isPendente = !t.isPago;
-        const isAtualOuFuturo = t.dataObj >= dataCorteAnterior;
-        return isAtualOuFuturo || isPendente;
-      })
-      .reduce((acc, t) => acc + t.valorNumerico, 0);
+    return transacoes.filter(t => {
+      if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
+      
+      const isPendente = !t.isPago;
+      const isAtualOuFuturo = t.dataObj > dataCorteAnterior;
+      return isAtualOuFuturo || isPendente; 
+    }).reduce((acc, t) => acc + t.valorNumerico, 0);
   };
 
   const handleEditarCartaoEspecifico = (idAlvo) => {
-    // A conversão para Number() garante que o Dashboard encontre o ID com precisão (===)
-    // Removido o window.scrollTo para não jogar a tela inteira pro topo, mantendo o enquadramento do cartão
-    navigate('/dashboard', { 
-      state: { 
-        acaoInicial: 'abrir_gaveta_config_cartao_existente',
-        cartaoIdAlvo: idAlvo !== null ? Number(idAlvo) : null
-      } 
-    });
-  };
-
-  const extrairCorBase = (corString) => {
-    if (!corString) return '#10b981';
-    if (corString.startsWith('#')) return corString;
-    const matchHex = corString.match(/#[0-9a-fA-F]{6}/);
-    return matchHex ? matchHex[0] : '#10b981';
+    navigate('/dashboard', { state: { acaoInicial: 'abrir_gaveta_config_cartao_existente', cartaoIdAlvo: idAlvo !== null ? Number(idAlvo) : null } });
   };
 
   const getToggleStyle = (checked) => ({
-    cursor: 'pointer',
-    width: '2.5em',
-    height: '1.25em',
+    cursor: 'pointer', width: '2.5em', height: '1.25em',
     backgroundColor: checked ? '#10b981' : (isDark ? 'transparent' : '#ffffff'),
     borderColor: checked ? '#10b981' : (isDark ? 'rgba(255,255,255,0.3)' : '#cbd5e1'),
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    backgroundImage: checked 
-      ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e\")"
-      : (isDark 
-          ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(255,255,255,0.5)'/%3e%3c/svg%3e\")" 
-          : "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23cbd5e1'/%3e%3c/svg%3e\")")
+    borderWidth: '1px', borderStyle: 'solid',
+    backgroundImage: checked ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e\")" : (isDark ? "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba(255,255,255,0.5)'/%3e%3c/svg%3e\")" : "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23cbd5e1'/%3e%3c/svg%3e\")")
   });
 
   return (
     <div className={`config-page ${isDark ? 'theme-dark' : 'theme-light'}`} data-bs-theme={temaAtual}>
       <div className="config-header">
-        <button 
-          onClick={() => navigate('/dashboard')} 
-          className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}
-        >
-          <FiArrowLeft size={24} />
-        </button>
+        <button onClick={() => navigate('/dashboard')} className={`btn btn-link p-0 border-0 mb-3 shadow-none ${isDark ? 'text-white' : 'text-dark'}`}><FiArrowLeft size={24} /></button>
         <h1 className={isDark ? 'text-white' : 'text-dark'}>Limites & Metas</h1>
         <p>Gerencie tetos globais, alertas e limites dos seus cartões.</p>
       </div>
@@ -321,7 +249,6 @@ function LimitesMetas({ temaAtual }) {
       <div className="config-section">
         <div className="config-section-title">CONTROLE DE GASTOS</div>
         
-        {/* TETO DE GASTOS MENSAL */}
         <div className="config-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
           <div className="d-flex justify-content-between align-items-center w-100">
             <div className="config-card-left">
@@ -337,15 +264,7 @@ function LimitesMetas({ temaAtual }) {
             
             <div className="d-flex align-items-center justify-content-end" style={{ maxWidth: '160px' }}>
               <span className={`fw-bold me-1 ${isDark ? 'text-white' : 'text-dark'}`} style={{ fontSize: '1rem' }}>R$</span>
-              <input 
-                type="text" 
-                inputMode="numeric"
-                className="form-control shadow-none border-0 bg-transparent p-0 text-end fw-bold" 
-                value={formState.limiteMensal} 
-                onChange={handleChangeLimite}
-                placeholder="0,00"
-                style={{ color: formState.limiteMensal ? '#10b981' : (isDark ? '#adb5bd' : '#adb5bd'), fontSize: '1.1rem', width: `${Math.max((formState.limiteMensal || '0,00').length * 11, 45)}px`, transition: 'color 0.3s' }}
-              />
+              <input type="text" inputMode="numeric" className="form-control shadow-none border-0 bg-transparent p-0 text-end fw-bold" value={formState.limiteMensal} onChange={handleChangeLimite} placeholder="0,00" style={{ color: formState.limiteMensal ? '#10b981' : (isDark ? '#adb5bd' : '#adb5bd'), fontSize: '1.1rem', width: `${Math.max((formState.limiteMensal || '0,00').length * 11, 45)}px`, transition: 'color 0.3s' }} />
             </div>
           </div>
 
@@ -367,7 +286,6 @@ function LimitesMetas({ temaAtual }) {
           </div>
         </div>
 
-        {/* AVISO ANTECIPADO DE LIMITE */}
         <div className="config-card" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
           <div className="config-card-left mb-2">
             <FiBell className="config-icon" />
@@ -400,7 +318,6 @@ function LimitesMetas({ temaAtual }) {
 
         <div className="config-divider"></div>
 
-        {/* SEÇÃO: LIMITES DOS CARTÕES DE CRÉDITO */}
         <div className="config-section-title">LIMITES DOS CARTÕES DE CRÉDITO</div>
 
         {cartoes.length === 0 ? (
@@ -426,160 +343,31 @@ function LimitesMetas({ temaAtual }) {
             const valorFaturaAtual = calcularFaturaAtualExata(cartao);
             const valorProximaFatura = calcularProximaFaturaExata(cartao);
             const totalComprometido = calcularLimiteUtilizado(cartao);
+            const transacoesDaFatura = getTransacoesFaturaAtual(cartao);
             
-            const porcentagemUso = limiteTotalCartao > 0 ? Math.min(Math.round((totalComprometido / limiteTotalCartao) * 100), 100) : 0;
-            const valorDisponivel = limiteTotalCartao > 0 ? Math.max(limiteTotalCartao - totalComprometido, 0) : 0;
-            const isEstourado = porcentagemUso > 85;
+            const temTransacoes = transacoesDaFatura.length > 0;
+            const pendentes = transacoesDaFatura.some(t => !t.isPago);
+            const { nomeMes } = getMesVencimentoFaturaStr(cartao);
             const estaEditando = editandoLimiteId === cartao.id;
 
-            const corDinamica = getDynamicColor(porcentagemUso);
-            const corBaseCartao = extrairCorBase(cartao.corFundo || cartao.corCartao);
-
-            const nomeCartao = cartao.apelidoCartao || cartao.ApelidoCartao || cartao.nome || cartao.Nome || 'Cartão';
-            const finalDigitos = cartao.finalCartao || cartao.FinalCartao || cartao.ultimosDigitos || cartao.UltimosDigitos || '0000';
-
             return (
-              <div 
-                key={cartao.id} 
-                className="config-card p-4" 
-                style={{ 
-                  flexDirection: 'column', 
-                  alignItems: 'stretch', 
-                  gap: '0', 
-                  borderRadius: '20px',
-                  border: isEstourado ? '1px solid rgba(239, 68, 68, 0.4)' : (isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)'),
-                  boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 20px rgba(0,0,0,0.02)'
-                }}
-              >
-                {/* Linha Principal do Cartão */}
-                <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
-                  <div className="d-flex align-items-center gap-3" style={{ minWidth: 0, flex: 1 }}>
-                    <div 
-                      className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{ 
-                        width: '42px', 
-                        height: '42px', 
-                        backgroundColor: `${corBaseCartao}25`, 
-                        color: corBaseCartao
-                      }}
-                    >
-                      <FiCreditCard size={20} />
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div className="d-flex align-items-center gap-1">
-                        <span className="fw-bold text-truncate" style={{ fontSize: '0.95rem', color: isDark ? '#fff' : '#111', maxWidth: '140px' }}>
-                          {nomeCartao}
-                        </span>
-                        <span className="text-muted text-nowrap flex-shrink-0" style={{ fontSize: '0.75rem' }}>
-                          (Final {finalDigitos})
-                        </span>
-                      </div>
-                      <span className="text-muted d-block" style={{ fontSize: '0.73rem' }}>Fatura atual em aberto</span>
-                    </div>
-                  </div>
-
-                  <button 
-                    className="btn btn-sm d-flex align-items-center justify-content-center p-2 rounded-circle flex-shrink-0 ms-2"
-                    style={{ 
-                      width: '32px',
-                      height: '32px',
-                      backgroundColor: estaEditando ? '#10b981' : (isDark ? 'rgba(255,255,255,0.08)' : '#f0f2f5'), 
-                      color: estaEditando ? '#ffffff' : (isDark ? '#cbd5e1' : '#4b5563'),
-                      border: 'none',
-                      transition: 'all 0.2s'
-                    }}
-                    onClick={() => setEditandoLimiteId(estaEditando ? null : cartao.id)}
-                    title="Detalhes"
-                  >
-                    <FiSliders size={14} />
-                  </button>
-                </div>
-
-                {/* Soft Container para os Valores Financeiros */}
-                <div 
-                  className="p-3 rounded-4 mb-3" 
-                  style={{ 
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#f8f9fa',
-                    border: isDark ? '1px solid rgba(255,255,255,0.03)' : '1px solid #e9ecef'
-                  }}
-                >
-                  <div className="d-flex justify-content-between align-items-end">
-                    <div>
-                      <span className="text-muted d-block mb-1" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fatura Atual</span>
-                      <span className="fw-bold" style={{ color: corDinamica, fontSize: '1.25rem', transition: 'color 0.4s ease' }}>
-                        R$ {valorFaturaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    <div className="text-end">
-                      <span className="text-muted d-block mb-1" style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Limite Total</span>
-                      <span className={`fw-bold ${isDark ? 'text-light' : 'text-dark'}`} style={{ fontSize: '0.95rem' }}>
-                        R$ {limiteTotalCartao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Barra de Progresso */}
-                <div>
-                  <div className="w-100" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#e9ecef', borderRadius: '10px', height: '10px', overflow: 'hidden' }}>
-                    <div 
-                      style={{ 
-                        width: `${porcentagemUso}%`, 
-                        backgroundColor: corDinamica, 
-                        height: '100%', 
-                        borderRadius: '10px', 
-                        transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s ease' 
-                      }}
-                    ></div>
-                  </div>
-                  <div className="d-flex justify-content-between align-items-center mt-2" style={{ fontSize: '0.75rem' }}>
-                    <span className="text-muted">Disponível: R$ {valorDisponivel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    <span className="fw-bold" style={{ color: corDinamica, transition: 'color 0.4s ease' }}>
-                      {porcentagemUso}% utilizado
-                    </span>
-                  </div>
-                </div>
-
-                {/* GAVETA DE ANÁLISE E CONFIGURAÇÕES AVANÇADAS */}
-                {estaEditando && (
-                  <div className="pt-4 mt-3 animate-fadeIn" style={{ borderTop: `1px dashed ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}>
-                    
-                    {/* Analytics: Box de Próxima Fatura */}
-                    <div 
-                      className="d-flex align-items-center justify-content-between py-2 px-3 rounded-4 mb-3" 
-                      style={{ 
-                        backgroundColor: isDark ? 'rgba(139, 92, 246, 0.08)' : '#f9f5ff',
-                        border: isDark ? '1px solid rgba(139, 92, 246, 0.2)' : '1px solid #f3e8ff'
-                      }}
-                    >
-                      <div className="d-flex align-items-center gap-2">
-                        <div 
-                          className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
-                          style={{ width: '26px', height: '26px', backgroundColor: isDark ? 'rgba(139, 92, 246, 0.2)' : '#f3e8ff', color: '#8b5cf6' }}
-                        >
-                          <FiCalendar size={13} />
-                        </div>
-                        <span style={{ fontSize: '0.8rem', color: isDark ? '#cbd5e1' : '#4b5563', fontWeight: '500' }}>
-                          Próxima Fatura Estimada
-                        </span>
-                      </div>
-                      <span className="fw-bold" style={{ color: '#8b5cf6', fontSize: '0.9rem', letterSpacing: '0.3px' }}>
-                        R$ {valorProximaFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-
-                    {/* Atalho Inteligente para Edição Completa */}
-                    <button 
-                      className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1"
-                      style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '500' }}
-                      onClick={() => handleEditarCartaoEspecifico(cartao.id)}
-                    >
-                      <FiEdit3 size={15}/> Configurações avançadas do cartão
-                    </button>
-
-                  </div>
-                )}
-              </div>
+              <CardControleLimite 
+                key={cartao.id}
+                cartao={cartao}
+                isDark={isDark}
+                limiteTotalCartao={limiteTotalCartao}
+                valorFaturaAtual={valorFaturaAtual}
+                valorProximaFatura={valorProximaFatura}
+                totalComprometido={totalComprometido}
+                pendentes={pendentes}
+                temTransacoes={temTransacoes}
+                nomeMes={nomeMes}
+                estaEditando={estaEditando}
+                setEditandoLimiteId={setEditandoLimiteId}
+                handlePagarFatura={handlePagarFatura}
+                processandoPagamento={processandoPagamento}
+                handleEditarCartaoEspecifico={handleEditarCartaoEspecifico}
+              />
             );
           })
         )}

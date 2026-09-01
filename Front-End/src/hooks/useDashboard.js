@@ -19,7 +19,6 @@ export function useDashboard(temaAtual) {
   const isDark = temaAtual === 'dark';
   const carrosselRef = useRef(null);
 
-  // INICIALIZAÇÃO INTELIGENTE DO MODO PRIVACIDADE
   const [showBalance, setShowBalance] = useState(() => {
     const configsSalvas = localStorage.getItem('firmo_configs');
     if (configsSalvas) {
@@ -48,7 +47,6 @@ export function useDashboard(temaAtual) {
   const [isChartAnimating, setIsChartAnimating] = useState(true); 
   const [coresDinamicas, setCoresDinamicas] = useState({ ...coresCategorias });
   
-  // Mantemos true na inicialização para exibir o Skeleton enquanto o Render acorda
   const [isRefreshingUI, setIsRefreshingUI] = useState(true);
 
   const [mesFiltro, setMesFiltro] = useState(() => {
@@ -104,7 +102,8 @@ export function useDashboard(temaAtual) {
     let mesFechamento = mesTransacao;
     let anoFechamento = anoTransacao;
 
-    if (diaTransacao >= diaFechamento) {
+    // Transações no dia do fechamento caem na fatura atual. Apenas dias maiores que o fechamento pulam.
+    if (diaTransacao > diaFechamento) {
       mesFechamento += 1;
       if (mesFechamento > 12) {
         mesFechamento = 1;
@@ -159,30 +158,53 @@ export function useDashboard(temaAtual) {
     const dataFechamentoFatura = new Date(anoFechamentoReal, mesFechamentoReal - 1, diaFechamento);
     const dataVencimentoReal = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
 
-    let statusTexto = 'Aberta';
-    let statusCor = 'text-success'; 
-
-    if (hoje > dataVencimentoReal) {
-      statusTexto = 'Vencida';
-      statusCor = 'text-danger';
-    } else if (hoje >= dataFechamentoFatura) {
-      statusTexto = 'Fechada';
-      statusCor = 'text-danger'; 
-    }
+    const dataAberturaFatura = new Date(dataFechamentoFatura);
+    dataAberturaFatura.setMonth(dataAberturaFatura.getMonth() - 1);
 
     const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const nomeMesVencimentoFatura = nomesMeses[mesExibicaoNum - 1];
     const mesVencimentoFaturaStr = String(mesExibicaoNum).padStart(2, '0');
     const anoVencimentoFaturaStr = String(anoExibicaoNum);
 
-    const total = transacoes.filter(t => {
+    const transacoesDaFaturaExibida = transacoes.filter(t => {
       if (t.pagamento === 'Crédito' && t.tipo === 'despesa') {
         if (t.cartaoId && t.cartaoId !== cartao.id) return false;
         const fatura = getFaturaVencimento(t.data, cartao.diaFechamento, cartao.diaVencimento);
         return fatura && fatura.num === mesVencimentoFaturaStr && fatura.ano === anoVencimentoFaturaStr;
       }
       return false;
-    }).reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+    });
+
+    const total = transacoesDaFaturaExibida.reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+    const temPendentes = transacoesDaFaturaExibida.some(t => !t.pago);
+
+    let statusTexto = 'Aberta';
+    let statusCor = 'text-success';
+
+    const isFaturaPassada = hoje > dataFechamentoFatura;
+    const isFaturaVencida = hoje > dataVencimentoReal;
+
+    if (hoje <= dataAberturaFatura) {
+      statusTexto = 'Futura';
+      statusCor = 'text-secondary'; 
+    } else if (isFaturaPassada) {
+      if (total === 0) {
+        statusTexto = 'Paga';
+        statusCor = 'text-success';
+      } else if (!temPendentes) {
+        statusTexto = 'Paga';
+        statusCor = 'text-success'; 
+      } else if (isFaturaVencida) {
+        statusTexto = 'Vencida';
+        statusCor = 'text-danger'; 
+      } else {
+        statusTexto = 'Fechada';
+        statusCor = 'text-warning'; 
+      }
+    } else {
+      statusTexto = 'Aberta';
+      statusCor = 'text-success'; 
+    }
 
     return { 
       total, 
@@ -376,7 +398,44 @@ export function useDashboard(temaAtual) {
           cartaoId: t.cartaoId
         };
       });
+      
       setTransacoes(transacoesDoBanco);
+
+      if (cartaoAtivo && cartaoAtivo.id) {
+        const hoje = new Date();
+        const df = parseInt(cartaoAtivo.diaFechamento, 10) || 1;
+        
+        if (hoje.getDate() > df) {
+          const mesAtualStr = String(hoje.getMonth() + 1).padStart(2, '0');
+          const anoAtualStr = String(hoje.getFullYear());
+          
+          const transacoesDaFatura = transacoesDoBanco.filter(t => {
+            if (t.cartaoId === cartaoAtivo.id && t.pagamento === 'Crédito' && t.tipo === 'despesa') {
+              const fatura = getFaturaVencimento(t.data, cartaoAtivo.diaFechamento, cartaoAtivo.diaVencimento);
+              return fatura && fatura.num === mesAtualStr && fatura.ano === anoAtualStr;
+            }
+            return false;
+          });
+
+          const temTransacoes = transacoesDaFatura.length > 0;
+          const temPendentes = transacoesDaFatura.some(t => !t.pago);
+
+          if (temTransacoes && !temPendentes) {
+            let proxMes = hoje.getMonth() + 2;
+            let proxAno = hoje.getFullYear();
+            if (proxMes > 12) { proxMes = 1; proxAno += 1; }
+            
+            const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            
+            setMesFiltro({
+              num: String(proxMes).padStart(2, '0'),
+              ano: String(proxAno),
+              nome: nomesMeses[proxMes - 1]
+            });
+          }
+        }
+      }
+
     } catch (error) {
       if (error.response && error.response.status === 401) {
         const savedData = localStorage.getItem('firmo_user');
@@ -393,7 +452,7 @@ export function useDashboard(temaAtual) {
           }
         }
       } else {
-        console.error("Erro de conexão/servidor ao buscar transações (Servidor acordando?):", error);
+        console.error("Erro de conexão/servidor ao buscar transações:", error);
       }
     } finally {
       setIsRefreshingUI(false);
@@ -480,10 +539,6 @@ export function useDashboard(temaAtual) {
     const diffX = Math.abs(e.touches[0].clientX - swipeCoords.current.x);
     const diffY = Math.abs(e.touches[0].clientY - swipeCoords.current.y);
     
-    // INTELIGÊNCIA DO SWIPE: 
-    // Se o movimento horizontal for maior que o vertical, paramos a propagação
-    // para evitar que o pull-to-refresh seja acionado acidentalmente.
-    // Se o movimento vertical for maior, o navegador cuida naturalmente do pull-to-refresh.
     if (diffX > diffY) {
       e.stopPropagation();
     }
