@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
+import { FinanceiroContext } from '../contexts/FinanceiroContext'; // Novo import
 
 export function useCreditCard(usuarioLogado, setShowCardSettings, cartaoIdParaEditar = null) {
+  const { cartoesGlobais, carregarDadosFinanceiros } = useContext(FinanceiroContext); // Puxa do contexto
+
   const [cartaoId, setCartaoId] = useState(cartaoIdParaEditar);
   const [diaVencimento, setDiaVencimento] = useState('00');
   const [diaFechamento, setDiaFechamento] = useState('00');
@@ -22,40 +25,25 @@ export function useCreditCard(usuarioLogado, setShowCardSettings, cartaoIdParaEd
   const [tempBandeira, setTempBandeira] = useState('');
   const [tempLimite, setTempLimite] = useState('');
 
-  // 1. Função movida para FORA do useEffect
-  const carregarCartao = async () => {
-    if (usuarioLogado?.id) {
-      try {
-        const response = await api.get(`/Cartoes/usuario/${usuarioLogado.id}`);
-        if (response.data && response.data.length > 0) {
-          // Se foi passado um ID para edição, busca ele. Se não, pega o primeiro da lista.
-          const cartaoDoBanco = cartaoIdParaEditar 
-            ? response.data.find(c => c.id === cartaoIdParaEditar) || response.data[0]
-            : response.data[0];
-          
-          if (cartaoDoBanco) {
-            setCartaoId(cartaoDoBanco.id);
-            setDiaVencimento(String(cartaoDoBanco.diaVencimento).padStart(2, '0'));
-            setDiaFechamento(String(cartaoDoBanco.diaFechamento).padStart(2, '0'));
-            setCorCartao(cartaoDoBanco.corFundo || 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
-            setApelidoCartao(cartaoDoBanco.nome || 'Cartão Principal');
-            setFinalCartao(cartaoDoBanco.ultimosDigitos || '0000');
-            setBandeiraCartao(cartaoDoBanco.bandeira || 'Mastercard');
-            setLimiteTotal(cartaoDoBanco.limiteTotal || 0);
-          }
-        }
-        setNomeCartao((usuarioLogado?.nome || 'SEU NOME').toUpperCase());
-      } catch (error) {
-        console.error("Erro ao buscar cartões:", error);
-      }
-    }
-  };
-
-  // 2. O useEffect agora apenas chama a função
-  // Se recebermos um ID específico para editar, busca os dados dele. Senão, busca o primeiro ou prepara para novo.
   useEffect(() => {
-    carregarCartao();
-  }, [usuarioLogado, cartaoIdParaEditar]);
+    if (usuarioLogado?.id && cartoesGlobais.length > 0) {
+      const cartaoDoBanco = cartaoIdParaEditar 
+        ? cartoesGlobais.find(c => c.id === cartaoIdParaEditar) || cartoesGlobais[0]
+        : cartoesGlobais[0];
+      
+      if (cartaoDoBanco) {
+        setCartaoId(cartaoDoBanco.id);
+        setDiaVencimento(String(cartaoDoBanco.diaVencimento).padStart(2, '0'));
+        setDiaFechamento(String(cartaoDoBanco.diaFechamento).padStart(2, '0'));
+        setCorCartao(cartaoDoBanco.corFundo || 'linear-gradient(135deg, #8A05BE 0%, #4c0677 100%)');
+        setApelidoCartao(cartaoDoBanco.nome || 'Cartão Principal');
+        setFinalCartao(cartaoDoBanco.ultimosDigitos || '0000');
+        setBandeiraCartao(cartaoDoBanco.bandeira || 'Mastercard');
+        setLimiteTotal(cartaoDoBanco.limiteTotal || 0);
+      }
+      setNomeCartao((usuarioLogado?.nome || 'SEU NOME').toUpperCase());
+    }
+  }, [usuarioLogado, cartaoIdParaEditar, cartoesGlobais]);
 
   const handleSalvarConfigCartao = async () => {
     const vVenc = parseInt(tempDiaVencimento || diaVencimento || '1', 10);
@@ -81,25 +69,14 @@ export function useCreditCard(usuarioLogado, setShowCardSettings, cartaoIdParaEd
 
     try {
       if (cartaoId) {
-        // Se já tem ID, atualiza especificamente este cartão (PUT)
         await api.put(`/Cartoes/${cartaoId}`, payload);
       } else {
-        // Se não tem ID (Novo cartão sendo criado pelo botão "Adicionar cartão"), usa POST
         const response = await api.post('/Cartoes', payload);
-        if (response.data && response.data.id) {
-          setCartaoId(response.data.id);
-        }
+        if (response.data && response.data.id) setCartaoId(response.data.id);
       }
 
-      // Atualiza os estados locais
-      setDiaVencimento(String(vVenc).padStart(2, '0'));
-      setDiaFechamento(String(vFech).padStart(2, '0'));
-      setCorCartao(vCor);
-      setApelidoCartao(vApelido);
-      setFinalCartao(vFinal);
-      setBandeiraCartao(vBandeira);
-      setLimiteTotal(vLimite);
-
+      await carregarDadosFinanceiros(); // Atualiza tudo globalmente
+      
       alert("Cartão salvo com sucesso!");
       setShowCardSettings(false);
     } catch (error) {
@@ -109,12 +86,10 @@ export function useCreditCard(usuarioLogado, setShowCardSettings, cartaoIdParaEd
   };
 
   return {
-    cartaoId,
-    diaVencimento, diaFechamento, corCartao, apelidoCartao, finalCartao, nomeCartao, bandeiraCartao, limiteTotal,
+    cartaoId, diaVencimento, diaFechamento, corCartao, apelidoCartao, finalCartao, nomeCartao, bandeiraCartao, limiteTotal,
     tempDiaVencimento, setTempDiaVencimento, tempDiaFechamento, setTempDiaFechamento,
     tempCor, setTempCor, tempApelido, setTempApelido, tempFinal, setTempFinal,
     tempNome, setTempNome, tempBandeira, setTempBandeira, tempLimite, setTempLimite,
-    handleSalvarConfigCartao,
-    carregarCartao // 3. ADICIONADO AQUI para a Dashboard conseguir usar no Pull-to-Refresh
+    handleSalvarConfigCartao
   };
 }

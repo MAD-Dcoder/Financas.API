@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
+import { FinanceiroContext } from '../contexts/FinanceiroContext';
 import api from '../api/axios';
 import { FiArrowLeft, FiPieChart, FiBell, FiPlus, FiTarget, FiLock, FiCheck, FiHelpCircle, FiCreditCard } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ import CardControleLimite from '../components/CardControleLimite';
 function LimitesMetas({ temaAtual }) {
   const navigate = useNavigate();
   const { usuarioLogado } = useContext(AuthContext);
+  const { cartoesGlobais, transacoesGlobais, setTransacoesGlobais } = useContext(FinanceiroContext);
   const isDark = temaAtual === 'dark'; 
   
   const initialState = { limiteMensal: '', alertaPorcentagem: '', travaAtiva: false };
@@ -16,8 +18,6 @@ function LimitesMetas({ temaAtual }) {
   const [savedConfig, setSavedConfig] = useState(initialState);
   const [hasChanges, setHasChanges] = useState(false);
   const [ajudaAtiva, setAjudaAtiva] = useState(null); 
-  const [cartoes, setCartoes] = useState([]);
-  const [transacoes, setTransacoes] = useState([]);
   const [limitesCartoes, setLimitesCartoes] = useState({}); 
   const [editandoLimiteId, setEditandoLimiteId] = useState(null);
   const [processandoPagamento, setProcessandoPagamento] = useState(null);
@@ -30,45 +30,16 @@ function LimitesMetas({ temaAtual }) {
           const parsed = JSON.parse(configSalva);
           setFormState(parsed);
           setSavedConfig(parsed);
-        } catch (e) { console.error("Erro", e); }
+        } catch (e) {}
       }
     }
   }, [usuarioLogado?.id]);
 
-  const carregarDadosGerais = async () => {
-    if (!usuarioLogado?.id) return;
-    try {
-      const [resCartoes, resTrans] = await Promise.all([
-        api.get(`/Cartoes/usuario/${usuarioLogado.id}`),
-        api.get(`/Transacoes/usuario/${usuarioLogado.id}`)
-      ]);
-
-      setCartoes(resCartoes.data || []);
-
-      const transacoesNormalizadas = (resTrans.data || []).map(t => {
-        const dataStr = t.dataTransacao || t.DataTransacao || t.data || t.Data || new Date().toISOString();
-        const dataQuebrada = dataStr.split('T');
-        const dataBruta = dataQuebrada[0].split('-');
-        const dataCerta = dataBruta.length === 3 ? `${dataBruta[2]}/${dataBruta[1]}/${dataBruta[0]}` : '01/01/2000';
-        return {
-           ...t,
-           dataStrFormatada: dataCerta,
-           dataObj: dataBruta.length === 3 ? new Date(dataBruta[0], dataBruta[1] - 1, dataBruta[2]) : new Date(2000, 0, 1),
-           valorNumerico: Number(t.valor || t.Valor) || 0,
-           cartaoIdNumerico: Number(t.cartaoId || t.CartaoId),
-           tipoStr: (t.tipo || t.Tipo || '').toLowerCase(),
-           isPago: t.pago === true || t.Pago === true || t.pago === 1 || t.Pago === 1
-        };
-      });
-      
-      setTransacoes(transacoesNormalizadas);
-      const limitesIniciais = {};
-      (resCartoes.data || []).forEach(c => limitesIniciais[c.id] = Number(c.limiteTotal || c.LimiteTotal) || 0);
-      setLimitesCartoes(limitesIniciais);
-    } catch (error) { console.error("Erro ao carregar", error); }
-  };
-
-  useEffect(() => { carregarDadosGerais(); }, [usuarioLogado?.id]);
+  useEffect(() => {
+    const limitesIniciais = {};
+    cartoesGlobais.forEach(c => limitesIniciais[c.id] = Number(c.limiteTotal || c.LimiteTotal) || 0);
+    setLimitesCartoes(limitesIniciais);
+  }, [cartoesGlobais]);
 
   useEffect(() => {
     setHasChanges(JSON.stringify(formState) !== JSON.stringify(savedConfig));
@@ -85,7 +56,7 @@ function LimitesMetas({ temaAtual }) {
 
   const handleSave = async () => {
     try {
-      for (const cartao of cartoes) {
+      for (const cartao of cartoesGlobais) {
         const novoLimite = limitesCartoes[cartao.id];
         const limiteAntigo = Number(cartao.limiteTotal || cartao.LimiteTotal) || 0;
         if (novoLimite !== limiteAntigo) {
@@ -110,120 +81,133 @@ function LimitesMetas({ temaAtual }) {
     let mesTransacao = parseInt(partes[1], 10);
     let anoTransacao = parseInt(partes[2], 10);
 
-    const diaFechamento = parseInt(fechamentoCartao, 10) || 0;
-    const diaVencimento = parseInt(vencimentoCartao, 10) || 0;
-
-    if (diaFechamento === 0 || diaVencimento === 0) return { num: String(mesTransacao).padStart(2, '0'), ano: String(anoTransacao) };
+    const diaFechamento = parseInt(fechamentoCartao, 10) || 1;
+    const diaVencimento = parseInt(vencimentoCartao, 10) || 1;
 
     let mesFechamento = mesTransacao;
     let anoFechamento = anoTransacao;
-
     if (diaTransacao > diaFechamento) {
       mesFechamento += 1;
       if (mesFechamento > 12) { mesFechamento = 1; anoFechamento += 1; }
     }
+
     let mesVencimento = mesFechamento;
     let anoVencimento = anoFechamento;
-
     if (diaVencimento < diaFechamento) {
       mesVencimento += 1;
       if (mesVencimento > 12) { mesVencimento = 1; anoVencimento += 1; }
     }
-    return { num: String(mesVencimento).padStart(2, '0'), ano: String(anoVencimento) };
+
+    let mesReferencia = mesVencimento - 1;
+    let anoReferencia = anoVencimento;
+    if (mesReferencia < 1) { mesReferencia = 12; anoReferencia -= 1; }
+
+    return { num: String(mesReferencia).padStart(2, '0'), ano: String(anoReferencia), vencimentoReal: { mes: mesVencimento, ano: anoVencimento } };
   };
 
-  const getMesVencimentoFaturaStr = (cartao) => {
-    const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
+  const getStatusFaturas = (cartao) => {
+    const diaFechamento = parseInt(cartao.diaFechamento, 10) || 1;
+    const diaVencimento = parseInt(cartao.diaVencimento, 10) || 1;
     const hoje = new Date();
-    let mesExibicaoNum = hoje.getMonth() + 1;
-    let anoExibicaoNum = hoje.getFullYear();
-    const dataVencimentoFatura = new Date(anoExibicaoNum, mesExibicaoNum - 1, diaVencimento);
+    hoje.setHours(0,0,0,0);
 
-    if (hoje > dataVencimentoFatura) {
-      mesExibicaoNum += 1;
-      if (mesExibicaoNum > 12) { mesExibicaoNum = 1; anoExibicaoNum += 1; }
-    }
+    const faturasObj = {};
     
-    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    return { num: String(mesExibicaoNum).padStart(2, '0'), ano: String(anoExibicaoNum), nomeMes: nomesMeses[mesExibicaoNum - 1] };
-  };
+    const calcFechada = (mesVenc, anoVenc) => {
+        let mFech = mesVenc;
+        let aFech = anoVenc;
+        if (diaVencimento < diaFechamento) {
+            mFech -= 1;
+            if (mFech < 1) { mFech = 12; aFech -= 1; }
+        }
+        const dataFech = new Date(aFech, mFech - 1, diaFechamento);
+        return hoje > dataFech;
+    };
 
-  const getTransacoesFaturaAtual = (cartao) => {
-    const diaFechamento = parseInt(cartao.diaFechamento || cartao.DiaFechamento, 10) || 0;
-    const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
-    const { num, ano } = getMesVencimentoFaturaStr(cartao);
-
-    return transacoes.filter(t => {
-      if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
-      const fatura = getFaturaVencimento(t.dataStrFormatada, diaFechamento, diaVencimento);
-      return fatura && fatura.num === num && fatura.ano === ano;
+    transacoesGlobais.forEach(t => {
+      if (t.cartaoIdNumerico === cartao.id && t.tipoStr === 'despesa') {
+        const f = getFaturaVencimento(t.dataStrFormatada || t.data, diaFechamento, diaVencimento);
+        if (f) {
+          const key = `${f.ano}-${f.num}`;
+          if (!faturasObj[key]) {
+            faturasObj[key] = { ...f, totalBruto: 0, pendentes: 0, transacoes: [], isFechada: calcFechada(f.vencimentoReal.mes, f.vencimentoReal.ano) };
+          }
+          faturasObj[key].transacoes.push(t);
+          faturasObj[key].totalBruto += Number(t.valorNumerico);
+          if (!t.isPago) {
+            faturasObj[key].pendentes += 1;
+          }
+        }
+      }
     });
+
+    const hojeStr = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
+    const fHoje = getFaturaVencimento(hojeStr, diaFechamento, diaVencimento);
+    const keyHoje = `${fHoje.ano}-${fHoje.num}`;
+
+    if (!faturasObj[keyHoje]) {
+      faturasObj[keyHoje] = { ...fHoje, totalBruto: 0, pendentes: 0, transacoes: [], isFechada: calcFechada(fHoje.vencimentoReal.mes, fHoje.vencimentoReal.ano) };
+    }
+
+    Object.values(faturasObj).forEach(f => {
+       f.total = f.totalBruto;
+       if (!f.isFechada && f.pendentes === 0 && f.transacoes.length > 0) {
+           f.total = 0;
+       }
+    });
+
+    const faturas = Object.values(faturasObj).sort((a, b) => {
+      if (a.ano !== b.ano) return parseInt(a.ano) - parseInt(b.ano);
+      return parseInt(a.num) - parseInt(b.num);
+    });
+
+    const faturasPendentes = faturas.filter(f => f.pendentes > 0);
+    let faturaAtual = faturasPendentes.length > 0 ? faturasPendentes[0] : faturasObj[keyHoje];
+
+    let prevNum = parseInt(faturaAtual.num, 10) - 1;
+    let prevAno = parseInt(faturaAtual.ano, 10);
+    if (prevNum < 1) { prevNum = 12; prevAno -= 1; }
+    const keyPrev = `${prevAno}-${String(prevNum).padStart(2, '0')}`;
+    const faturaAnterior = faturasObj[keyPrev];
+
+    let nextNum = parseInt(faturaAtual.num, 10) + 1;
+    let nextAno = parseInt(faturaAtual.ano, 10);
+    if (nextNum > 12) { nextNum = 1; nextAno += 1; }
+    const keyNext = `${nextAno}-${String(nextNum).padStart(2, '0')}`;
+    const faturaProxima = faturasObj[keyNext] || { num: String(nextNum).padStart(2, '0'), ano: String(nextAno), total: 0 };
+
+    const nomesMeses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    return {
+      atual: { ...faturaAtual, nomeMes: nomesMeses[parseInt(faturaAtual.num)-1] },
+      anterior: faturaAnterior ? { ...faturaAnterior, nomeMes: nomesMeses[parseInt(faturaAnterior.num)-1] } : null,
+      proxima: { ...faturaProxima, nomeMes: nomesMeses[parseInt(faturaProxima.num)-1] }
+    };
   };
 
-  const handlePagarFatura = async (cartao) => {
+  const handlePagarFatura = async (cartao, faturaAlvo, desfazer = false) => {
     setProcessandoPagamento(cartao.id);
     try {
-      const transacoesDaFatura = getTransacoesFaturaAtual(cartao).filter(t => !t.isPago);
+      const alvo = desfazer ? faturaAlvo.transacoes.filter(t => t.isPago) : faturaAlvo.transacoes.filter(t => !t.isPago);
       
-      for (const t of transacoesDaFatura) {
-        const payload = { ...t, pago: true };
+      for (const t of alvo) {
+        const payload = { ...t, pago: !desfazer };
         await api.put(`/Transacoes/${t.id}`, payload);
       }
       
-      setTransacoes(prev => prev.map(t => {
-        if (transacoesDaFatura.some(tdf => tdf.id === t.id)) {
-          return { ...t, isPago: true, pago: true };
+      setTransacoesGlobais(prev => prev.map(t => {
+        if (alvo.some(tdf => tdf.id === t.id)) {
+          return { ...t, isPago: !desfazer, pago: !desfazer };
         }
         return t;
       }));
       
-      toast.success('Fatura paga com sucesso! Limite liberado.');
+      toast.success(desfazer ? 'Pagamento desfeito! A fatura voltou.' : 'Fatura paga com sucesso! Limite liberado.');
     } catch (error) {
-      console.error("Erro ao pagar fatura:", error);
       toast.error('Erro ao processar o pagamento.');
     } finally {
       setProcessandoPagamento(null);
     }
-  };
-
-  const calcularFaturaAtualExata = (cartao) => {
-    return getTransacoesFaturaAtual(cartao).reduce((acc, t) => acc + t.valorNumerico, 0);
-  };
-
-  const calcularProximaFaturaExata = (cartao) => {
-    const diaFechamento = parseInt(cartao.diaFechamento || cartao.DiaFechamento, 10) || 0;
-    const diaVencimento = parseInt(cartao.diaVencimento || cartao.DiaVencimento, 10) || 0;
-    let { num, ano } = getMesVencimentoFaturaStr(cartao);
-    
-    let proxNum = parseInt(num, 10) + 1;
-    let proxAno = parseInt(ano, 10);
-    if (proxNum > 12) {
-      proxNum = 1;
-      proxAno += 1;
-    }
-
-    return transacoes.filter(t => {
-      if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
-      const fatura = getFaturaVencimento(t.dataStrFormatada, diaFechamento, diaVencimento);
-      return fatura && fatura.num === String(proxNum).padStart(2, '0') && fatura.ano === String(proxAno);
-    }).reduce((acc, t) => acc + t.valorNumerico, 0);
-  };
-
-  const calcularLimiteUtilizado = (cartao) => {
-    const diaFechamento = Number(cartao.diaFechamento || cartao.DiaFechamento || 1);
-    const hoje = new Date();
-    let mesFechamentoAnterior = hoje.getMonth() - 1;
-    let anoFechamentoAnterior = hoje.getFullYear();
-    if (mesFechamentoAnterior < 0) { mesFechamentoAnterior = 11; anoFechamentoAnterior -= 1; }
-    const dataCorteAnterior = new Date(anoFechamentoAnterior, mesFechamentoAnterior, diaFechamento);
-
-    return transacoes.filter(t => {
-      if (t.cartaoIdNumerico !== Number(cartao.id) || t.tipoStr !== 'despesa') return false;
-      
-      const isPendente = !t.isPago;
-      const isAtualOuFuturo = t.dataObj > dataCorteAnterior;
-      return isAtualOuFuturo || isPendente; 
-    }).reduce((acc, t) => acc + t.valorNumerico, 0);
   };
 
   const handleEditarCartaoEspecifico = (idAlvo) => {
@@ -320,14 +304,14 @@ function LimitesMetas({ temaAtual }) {
 
         <div className="config-section-title">LIMITES DOS CARTÕES DE CRÉDITO</div>
 
-        {cartoes.length === 0 ? (
+        {cartoesGlobais.length === 0 ? (
           <div className="config-card p-4 text-center" style={{ flexDirection: 'column', gap: '10px' }}>
             <div className="rounded-circle d-flex align-items-center justify-content-center mx-auto" style={{ width: '48px', height: '48px', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
               <FiCreditCard size={22} />
             </div>
             <h6 className="fw-bold m-0" style={{ fontSize: '0.95rem' }}>Configurar Cartão Padrão</h6>
             <p className="text-muted small m-0" style={{ lineHeight: '1.4' }}>
-              O FIRMO já deixa um cartão rascunho pronto para você. Clique abaixo para personalizá-lo, definir limite e bandeira.
+              O FIRMO já deixa um cartão rascunho pronto para você. Clique abaixo para personalizá-lo.
             </p>
             <button 
               className="btn btn-sm fw-bold mt-2 text-white d-flex align-items-center justify-content-center gap-2 mx-auto" 
@@ -338,16 +322,11 @@ function LimitesMetas({ temaAtual }) {
             </button>
           </div>
         ) : (
-          cartoes.map((cartao) => {
+          cartoesGlobais.map((cartao) => {
             const limiteTotalCartao = limitesCartoes[cartao.id] || 0;
-            const valorFaturaAtual = calcularFaturaAtualExata(cartao);
-            const valorProximaFatura = calcularProximaFaturaExata(cartao);
-            const totalComprometido = calcularLimiteUtilizado(cartao);
-            const transacoesDaFatura = getTransacoesFaturaAtual(cartao);
+            const status = getStatusFaturas(cartao);
             
-            const temTransacoes = transacoesDaFatura.length > 0;
-            const pendentes = transacoesDaFatura.some(t => !t.isPago);
-            const { nomeMes } = getMesVencimentoFaturaStr(cartao);
+            const totalComprometido = transacoesGlobais.filter(t => t.cartaoIdNumerico === cartao.id && t.tipoStr === 'despesa' && !t.isPago).reduce((acc, t) => acc + t.valorNumerico, 0);
             const estaEditando = editandoLimiteId === cartao.id;
 
             return (
@@ -356,17 +335,13 @@ function LimitesMetas({ temaAtual }) {
                 cartao={cartao}
                 isDark={isDark}
                 limiteTotalCartao={limiteTotalCartao}
-                valorFaturaAtual={valorFaturaAtual}
-                valorProximaFatura={valorProximaFatura}
                 totalComprometido={totalComprometido}
-                pendentes={pendentes}
-                temTransacoes={temTransacoes}
-                nomeMes={nomeMes}
                 estaEditando={estaEditando}
                 setEditandoLimiteId={setEditandoLimiteId}
                 handlePagarFatura={handlePagarFatura}
                 processandoPagamento={processandoPagamento}
                 handleEditarCartaoEspecifico={handleEditarCartaoEspecifico}
+                status={status}
               />
             );
           })

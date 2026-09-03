@@ -2,15 +2,17 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
-import { BrowserRouter } from 'react-router-dom' // <-- NOVO IMPORT
+import { FinanceiroProvider } from './contexts/FinanceiroContext.jsx'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* Envolvendo o app com o BrowserRouter */}
     <BrowserRouter> 
       <AuthProvider>
-        <App />
+        <FinanceiroProvider>
+          <App />
+        </FinanceiroProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,

@@ -100,7 +100,10 @@ function FlipCard({
   let tipoAlerta = '';
   let diasAlerta = 0;
 
-  if (isFaturaAtual) {
+  // 🟢 NOVA REGRA: Só exibe alerta vermelho se a fatura NÃO estiver com status "Paga"
+  const isFaturaPaga = statusFatura?.texto?.includes('Paga');
+
+  if (isFaturaAtual && !isFaturaPaga) {
     if (faturaFechada) {
       if (diasParaVencer !== null && diasParaVencer <= 7) {
         showAlert = true;
@@ -290,7 +293,6 @@ function FlipCard({
                   **** **** **** {finalCartao}
                 </h5>
                 <div className="d-flex justify-content-between align-items-end">
-                  {/* Fonte do nome ajustada para 0.82rem */}
                   <small className="text-light opacity-75 text-uppercase fw-bold m-0 p-0" style={{ fontSize: '0.82rem', letterSpacing: '1px' }}>
                     {nomeCartao}
                   </small>
